@@ -12,7 +12,7 @@
   let previousQuery = "";
   let mobileMenuOpen = false;
 
-  $: currentLocale = getLocale();
+  let currentLocale = getLocale();
 
   const toLabel = (item) =>
     item?.canonical_name || item?.names?.[0] || item?.agency_slug || "Unknown agency";

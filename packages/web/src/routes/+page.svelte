@@ -6,8 +6,6 @@
 
   export let data;
 
-  let selectedLocation = null;
-  let aboutDataHtml = "";
   let statsData = null;
   let historicalOutcomes = null; // { years: [], data: { citations: [], arrests: [], searches: [], noAction: [] } }
   let historicalByRace = null; // { years: [], data: { White: [], Black: [], Hispanic: [] } }
@@ -16,7 +14,8 @@
   let tooltip = { show: false, x: 0, y: 0, content: "" };
 
   function showTooltip(event, content) {
-    const rect = event.target.getBoundingClientRect();
+    const el = event.currentTarget || event.target;
+    const rect = el.getBoundingClientRect();
     tooltip = {
       show: true,
       x: rect.left + rect.width / 2,
@@ -160,16 +159,6 @@
     return new Intl.NumberFormat(undefined, { maximumFractionDigits: 0 }).format(numeric);
   };
 
-  const handleLocationSelect = (location) => {
-    selectedLocation = location;
-  };
-
-  $: displayStat = selectedLocation
-    ? m.home_stat_template()
-        .replace("{year}", "2023")
-        .replace("{location}", selectedLocation.canonical_name || selectedLocation.agency_slug)
-        .replace("{stops}", formatStops(selectedLocation.all_stops_total))
-    : m.home_stat_default();
 </script>
 
 <svelte:head>
@@ -292,7 +281,7 @@
               </div>
             </div>
           {:else}
-            <div class="flex h-48 items-center justify-center">
+            <div class="flex h-[300px] items-center justify-center">
               <span class="text-sm text-slate-400">Loading data...</span>
             </div>
           {/if}
@@ -378,19 +367,29 @@
                     stroke-width="1.5"
                     points={historicalOutcomes.data.map((d, i) => `${padding.left + (i / (years.length - 1)) * width},${padding.top + (1 - d[outcome] / maxY) * height}`).join(" ")}
                   />
-                  <!-- Points with tooltips - smaller -->
+                  <!-- Points with tooltips -->
                   {#each historicalOutcomes.data as d, i}
-                    <circle
-                      cx={padding.left + (i / (years.length - 1)) * width}
-                      cy={padding.top + (1 - d[outcome] / maxY) * height}
-                      r="2.5"
-                      fill={outcomeColors[outcome]}
-                      class="cursor-pointer hover:opacity-70 transition-opacity"
+                    <g
+                      class="cursor-pointer"
                       on:mouseenter={(e) => showTooltip(e, `${outcomeLabels[outcome]}: ${d[outcome].toFixed(1)}% (${d.year})`)}
                       on:mouseleave={hideTooltip}
                       role="img"
                       aria-label="{outcomeLabels[outcome]} {d.year}"
-                    />
+                    >
+                      <circle
+                        cx={padding.left + (i / (years.length - 1)) * width}
+                        cy={padding.top + (1 - d[outcome] / maxY) * height}
+                        r="8"
+                        fill="transparent"
+                      />
+                      <circle
+                        cx={padding.left + (i / (years.length - 1)) * width}
+                        cy={padding.top + (1 - d[outcome] / maxY) * height}
+                        r="3"
+                        fill={outcomeColors[outcome]}
+                        class="pointer-events-none"
+                      />
+                    </g>
                   {/each}
                 {/each}
               </svg>
@@ -406,7 +405,7 @@
               </div>
             </div>
           {:else}
-            <div class="flex h-48 items-center justify-center">
+            <div class="flex h-[300px] items-center justify-center">
               <span class="text-sm text-slate-400">Loading historical data...</span>
             </div>
           {/if}
@@ -463,17 +462,27 @@
                   />
                   <!-- Points with tooltips -->
                   {#each historicalByRace.data as d, i}
-                    <circle
-                      cx={padding.left + (i / (years.length - 1)) * width}
-                      cy={padding.top + (1 - d[race] / maxY) * height}
-                      r="2.5"
-                      fill={raceColors[race]}
-                      class="cursor-pointer hover:opacity-70 transition-opacity"
+                    <g
+                      class="cursor-pointer"
                       on:mouseenter={(e) => showTooltip(e, `${race}: ${d[race].toFixed(1)}% (${d.year})`)}
                       on:mouseleave={hideTooltip}
                       role="img"
                       aria-label="{race} {d.year}"
-                    />
+                    >
+                      <circle
+                        cx={padding.left + (i / (years.length - 1)) * width}
+                        cy={padding.top + (1 - d[race] / maxY) * height}
+                        r="8"
+                        fill="transparent"
+                      />
+                      <circle
+                        cx={padding.left + (i / (years.length - 1)) * width}
+                        cy={padding.top + (1 - d[race] / maxY) * height}
+                        r="3"
+                        fill={raceColors[race]}
+                        class="pointer-events-none"
+                      />
+                    </g>
                   {/each}
                 {/each}
               </svg>
@@ -489,7 +498,7 @@
               </div>
             </div>
           {:else}
-            <div class="flex h-48 items-center justify-center">
+            <div class="flex h-[300px] items-center justify-center">
               <span class="text-sm text-slate-400">Loading historical data...</span>
             </div>
           {/if}
