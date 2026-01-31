@@ -1,14 +1,12 @@
 <script>
   import StickyHeader from "$lib/components/StickyHeader.svelte";
+  import AgencyRateScatter from "$lib/components/AgencyRateScatter.svelte";
   import * as m from "$lib/paraglide/messages";
   import { onMount } from "svelte";
 
   export let data;
 
-  let selectedLocation = null;
-  let aboutDataHtml = "";
   let statsData = null;
-  let scatterData = null;
   let historicalOutcomes = null; // { years: [], data: { citations: [], arrests: [], searches: [], noAction: [] } }
   let historicalByRace = null; // { years: [], data: { White: [], Black: [], Hispanic: [] } }
 
@@ -16,7 +14,8 @@
   let tooltip = { show: false, x: 0, y: 0, content: "" };
 
   function showTooltip(event, content) {
-    const rect = event.target.getBoundingClientRect();
+    const el = event.currentTarget || event.target;
+    const rect = el.getBoundingClientRect();
     tooltip = {
       show: true,
       x: rect.left + rect.width / 2,
@@ -41,46 +40,14 @@
     }
 
     try {
-      // Fetch scatter plot data
+      // Fetch metric data for historical charts
       const metricResponse = await fetch("/data/dist/metric_year_subset.json");
       if (metricResponse.ok) {
         const metricData = await metricResponse.json();
-        const yearIndex = metricData.years.indexOf(2024);
         // Row format: [agency_index, year_index, Total, White, Black, ...]
-        // So Total is at index 2 (after agency_index and year_index)
         const totalColOffset = 2;
 
-        // Build maps for each metric
-        const searchesMap = new Map();
-        const contrabandMap = new Map();
-        const stopsMap = new Map();
-
-        (metricData.rows["rates-by-race--totals--searches"] || []).forEach(row => {
-          if (row[1] === yearIndex) searchesMap.set(row[0], row[totalColOffset]);
-        });
-        (metricData.rows["rates-by-race--totals--contraband"] || []).forEach(row => {
-          if (row[1] === yearIndex) contrabandMap.set(row[0], row[totalColOffset]);
-        });
-        (metricData.rows["rates-by-race--totals--all-stops"] || []).forEach(row => {
-          if (row[1] === yearIndex) stopsMap.set(row[0], row[totalColOffset]);
-        });
-
-        // Compute rates for each agency
-        const points = [];
-        searchesMap.forEach((searches, agencyIdx) => {
-          const stops = stopsMap.get(agencyIdx) || 0;
-          const contraband = contrabandMap.get(agencyIdx) || 0;
-          if (stops > 100 && searches > 0) {
-            const searchRate = (searches / stops) * 100;
-            const hitRate = (contraband / searches) * 100;
-            if (searchRate > 0 && searchRate < 50 && hitRate >= 0 && hitRate < 100) {
-              points.push({ searchRate, hitRate, stops, agency: metricData.agencies[agencyIdx] });
-            }
-          }
-        });
-        scatterData = points;
-
-        // Also build historical statewide data for slope charts
+        // Build historical statewide data for slope charts
         const years = metricData.years;
         const whiteColOffset = 3;
         const blackColOffset = 4;
@@ -192,16 +159,6 @@
     return new Intl.NumberFormat(undefined, { maximumFractionDigits: 0 }).format(numeric);
   };
 
-  const handleLocationSelect = (location) => {
-    selectedLocation = location;
-  };
-
-  $: displayStat = selectedLocation
-    ? m.home_stat_template()
-        .replace("{year}", "2023")
-        .replace("{location}", selectedLocation.canonical_name || selectedLocation.agency_slug)
-        .replace("{stops}", formatStops(selectedLocation.all_stops_total))
-    : m.home_stat_default();
 </script>
 
 <svelte:head>
@@ -230,9 +187,9 @@
         {m.home_highlights_heading()}
       </h2>
 
-      <div class="grid gap-6 md:grid-cols-2 md:grid-rows-2 md:auto-rows-fr">
+      <div class="flex flex-col gap-6">
         <!-- Box 1: Population vs Stops Comparison -->
-        <div class="rounded-lg border border-slate-200 bg-white p-4 sm:p-6 flex flex-col h-[380px] sm:h-[420px]">
+        <div class="rounded-lg border border-slate-200 bg-white p-4 sm:p-6 flex flex-col">
           <div class="mb-3 sm:mb-4">
             <h3 class="text-lg sm:text-xl font-bold text-slate-900">
               Black drivers were 17% of stops, but only 11% of Missouri's population
@@ -324,14 +281,14 @@
               </div>
             </div>
           {:else}
-            <div class="flex h-48 items-center justify-center">
+            <div class="flex h-[300px] items-center justify-center">
               <span class="text-sm text-slate-400">Loading data...</span>
             </div>
           {/if}
         </div>
 
         <!-- Box 2: Search Rate vs Hit Rate Scatter -->
-        <div class="rounded-lg border border-slate-200 bg-white p-4 sm:p-6 flex flex-col h-[380px] sm:h-[420px]">
+        <div class="rounded-lg border border-slate-200 bg-white p-4 sm:p-6 flex flex-col">
           <div class="mb-3 sm:mb-4">
             <h3 class="text-lg sm:text-xl font-bold text-slate-900">
               Officers searched 4.8% of stopped drivers, but found contraband in only 1 in 5
@@ -341,77 +298,28 @@
             </p>
           </div>
 
-          <div class="flex-1 flex flex-col min-h-0">
-            {#if scatterData && scatterData.length > 0}
-              {@const maxX = Math.max(...scatterData.map(d => d.searchRate), 10)}
-              {@const maxY = Math.max(...scatterData.map(d => d.hitRate), 30)}
-              {@const maxStops = Math.max(...scatterData.map(d => d.stops))}
-              {@const minRadius = 4}
-              {@const maxRadius = 16}
-              {@const padding = { top: 15, right: 15, bottom: 30, left: 40 }}
-              {@const width = 180}
-              {@const height = 150}
-              <svg viewBox="0 0 {width + padding.left + padding.right} {height + padding.top + padding.bottom}" class="w-full h-full flex-1" preserveAspectRatio="xMidYMid meet">
-                <!-- Grid lines -->
-                {#each [0, 25, 50, 75, 100] as tick}
-                  <line
-                    x1={padding.left}
-                    y1={padding.top + (1 - tick/100) * height}
-                    x2={padding.left + width}
-                    y2={padding.top + (1 - tick/100) * height}
-                    stroke="#e2e8f0"
-                    stroke-width="0.5"
-                  />
-                {/each}
-
-                <!-- Y-axis -->
-                <line x1={padding.left} y1={padding.top} x2={padding.left} y2={padding.top + height} stroke="#94a3b8" stroke-width="1" />
-                <!-- X-axis -->
-                <line x1={padding.left} y1={padding.top + height} x2={padding.left + width} y2={padding.top + height} stroke="#94a3b8" stroke-width="1" />
-
-                <!-- Y-axis labels -->
-                <text x={padding.left - 5} y={padding.top + 4} text-anchor="end" font-size="6" fill="#64748b">{maxY.toFixed(0)}%</text>
-                <text x={padding.left - 5} y={padding.top + height/2 + 2} text-anchor="end" font-size="6" fill="#64748b">{(maxY/2).toFixed(0)}%</text>
-                <text x={padding.left - 5} y={padding.top + height + 2} text-anchor="end" font-size="6" fill="#64748b">0%</text>
-
-                <!-- X-axis labels -->
-                <text x={padding.left} y={padding.top + height + 12} text-anchor="middle" font-size="6" fill="#64748b">0%</text>
-                <text x={padding.left + width/2} y={padding.top + height + 12} text-anchor="middle" font-size="6" fill="#64748b">{(maxX/2).toFixed(0)}%</text>
-                <text x={padding.left + width} y={padding.top + height + 12} text-anchor="middle" font-size="6" fill="#64748b">{maxX.toFixed(0)}%</text>
-
-                <!-- Axis titles -->
-                <text x={padding.left + width/2} y={padding.top + height + 26} text-anchor="middle" font-size="7" fill="#475569" font-weight="500">Search Rate</text>
-                <text x={12} y={padding.top + height/2} text-anchor="middle" font-size="7" fill="#475569" font-weight="500" transform="rotate(-90, 12, {padding.top + height/2})">Hit Rate</text>
-
-                <!-- Data points - sized by sqrt of stops -->
-                {#each scatterData as point}
-                  {@const radius = minRadius + (Math.sqrt(point.stops) / Math.sqrt(maxStops)) * (maxRadius - minRadius)}
-                  <circle
-                    cx={padding.left + (point.searchRate / maxX) * width}
-                    cy={padding.top + (1 - point.hitRate / maxY) * height}
-                    r={radius}
-                    fill="rgba(45, 137, 139, 0.4)"
-                    stroke="rgba(45, 137, 139, 0.7)"
-                    stroke-width="0.5"
-                    class="cursor-pointer hover:opacity-70 transition-opacity"
-                    on:mouseenter={(e) => showTooltip(e, `${point.agency}: ${Math.round(point.searchRate)}% search, ${Math.round(point.hitRate)}% hit (${formatStops(point.stops)} stops)`)}
-                    on:mouseleave={hideTooltip}
-                    role="img"
-                    aria-label="{point.agency}"
-                  />
-                {/each}
-              </svg>
-              <p class="text-center text-[10px] text-slate-500 mt-1 shrink-0">{scatterData.length} agencies · bubble size = stops</p>
-            {:else}
-              <div class="flex-1 flex items-center justify-center">
-                <span class="text-sm text-slate-400">Loading scatter data...</span>
-              </div>
-            {/if}
-          </div>
+          <AgencyRateScatter
+            selectedYear={2024}
+            title=""
+            xLabel="Search Rate (%)"
+            yLabel="Hit Rate (%)"
+            xMetricKey="rates-by-race--totals--searches-rate"
+            yMetricKey="rates-by-race--totals--contraband-rate"
+            xColumn="Total"
+            yColumn="Total"
+            xCountKey="rates-by-race--totals--searches"
+            yCountKey="rates-by-race--totals--contraband"
+            xCountColumn="Total"
+            yCountColumn="Total"
+            sizeByStops={true}
+            showMeanLines={true}
+            minStops={100}
+            excludeAboveX={50}
+          />
         </div>
 
         <!-- Box 3: Historical Outcomes - Slope Chart -->
-        <div class="rounded-lg border border-slate-200 bg-white p-4 sm:p-6 flex flex-col h-[380px] sm:h-[420px]">
+        <div class="rounded-lg border border-slate-200 bg-white p-4 sm:p-6 flex flex-col">
           <div class="mb-3 sm:mb-4">
             <h3 class="text-lg sm:text-xl font-bold text-slate-900">
               About half of all traffic stops result in no formal action
@@ -426,11 +334,11 @@
             {@const outcomeLabels = { citations: "Citations", arrests: "Arrests", searches: "Searches", noAction: "No Action" }}
             {@const maxY = Math.ceil(Math.max(...historicalOutcomes.data.flatMap(d => [d.citations, d.arrests, d.searches, d.noAction])) / 10) * 10}
             {@const years = historicalOutcomes.years}
-            {@const padding = { top: 15, right: 15, bottom: 30, left: 40 }}
-            {@const width = 140}
-            {@const height = 100}
-            <div class="flex-1 flex flex-col min-h-0">
-              <svg viewBox="0 0 {width + padding.left + padding.right} {height + padding.top + padding.bottom}" class="w-full flex-1" preserveAspectRatio="xMidYMid meet">
+            {@const padding = { top: 20, right: 20, bottom: 35, left: 45 }}
+            {@const width = 280}
+            {@const height = 180}
+            <div class="flex flex-col">
+              <svg viewBox="0 0 {width + padding.left + padding.right} {height + padding.top + padding.bottom}" class="w-full max-w-lg mx-auto" style="height: 260px;">
                 <!-- Grid lines -->
                 {#each [0, 0.25, 0.5, 0.75, 1] as tick}
                   <line x1={padding.left} y1={padding.top + (1-tick) * height} x2={padding.left + width} y2={padding.top + (1-tick) * height} stroke="#e2e8f0" stroke-width="0.5" />
@@ -441,79 +349,89 @@
                 <line x1={padding.left} y1={padding.top + height} x2={padding.left + width} y2={padding.top + height} stroke="#94a3b8" stroke-width="1" />
 
                 <!-- Y-axis labels (percentages) -->
-                <text x={padding.left - 5} y={padding.top + 4} text-anchor="end" font-size="6" fill="#64748b">{maxY.toFixed(0)}%</text>
-                <text x={padding.left - 5} y={padding.top + height/2 + 2} text-anchor="end" font-size="6" fill="#64748b">{(maxY/2).toFixed(0)}%</text>
-                <text x={padding.left - 5} y={padding.top + height + 2} text-anchor="end" font-size="6" fill="#64748b">0%</text>
+                <text x={padding.left - 8} y={padding.top + 4} text-anchor="end" font-size="9" fill="#64748b">{maxY.toFixed(0)}%</text>
+                <text x={padding.left - 8} y={padding.top + height/2 + 3} text-anchor="end" font-size="9" fill="#64748b">{(maxY/2).toFixed(0)}%</text>
+                <text x={padding.left - 8} y={padding.top + height + 3} text-anchor="end" font-size="9" fill="#64748b">0%</text>
 
                 <!-- X-axis year labels -->
                 {#each years as year, i}
-                  <text x={padding.left + (i / (years.length - 1)) * width} y={padding.top + height + 12} text-anchor="middle" font-size="6" fill="#64748b">{year}</text>
+                  <text x={padding.left + (i / (years.length - 1)) * width} y={padding.top + height + 16} text-anchor="middle" font-size="9" fill="#64748b">{year}</text>
                 {/each}
 
                 <!-- Lines and points for each outcome -->
                 {#each ["citations", "arrests", "searches", "noAction"] as outcome}
-                  <!-- Line -->
+                  <!-- Line - thinner -->
                   <polyline
                     fill="none"
                     stroke={outcomeColors[outcome]}
-                    stroke-width="2"
+                    stroke-width="1.5"
                     points={historicalOutcomes.data.map((d, i) => `${padding.left + (i / (years.length - 1)) * width},${padding.top + (1 - d[outcome] / maxY) * height}`).join(" ")}
                   />
                   <!-- Points with tooltips -->
                   {#each historicalOutcomes.data as d, i}
-                    <circle
-                      cx={padding.left + (i / (years.length - 1)) * width}
-                      cy={padding.top + (1 - d[outcome] / maxY) * height}
-                      r="4"
-                      fill={outcomeColors[outcome]}
-                      class="cursor-pointer hover:opacity-70 transition-opacity"
-                      on:mouseenter={(e) => showTooltip(e, `${outcomeLabels[outcome]}: ${Math.round(d[outcome])}% (${d.year})`)}
+                    <g
+                      class="cursor-pointer"
+                      on:mouseenter={(e) => showTooltip(e, `${outcomeLabels[outcome]}: ${d[outcome].toFixed(1)}% (${d.year})`)}
                       on:mouseleave={hideTooltip}
                       role="img"
                       aria-label="{outcomeLabels[outcome]} {d.year}"
-                    />
+                    >
+                      <circle
+                        cx={padding.left + (i / (years.length - 1)) * width}
+                        cy={padding.top + (1 - d[outcome] / maxY) * height}
+                        r="8"
+                        fill="transparent"
+                      />
+                      <circle
+                        cx={padding.left + (i / (years.length - 1)) * width}
+                        cy={padding.top + (1 - d[outcome] / maxY) * height}
+                        r="3"
+                        fill={outcomeColors[outcome]}
+                        class="pointer-events-none"
+                      />
+                    </g>
                   {/each}
                 {/each}
               </svg>
 
               <!-- Legend -->
-              <div class="flex flex-wrap justify-center gap-3 mt-2 shrink-0">
+              <div class="flex flex-wrap justify-center gap-4 mt-3">
                 {#each ["citations", "arrests", "searches", "noAction"] as outcome}
-                  <span class="flex items-center gap-1">
-                    <span class="w-2.5 h-2.5 rounded-full" style="background-color: {outcomeColors[outcome]}"></span>
-                    <span class="text-[10px] text-slate-600">{outcomeLabels[outcome]}</span>
+                  <span class="flex items-center gap-1.5">
+                    <span class="w-3 h-0.5" style="background-color: {outcomeColors[outcome]}"></span>
+                    <span class="text-xs text-slate-600">{outcomeLabels[outcome]}</span>
                   </span>
                 {/each}
               </div>
             </div>
           {:else}
-            <div class="flex h-48 items-center justify-center">
+            <div class="flex h-[300px] items-center justify-center">
               <span class="text-sm text-slate-400">Loading historical data...</span>
             </div>
           {/if}
         </div>
 
-        <!-- Box 4: Historical Stops by Race - Stacked Column Chart -->
-        <div class="rounded-lg border border-slate-200 bg-white p-4 sm:p-6 flex flex-col h-[380px] sm:h-[420px]">
+        <!-- Box 4: Historical Stops by Race - Line Chart -->
+        <div class="rounded-lg border border-slate-200 bg-white p-4 sm:p-6 flex flex-col">
           <div class="mb-3 sm:mb-4">
             <h3 class="text-lg sm:text-xl font-bold text-slate-900">
               Racial breakdown of stops has stayed stable over time
             </h3>
             <p class="mt-1 sm:mt-2 text-xs sm:text-sm leading-relaxed text-slate-600">
-              Black drivers consistently represent 17% despite being 11% of population.
+              Black drivers consistently represent ~17% of stops despite being 11% of population.
             </p>
           </div>
 
           {#if historicalByRace && historicalByRace.data.length > 0}
             {@const raceColors = { White: "#095771", Black: "#2d898b", Hispanic: "#219255", Other: "#94a3b8" }}
-            {@const raceOrder = ["Other", "Hispanic", "Black", "White"]}
+            {@const raceOrder = ["White", "Black", "Hispanic", "Other"]}
             {@const years = historicalByRace.years}
-            {@const padding = { top: 15, right: 15, bottom: 30, left: 40 }}
-            {@const width = 160}
-            {@const height = 100}
-            {@const barWidth = (width - (years.length - 1) * 8) / years.length}
-            <div class="flex-1 flex flex-col min-h-0">
-              <svg viewBox="0 0 {width + padding.left + padding.right} {height + padding.top + padding.bottom}" class="w-full flex-1" preserveAspectRatio="xMidYMid meet">
+            {@const maxY = Math.ceil(Math.max(...historicalByRace.data.flatMap(d => [d.White, d.Black, d.Hispanic, d.Other])) / 10) * 10}
+            {@const padding = { top: 20, right: 20, bottom: 35, left: 45 }}
+            {@const width = 280}
+            {@const height = 180}
+            <div class="flex flex-col">
+              <svg viewBox="0 0 {width + padding.left + padding.right} {height + padding.top + padding.bottom}" class="w-full max-w-lg mx-auto" style="height: 260px;">
                 <!-- Grid lines -->
                 {#each [0, 0.25, 0.5, 0.75, 1] as tick}
                   <line x1={padding.left} y1={padding.top + (1-tick) * height} x2={padding.left + width} y2={padding.top + (1-tick) * height} stroke="#e2e8f0" stroke-width="0.5" />
@@ -524,48 +442,63 @@
                 <line x1={padding.left} y1={padding.top + height} x2={padding.left + width} y2={padding.top + height} stroke="#94a3b8" stroke-width="1" />
 
                 <!-- Y-axis labels (percentages) -->
-                <text x={padding.left - 5} y={padding.top + 4} text-anchor="end" font-size="6" fill="#64748b">100%</text>
-                <text x={padding.left - 5} y={padding.top + height/2 + 2} text-anchor="end" font-size="6" fill="#64748b">50%</text>
-                <text x={padding.left - 5} y={padding.top + height + 2} text-anchor="end" font-size="6" fill="#64748b">0%</text>
+                <text x={padding.left - 8} y={padding.top + 4} text-anchor="end" font-size="9" fill="#64748b">{maxY.toFixed(0)}%</text>
+                <text x={padding.left - 8} y={padding.top + height/2 + 3} text-anchor="end" font-size="9" fill="#64748b">{(maxY/2).toFixed(0)}%</text>
+                <text x={padding.left - 8} y={padding.top + height + 3} text-anchor="end" font-size="9" fill="#64748b">0%</text>
 
-                <!-- Stacked bars for each year -->
-                {#each historicalByRace.data as d, i}
-                  {@const barX = padding.left + i * (barWidth + 8)}
-                  {@const segments = []}
-                  {#each raceOrder as race, raceIdx}
-                    {@const prevTotal = raceOrder.slice(0, raceIdx).reduce((sum, r) => sum + (d[r] || 0), 0)}
-                    {@const segmentHeight = (d[race] / 100) * height}
-                    {@const segmentY = padding.top + height - ((prevTotal + d[race]) / 100) * height}
-                    <rect
-                      x={barX}
-                      y={segmentY}
-                      width={barWidth}
-                      height={segmentHeight}
-                      fill={raceColors[race]}
-                      class="cursor-pointer hover:opacity-70 transition-opacity"
-                      on:mouseenter={(e) => showTooltip(e, `${race}: ${Math.round(d[race])}% (${d.year})`)}
+                <!-- X-axis year labels -->
+                {#each years as year, i}
+                  <text x={padding.left + (i / (years.length - 1)) * width} y={padding.top + height + 16} text-anchor="middle" font-size="9" fill="#64748b">{year}</text>
+                {/each}
+
+                <!-- Lines and points for each race -->
+                {#each raceOrder as race}
+                  <!-- Line -->
+                  <polyline
+                    fill="none"
+                    stroke={raceColors[race]}
+                    stroke-width="1.5"
+                    points={historicalByRace.data.map((d, i) => `${padding.left + (i / (years.length - 1)) * width},${padding.top + (1 - d[race] / maxY) * height}`).join(" ")}
+                  />
+                  <!-- Points with tooltips -->
+                  {#each historicalByRace.data as d, i}
+                    <g
+                      class="cursor-pointer"
+                      on:mouseenter={(e) => showTooltip(e, `${race}: ${d[race].toFixed(1)}% (${d.year})`)}
                       on:mouseleave={hideTooltip}
                       role="img"
                       aria-label="{race} {d.year}"
-                    />
+                    >
+                      <circle
+                        cx={padding.left + (i / (years.length - 1)) * width}
+                        cy={padding.top + (1 - d[race] / maxY) * height}
+                        r="8"
+                        fill="transparent"
+                      />
+                      <circle
+                        cx={padding.left + (i / (years.length - 1)) * width}
+                        cy={padding.top + (1 - d[race] / maxY) * height}
+                        r="3"
+                        fill={raceColors[race]}
+                        class="pointer-events-none"
+                      />
+                    </g>
                   {/each}
-                  <!-- Year label -->
-                  <text x={barX + barWidth/2} y={padding.top + height + 12} text-anchor="middle" font-size="6" fill="#64748b">{d.year}</text>
                 {/each}
               </svg>
 
               <!-- Legend -->
-              <div class="flex flex-wrap justify-center gap-3 mt-2 shrink-0">
-                {#each ["White", "Black", "Hispanic", "Other"] as race}
-                  <span class="flex items-center gap-1">
-                    <span class="w-2.5 h-2.5 rounded-sm" style="background-color: {raceColors[race]}"></span>
-                    <span class="text-[10px] text-slate-600">{race}</span>
+              <div class="flex flex-wrap justify-center gap-4 mt-3">
+                {#each raceOrder as race}
+                  <span class="flex items-center gap-1.5">
+                    <span class="w-3 h-0.5" style="background-color: {raceColors[race]}"></span>
+                    <span class="text-xs text-slate-600">{race}</span>
                   </span>
                 {/each}
               </div>
             </div>
           {:else}
-            <div class="flex h-48 items-center justify-center">
+            <div class="flex h-[300px] items-center justify-center">
               <span class="text-sm text-slate-400">Loading historical data...</span>
             </div>
           {/if}
