@@ -635,7 +635,7 @@
   <!-- About the Data -->
   <section id="about" class="border-t border-slate-200 bg-slate-50 py-12">
     <div class="mx-auto max-w-4xl px-6">
-      <div class="prose prose-slate max-w-none prose-headings:text-slate-900 prose-h1:text-3xl prose-h1:font-bold prose-h2:text-xl prose-h2:font-semibold prose-h2:mt-8 prose-p:text-slate-700 prose-p:leading-relaxed prose-ul:text-slate-700 prose-li:text-slate-700">
+      <div class="content">
         {@html data.aboutDataHtml}
       </div>
 
