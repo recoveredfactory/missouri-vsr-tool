@@ -50,3 +50,5 @@ These live in `packages/web/messages/en.json` and `packages/web/messages/es.json
 - `agency_year_select`: agency page year selector click (payload: `year`, `source`, `agency`).
 - `metric_search`: agency page metric search, debounced (payload: `term`, `year`, `agency`).
 - `metric_open`: agency page metric click (payload: `metricKey`, `label`, `year`, `agency`).
+- `agency_neighbors_expand`: neighboring agencies panel expanded (payload: `agency`, `touchingCount`, `containedCount`).
+- `agency_neighbors_collapse`: neighboring agencies panel collapsed (payload: `agency`, `touchingCount`, `containedCount`).
