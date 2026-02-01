@@ -90,13 +90,11 @@
   const toggleNeighbors = () => {
     const next = !neighborsExpanded;
     neighborsExpanded = next;
-    if (next) {
-      trackEvent("agency_neighbors_expand", {
-        agency: agencyData?.agency ?? data.slug,
-        touchingCount: touchingAgencies.length,
-        containedCount: containedAgencies.length,
-      });
-    }
+    trackEvent(next ? "agency_neighbors_expand" : "agency_neighbors_collapse", {
+      agency: agencyData?.agency ?? data.slug,
+      touchingCount: touchingAgencies.length,
+      containedCount: containedAgencies.length,
+    });
   };
 
   $: agencyData = data.data;
