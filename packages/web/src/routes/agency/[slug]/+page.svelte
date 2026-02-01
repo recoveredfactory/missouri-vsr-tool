@@ -78,6 +78,13 @@
   let agencyCount = 0;
   let locale = "en";
   let basemapStyleUrl = "/map/style.en.json";
+  let metricSearchTimeout;
+  let lastTrackedMetricSearch = "";
+
+  const trackEvent = (event, payload = {}) => {
+    if (typeof window === "undefined") return;
+    window.umami?.track?.(event, payload);
+  };
 
   $: agencyData = data.data;
   $: baselines = Array.isArray(data.baselines) ? data.baselines : [];
@@ -205,7 +212,7 @@
       accessor: (row) => ({
         value: row.metric,
         metricKey: row.metricKey,
-        onOpen: openMetric,
+        onOpen: handleMetricOpen,
       }),
       renderComponent: GridMetricCell,
     },
@@ -217,7 +224,7 @@
       accessor: (row) => ({
         ...row[label],
         metricKey: row.metricKey,
-        onOpen: openMetric,
+        onOpen: handleMetricOpen,
       }),
       renderComponent: GridValueCell,
     })),
@@ -910,8 +917,57 @@
     }
   };
 
-  const selectYear = (year) => {
+  const selectYear = (year, source = "unknown") => {
     selectedYear = year;
+    trackEvent("agency_year_select", {
+      year,
+      source,
+      agency: agencyData?.agency ?? data.slug,
+    });
+  };
+
+  const handleMetricOpen = (metricKey) => {
+    if (!metricKey) return;
+    flushMetricSearch();
+    trackEvent("metric_open", {
+      metricKey,
+      label: metricLabelForKey(metricKey),
+      year: selectedYear,
+      agency: agencyData?.agency ?? data.slug,
+    });
+    openMetric(metricKey);
+  };
+
+  const scheduleMetricSearch = (value) => {
+    const term = value.trim();
+    if (!term) {
+      lastTrackedMetricSearch = "";
+      if (metricSearchTimeout) clearTimeout(metricSearchTimeout);
+      return;
+    }
+    if (term === lastTrackedMetricSearch) return;
+    if (metricSearchTimeout) clearTimeout(metricSearchTimeout);
+    metricSearchTimeout = setTimeout(() => {
+      if (term !== metricSearch.trim()) return;
+      lastTrackedMetricSearch = term;
+      trackEvent("metric_search", {
+        term,
+        year: selectedYear,
+        agency: agencyData?.agency ?? data.slug,
+      });
+    }, 1000);
+  };
+
+  const flushMetricSearch = () => {
+    const term = metricSearch.trim();
+    if (!term || term === lastTrackedMetricSearch) return;
+    if (metricSearchTimeout) clearTimeout(metricSearchTimeout);
+    lastTrackedMetricSearch = term;
+    trackEvent("metric_search", {
+      term,
+      year: selectedYear,
+      agency: agencyData?.agency ?? data.slug,
+    });
   };
 
 
@@ -1198,7 +1254,7 @@
                           ? "border-slate-900 bg-slate-900 text-white"
                           : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:text-slate-900"
                       }`}
-                      on:click={() => selectYear(year)}
+                      on:click={() => selectYear(year, "top")}
                     >
                       {year}
                     </button>
@@ -1288,7 +1344,7 @@
                           ? "border-slate-900 bg-slate-900 text-white"
                           : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:text-slate-900"
                       }`}
-                      on:click={() => selectYear(year)}
+                      on:click={() => selectYear(year, "bottom")}
                     >
                       {year}
                     </button>
@@ -1302,6 +1358,8 @@
                   placeholder={m?.agency_metric_search_placeholder?.() ?? "Search metrics"}
                   aria-label={m?.agency_metric_search_label?.() ?? "Search metrics"}
                   bind:value={metricSearch}
+                  on:input={(event) => scheduleMetricSearch(event.currentTarget.value)}
+                  on:blur={flushMetricSearch}
                 />
               </div>
             </div>

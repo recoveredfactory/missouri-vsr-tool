@@ -3,8 +3,14 @@ import { defineConfig } from "vite";
 import { paraglideVitePlugin } from "@inlang/paraglide-js";
 import tailwindcss from "@tailwindcss/postcss";
 import autoprefixer from "autoprefixer";
+import { fileURLToPath } from "node:url";
+import { dirname, resolve } from "node:path";
+
+const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..", "..");
 
 export default defineConfig({
+  envDir: repoRoot,
+  envPrefix: ["VITE_", "PUBLIC_"],
   plugins: [
     sveltekit(), 
     paraglideVitePlugin({

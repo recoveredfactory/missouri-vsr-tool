@@ -11,6 +11,8 @@
   let selectedIndex = -1;
   let previousQuery = "";
   let mobileMenuOpen = false;
+  let searchTermTimeout;
+  let lastTrackedSearchTerm = "";
 
   let currentLocale = getLocale();
 
@@ -67,11 +69,56 @@
     query = "";
     results = [];
     selectedIndex = -1;
+    if (searchTermTimeout) clearTimeout(searchTermTimeout);
+    lastTrackedSearchTerm = "";
+  };
+
+  const trackEvent = (event, payload = {}) => {
+    if (typeof window === "undefined") return;
+    window.umami?.track?.(event, payload);
+  };
+
+  const scheduleSearchTerm = () => {
+    const term = query.trim();
+    if (!term) {
+      lastTrackedSearchTerm = "";
+      if (searchTermTimeout) clearTimeout(searchTermTimeout);
+      return;
+    }
+    if (term === lastTrackedSearchTerm) return;
+    if (searchTermTimeout) clearTimeout(searchTermTimeout);
+    searchTermTimeout = setTimeout(() => {
+      if (term !== query.trim()) return;
+      lastTrackedSearchTerm = term;
+      trackEvent("search_term", { term });
+    }, 1000);
+  };
+
+  const flushSearchTerm = () => {
+    const term = query.trim();
+    if (!term || term === lastTrackedSearchTerm) return;
+    if (searchTermTimeout) clearTimeout(searchTermTimeout);
+    lastTrackedSearchTerm = term;
+    trackEvent("search_term", { term });
+  };
+
+  const trackSearch = (action, item, method) => {
+    const term = query.trim();
+    if (!term) return;
+    const slug = item ? toSlug(item) : null;
+    trackEvent("search_action", {
+      action,
+      method,
+      term,
+      slug: slug ?? null,
+    });
   };
 
   const handleSelect = (item) => {
     const slug = toSlug(item);
     if (!slug) return;
+    flushSearchTerm();
+    trackSearch("select", item, "enter");
     resetSearch();
     goto(`/agency/${slug}`).catch(() => {
       window.location.href = `/agency/${slug}`;
@@ -79,8 +126,14 @@
   };
 
   const handleKeydown = (event) => {
-    if (!results.length) return;
+    if (event.key === "Escape") {
+      flushSearchTerm();
+      trackSearch("bail", null, "escape");
+      resetSearch();
+      return;
+    }
 
+    if (!results.length) return;
     if (event.key === "ArrowDown") {
       event.preventDefault();
       selectedIndex = (selectedIndex + 1) % results.length;
@@ -100,14 +153,26 @@
       return;
     }
 
-    if (event.key === "Escape") {
-      resetSearch();
+  };
+
+  const handleResultClick = (event, item) => {
+    const slug = toSlug(item);
+    if (!slug) {
+      event.preventDefault();
+      return;
     }
+    flushSearchTerm();
+    trackSearch("select", item, "click");
+    resetSearch();
   };
 
   const handleLocaleChange = (event) => {
     const nextLocale = event?.currentTarget?.value;
     if (!nextLocale || nextLocale === currentLocale) return;
+    trackEvent("language_switch", {
+      from: currentLocale,
+      to: nextLocale,
+    });
     setLocale(nextLocale);
   };
 </script>
@@ -124,6 +189,7 @@
           type="search"
           placeholder={m.search_placeholder()}
           bind:value={query}
+          on:input={scheduleSearchTerm}
           on:keydown={handleKeydown}
           aria-label={m.search_aria_label()}
           autocomplete="off"
@@ -138,7 +204,7 @@
               <li role="option">
                 <a
                   {href}
-                  on:click={slug ? resetSearch : undefined}
+                  on:click={(event) => handleResultClick(event, result.item)}
                   aria-disabled={!slug}
                   class="flex flex-col gap-1 px-4 py-2 text-sm text-slate-900 no-underline hover:bg-[#2c9166]/10 {index === selectedIndex ? 'bg-[#2c9166]/10' : ''}"
                 >

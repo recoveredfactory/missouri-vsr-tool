@@ -13,6 +13,11 @@
   // Tooltip state
   let tooltip = { show: false, x: 0, y: 0, content: "" };
 
+  const trackEvent = (event, payload = {}) => {
+    if (typeof window === "undefined") return;
+    window.umami?.track?.(event, payload);
+  };
+
   function showTooltip(event, content) {
     const el = event.currentTarget || event.target;
     const rect = el.getBoundingClientRect();
@@ -26,6 +31,13 @@
 
   function hideTooltip() {
     tooltip = { ...tooltip, show: false };
+  }
+
+  function handleDownloadClick(label, href) {
+    trackEvent("download_click", {
+      label,
+      href,
+    });
   }
 
   onMount(async () => {
@@ -528,6 +540,7 @@
           <a
             href="/data/dist/agency_index.json"
             download
+            on:click={() => handleDownloadClick("agency_index_json", "/data/dist/agency_index.json")}
             class="inline-block rounded-lg bg-[#2c9166] px-6 py-3 font-semibold text-white no-underline transition-colors hover:bg-[#216d4d]"
           >
             Download JSON
@@ -544,6 +557,7 @@
           <a
             href="/data/dist/agency_index.json"
             download
+            on:click={() => handleDownloadClick("full_dataset", "/data/dist/agency_index.json")}
             class="inline-block rounded-lg border-2 border-[#2c9166] bg-white px-6 py-3 font-semibold text-[#2c9166] no-underline transition-colors hover:bg-green-50"
           >
             Coming soon
