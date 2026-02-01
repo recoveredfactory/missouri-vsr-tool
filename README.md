@@ -40,3 +40,12 @@ These live in `packages/web/messages/en.json` and `packages/web/messages/es.json
 ## Deployment env
 
 - Set the deployed analytics ID with `sst secret set PUBLIC_UMAMI_WEBSITE_ID <value>`.
+
+## Analytics events
+
+- `search_action`: search box usage on home/agency header (payload: `action`, `method`, `term`, `slug`).
+- `language_switch`: locale selector change (payload: `from`, `to`).
+- `download_click`: homepage dataset download CTA (payload: `label`, `href`).
+- `agency_year_select`: agency page year selector click (payload: `year`, `source`, `agency`).
+- `metric_search`: agency page metric search (payload: `term`, `year`, `agency`).
+- `metric_open`: agency page metric click (payload: `metricKey`, `label`, `year`, `agency`).
