@@ -80,10 +80,23 @@
   let basemapStyleUrl = "/map/style.en.json";
   let metricSearchTimeout;
   let lastTrackedMetricSearch = "";
+  let neighborsExpanded = false;
 
   const trackEvent = (event, payload = {}) => {
     if (typeof window === "undefined") return;
     window.umami?.track?.(event, payload);
+  };
+
+  const toggleNeighbors = () => {
+    const next = !neighborsExpanded;
+    neighborsExpanded = next;
+    if (next) {
+      trackEvent("agency_neighbors_expand", {
+        agency: agencyData?.agency ?? data.slug,
+        touchingCount: touchingAgencies.length,
+        containedCount: containedAgencies.length,
+      });
+    }
   };
 
   $: agencyData = data.data;
@@ -1188,39 +1201,55 @@
 
   {#if touchingAgencies.length || containedAgencies.length}
     <section class="mb-10">
-      <h2 class="mb-4 text-xl font-semibold text-slate-900">
-        {m?.agency_neighbors_heading?.() ?? "Neighboring agencies"}
-      </h2>
-      <div class="space-y-4 rounded-2xl border border-slate-200 bg-white p-4">
-        {#if touchingAgencies.length}
-          <div>
-            <h3 class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">
-              {m?.agency_neighbors_touching_label?.() ?? "Touching agencies"}
-            </h3>
-            <div class="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-sm text-slate-700">
-              {#each touchingAgencies as neighbor}
-                <a class="underline" href={`/agency/${neighbor.slug}`}>
-                  {neighbor.label}
-                </a>
-              {/each}
-            </div>
-          </div>
-        {/if}
-        {#if containedAgencies.length}
-          <div>
-            <h3 class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">
-              {m?.agency_neighbors_contained_label?.() ?? "Contained agencies"}
-            </h3>
-            <div class="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-sm text-slate-700">
-              {#each containedAgencies as neighbor}
-                <a class="underline" href={`/agency/${neighbor.slug}`}>
-                  {neighbor.label}
-                </a>
-              {/each}
-            </div>
-          </div>
-        {/if}
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <h2 class="text-xl font-semibold text-slate-900">
+          {m?.agency_neighbors_heading?.() ?? "Neighboring agencies"}
+        </h2>
+        <button
+          type="button"
+          class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-slate-600 transition hover:border-slate-300 hover:text-slate-900"
+          aria-expanded={neighborsExpanded}
+          on:click={toggleNeighbors}
+        >
+          {#if neighborsExpanded}
+            {m?.agency_neighbors_collapse_label?.() ?? "Hide"}
+          {:else}
+            {m?.agency_neighbors_expand_label?.() ?? "Show"}
+          {/if}
+        </button>
       </div>
+      {#if neighborsExpanded}
+        <div class="mt-4 space-y-4 rounded-2xl border border-slate-200 bg-white p-4">
+          {#if touchingAgencies.length}
+            <div>
+              <h3 class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">
+                {m?.agency_neighbors_touching_label?.() ?? "Touching agencies"}
+              </h3>
+              <div class="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-sm text-slate-700">
+                {#each touchingAgencies as neighbor}
+                  <a class="underline" href={`/agency/${neighbor.slug}`}>
+                    {neighbor.label}
+                  </a>
+                {/each}
+              </div>
+            </div>
+          {/if}
+          {#if containedAgencies.length}
+            <div>
+              <h3 class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">
+                {m?.agency_neighbors_contained_label?.() ?? "Contained agencies"}
+              </h3>
+              <div class="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-sm text-slate-700">
+                {#each containedAgencies as neighbor}
+                  <a class="underline" href={`/agency/${neighbor.slug}`}>
+                    {neighbor.label}
+                  </a>
+                {/each}
+              </div>
+            </div>
+          {/if}
+        </div>
+      {/if}
     </section>
   {/if}
 
