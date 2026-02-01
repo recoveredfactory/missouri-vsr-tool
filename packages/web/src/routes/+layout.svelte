@@ -3,7 +3,7 @@
 
   export let data;
 
-  const fallbackUmamiWebsiteId = import.meta.env.UMAMI_WEBSITE_ID ?? null;
+  const fallbackUmamiWebsiteId = import.meta.env.PUBLIC_UMAMI_WEBSITE_ID ?? null;
   $: umamiWebsiteId = data?.umamiWebsiteId ?? fallbackUmamiWebsiteId;
 </script>
 

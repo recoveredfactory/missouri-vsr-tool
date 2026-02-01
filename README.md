@@ -9,6 +9,7 @@ Monorepo for the Missouri VSR (Vehicle Stops Report) site. The web app lives in
 - `pnpm dev` runs the SST dev server.
 - `pnpm -F web dev` runs the SvelteKit Vite server directly.
 - Create `.env` from `.env.example` to set the S3 bucket + prefix used by data sync.
+- For analytics, set `PUBLIC_UMAMI_WEBSITE_ID` in the repo-root `.env` for local dev.
 - `pnpm sync:data` pulls the latest data from S3 into `packages/web/static/data`.
 
 ## Data Notes
@@ -35,3 +36,7 @@ For report labels, translation keys are derived from IDs:
 - `metric_<metric_id>`
 
 These live in `packages/web/messages/en.json` and `packages/web/messages/es.json`.
+
+## Deployment env
+
+- Set the deployed analytics ID with `sst secret set PUBLIC_UMAMI_WEBSITE_ID <value>`.

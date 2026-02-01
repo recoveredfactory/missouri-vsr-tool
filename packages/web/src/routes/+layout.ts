@@ -1,6 +1,6 @@
 export async function load({ fetch }) {
   const response = await fetch("/data/dist/agency_index.json");
-  const umamiWebsiteId = import.meta.env.UMAMI_WEBSITE_ID ?? null;
+  const umamiWebsiteId = import.meta.env.PUBLIC_UMAMI_WEBSITE_ID ?? null;
 
   if (!response.ok) {
     return {
