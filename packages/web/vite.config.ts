@@ -10,6 +10,7 @@ const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..", "..");
 
 export default defineConfig({
   envDir: repoRoot,
+  envPrefix: ["VITE_", "PUBLIC_", "UMAMI_"],
   plugins: [
     sveltekit(), 
     paraglideVitePlugin({

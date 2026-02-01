@@ -2,14 +2,17 @@
   import "../app.css";
 
   export let data;
+
+  const fallbackUmamiWebsiteId = import.meta.env.UMAMI_WEBSITE_ID ?? null;
+  $: umamiWebsiteId = data?.umamiWebsiteId ?? fallbackUmamiWebsiteId;
 </script>
 
 <svelte:head>
-  {#if data?.umamiWebsiteId}
+  {#if umamiWebsiteId}
     <script
       defer
       src="https://cloud.umami.is/script.js"
-      data-website-id={data.umamiWebsiteId}
+      data-website-id={umamiWebsiteId}
     ></script>
   {/if}
 </svelte:head>
