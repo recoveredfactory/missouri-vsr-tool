@@ -11,6 +11,8 @@
   let selectedIndex = -1;
   let previousQuery = "";
   let mobileMenuOpen = false;
+  let searchTermTimeout;
+  let lastTrackedSearchTerm = "";
 
   let currentLocale = getLocale();
 
@@ -67,11 +69,37 @@
     query = "";
     results = [];
     selectedIndex = -1;
+    if (searchTermTimeout) clearTimeout(searchTermTimeout);
+    lastTrackedSearchTerm = "";
   };
 
   const trackEvent = (event, payload = {}) => {
     if (typeof window === "undefined") return;
     window.umami?.track?.(event, payload);
+  };
+
+  const scheduleSearchTerm = () => {
+    const term = query.trim();
+    if (!term) {
+      lastTrackedSearchTerm = "";
+      if (searchTermTimeout) clearTimeout(searchTermTimeout);
+      return;
+    }
+    if (term === lastTrackedSearchTerm) return;
+    if (searchTermTimeout) clearTimeout(searchTermTimeout);
+    searchTermTimeout = setTimeout(() => {
+      if (term !== query.trim()) return;
+      lastTrackedSearchTerm = term;
+      trackEvent("search_term", { term });
+    }, 1000);
+  };
+
+  const flushSearchTerm = () => {
+    const term = query.trim();
+    if (!term || term === lastTrackedSearchTerm) return;
+    if (searchTermTimeout) clearTimeout(searchTermTimeout);
+    lastTrackedSearchTerm = term;
+    trackEvent("search_term", { term });
   };
 
   const trackSearch = (action, item, method) => {
@@ -89,6 +117,7 @@
   const handleSelect = (item) => {
     const slug = toSlug(item);
     if (!slug) return;
+    flushSearchTerm();
     trackSearch("select", item, "enter");
     resetSearch();
     goto(`/agency/${slug}`).catch(() => {
@@ -98,6 +127,7 @@
 
   const handleKeydown = (event) => {
     if (event.key === "Escape") {
+      flushSearchTerm();
       trackSearch("bail", null, "escape");
       resetSearch();
       return;
@@ -131,6 +161,7 @@
       event.preventDefault();
       return;
     }
+    flushSearchTerm();
     trackSearch("select", item, "click");
     resetSearch();
   };
@@ -158,6 +189,7 @@
           type="search"
           placeholder={m.search_placeholder()}
           bind:value={query}
+          on:input={scheduleSearchTerm}
           on:keydown={handleKeydown}
           aria-label={m.search_aria_label()}
           autocomplete="off"

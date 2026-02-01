@@ -928,6 +928,7 @@
 
   const handleMetricOpen = (metricKey) => {
     if (!metricKey) return;
+    flushMetricSearch();
     trackEvent("metric_open", {
       metricKey,
       label: metricLabelForKey(metricKey),
@@ -937,19 +938,36 @@
     openMetric(metricKey);
   };
 
-  const handleMetricSearchInput = (event) => {
-    if (!event?.currentTarget) return;
-    const term = event.currentTarget.value.trim();
-    if (!term || term === lastTrackedMetricSearch) return;
+  const scheduleMetricSearch = (value) => {
+    const term = value.trim();
+    if (!term) {
+      lastTrackedMetricSearch = "";
+      if (metricSearchTimeout) clearTimeout(metricSearchTimeout);
+      return;
+    }
+    if (term === lastTrackedMetricSearch) return;
     if (metricSearchTimeout) clearTimeout(metricSearchTimeout);
     metricSearchTimeout = setTimeout(() => {
+      if (term !== metricSearch.trim()) return;
       lastTrackedMetricSearch = term;
       trackEvent("metric_search", {
         term,
         year: selectedYear,
         agency: agencyData?.agency ?? data.slug,
       });
-    }, 400);
+    }, 1000);
+  };
+
+  const flushMetricSearch = () => {
+    const term = metricSearch.trim();
+    if (!term || term === lastTrackedMetricSearch) return;
+    if (metricSearchTimeout) clearTimeout(metricSearchTimeout);
+    lastTrackedMetricSearch = term;
+    trackEvent("metric_search", {
+      term,
+      year: selectedYear,
+      agency: agencyData?.agency ?? data.slug,
+    });
   };
 
 
@@ -1340,7 +1358,8 @@
                   placeholder={m?.agency_metric_search_placeholder?.() ?? "Search metrics"}
                   aria-label={m?.agency_metric_search_label?.() ?? "Search metrics"}
                   bind:value={metricSearch}
-                  on:input={handleMetricSearchInput}
+                  on:input={(event) => scheduleMetricSearch(event.currentTarget.value)}
+                  on:blur={flushMetricSearch}
                 />
               </div>
             </div>

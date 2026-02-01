@@ -44,8 +44,9 @@ These live in `packages/web/messages/en.json` and `packages/web/messages/es.json
 ## Analytics events
 
 - `search_action`: search box usage on home/agency header (payload: `action`, `method`, `term`, `slug`).
+- `search_term`: header search debounced term (payload: `term`).
 - `language_switch`: locale selector change (payload: `from`, `to`).
 - `download_click`: homepage dataset download CTA (payload: `label`, `href`).
 - `agency_year_select`: agency page year selector click (payload: `year`, `source`, `agency`).
-- `metric_search`: agency page metric search (payload: `term`, `year`, `agency`).
+- `metric_search`: agency page metric search, debounced (payload: `term`, `year`, `agency`).
 - `metric_open`: agency page metric click (payload: `metricKey`, `label`, `year`, `agency`).
