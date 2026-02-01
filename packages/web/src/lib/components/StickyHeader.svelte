@@ -69,9 +69,27 @@
     selectedIndex = -1;
   };
 
+  const trackEvent = (event, payload = {}) => {
+    if (typeof window === "undefined") return;
+    window.umami?.track?.(event, payload);
+  };
+
+  const trackSearch = (action, item, method) => {
+    const term = query.trim();
+    if (!term) return;
+    const slug = item ? toSlug(item) : null;
+    trackEvent("search_action", {
+      action,
+      method,
+      term,
+      slug: slug ?? null,
+    });
+  };
+
   const handleSelect = (item) => {
     const slug = toSlug(item);
     if (!slug) return;
+    trackSearch("select", item, "enter");
     resetSearch();
     goto(`/agency/${slug}`).catch(() => {
       window.location.href = `/agency/${slug}`;
@@ -79,8 +97,13 @@
   };
 
   const handleKeydown = (event) => {
-    if (!results.length) return;
+    if (event.key === "Escape") {
+      trackSearch("bail", null, "escape");
+      resetSearch();
+      return;
+    }
 
+    if (!results.length) return;
     if (event.key === "ArrowDown") {
       event.preventDefault();
       selectedIndex = (selectedIndex + 1) % results.length;
@@ -100,14 +123,25 @@
       return;
     }
 
-    if (event.key === "Escape") {
-      resetSearch();
+  };
+
+  const handleResultClick = (event, item) => {
+    const slug = toSlug(item);
+    if (!slug) {
+      event.preventDefault();
+      return;
     }
+    trackSearch("select", item, "click");
+    resetSearch();
   };
 
   const handleLocaleChange = (event) => {
     const nextLocale = event?.currentTarget?.value;
     if (!nextLocale || nextLocale === currentLocale) return;
+    trackEvent("language_switch", {
+      from: currentLocale,
+      to: nextLocale,
+    });
     setLocale(nextLocale);
   };
 </script>
@@ -138,7 +172,7 @@
               <li role="option">
                 <a
                   {href}
-                  on:click={slug ? resetSearch : undefined}
+                  on:click={(event) => handleResultClick(event, result.item)}
                   aria-disabled={!slug}
                   class="flex flex-col gap-1 px-4 py-2 text-sm text-slate-900 no-underline hover:bg-[#2c9166]/10 {index === selectedIndex ? 'bg-[#2c9166]/10' : ''}"
                 >
