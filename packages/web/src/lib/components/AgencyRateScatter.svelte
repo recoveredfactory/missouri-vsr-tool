@@ -753,16 +753,19 @@
               />
               <circle
                 cx={legendMaxRadiusPx}
-                cy={legendMaxRadiusPx}
+                cy={legendMaxDotSizePx - legendMinRadiusPx}
                 r={legendMinRadiusPx}
                 fill="transparent"
                 stroke="rgb(148 163 184 / 0.8)"
                 stroke-width="1"
               />
             </svg>
-            <div>
-              {formatStops(legendMaxStops)} {legendStopsDescriptor} ·{" "}
-              {formatStops(legendMinStops)} {legendStopsDescriptor}
+            <div
+              class="flex flex-col justify-between leading-tight"
+              style={`height: ${legendMaxDotSizePx}px;`}
+            >
+              <div>{formatStops(legendMaxStops)} {legendStopsDescriptor}</div>
+              <div>{formatStops(legendMinStops)} {legendStopsDescriptor}</div>
             </div>
           </div>
         </div>
