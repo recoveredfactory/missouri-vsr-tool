@@ -49,6 +49,10 @@
     style: "percent",
     maximumFractionDigits: 1,
   });
+  const formatPercentTick = (value) =>
+    value === null || value === undefined || Number.isNaN(value)
+      ? "—"
+      : `${numberFormatter.format(value)}%`;
 
   let agencyData;
   let metadata;
@@ -1359,6 +1363,8 @@
                       xMetricKey="rates-by-race--totals--citations-rate"
                       yMetricKey="rates-by-race--totals--arrests-rate"
                       excludeAgencies={scatterExcludedAgencies}
+                      formatXAxisTick={formatPercentTick}
+                      formatYAxisTick={formatPercentTick}
                       xCountKey="rates-by-race--totals--citations"
                       yCountKey="rates-by-race--totals--arrests"
                       xCountLabel={m?.agency_scatter_citations_label?.() ?? "Citations"}
@@ -1404,6 +1410,8 @@
                       xColumn="Non-white"
                       yColumn="Non-white"
                       excludeAgencies={scatterExcludedAgencies}
+                      formatXAxisTick={formatPercentTick}
+                      formatYAxisTick={formatPercentTick}
                       xCountKey="rates-by-race--totals--citations"
                       yCountKey="rates-by-race--totals--arrests"
                       xCountColumn="Non-white"
@@ -1459,6 +1467,8 @@
                       xColumn="White"
                       yColumn="White"
                       excludeAgencies={scatterExcludedAgencies}
+                      formatXAxisTick={formatPercentTick}
+                      formatYAxisTick={formatPercentTick}
                       xCountKey="rates-by-race--totals--citations"
                       yCountKey="rates-by-race--totals--arrests"
                       xCountColumn="White"
@@ -1501,6 +1511,8 @@
                       yLabel={m?.agency_scatter_hit_rate_label?.() ?? "Hit rate"}
                       xMetricKey="rates-by-race--totals--searches-rate"
                       yMetricKey="rates-by-race--totals--contraband-hit-rate"
+                      formatXAxisTick={formatPercentTick}
+                      formatYAxisTick={formatPercentTick}
                       xCountKey="rates-by-race--totals--searches"
                       yCountKey="rates-by-race--totals--contraband"
                       xCountLabel={m?.agency_scatter_searches_label?.() ?? "Searches"}
@@ -1544,6 +1556,8 @@
                       yMetricKey="rates-by-race--totals--contraband-hit-rate"
                       xColumn="Non-white"
                       yColumn="Non-white"
+                      formatXAxisTick={formatPercentTick}
+                      formatYAxisTick={formatPercentTick}
                       xCountKey="rates-by-race--totals--searches"
                       yCountKey="rates-by-race--totals--contraband"
                       xCountColumn="Non-white"
@@ -1591,6 +1605,8 @@
                       yMetricKey="rates-by-race--totals--contraband-hit-rate"
                       xColumn="White"
                       yColumn="White"
+                      formatXAxisTick={formatPercentTick}
+                      formatYAxisTick={formatPercentTick}
                       xCountKey="rates-by-race--totals--searches"
                       yCountKey="rates-by-race--totals--contraband"
                       xCountColumn="White"

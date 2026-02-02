@@ -93,6 +93,10 @@
   export let dotRadiusScale = 1;
   export let xScaleType: AxisScaleType = "linear";
   export let yScaleType: AxisScaleType = "linear";
+  export let formatXAxisTick: (value: number | null | undefined) => string = (value) =>
+    formatValue(value);
+  export let formatYAxisTick: (value: number | null | undefined) => string = (value) =>
+    formatValue(value);
   export let note = "";
   export let domainGroup: string | null = null;
   export let showMeanLines = false;
@@ -651,6 +655,8 @@
           formatValue={formatValue}
           formatStops={formatStops}
           formatCount={formatCount}
+          formatXAxisTick={formatXAxisTick}
+          formatYAxisTick={formatYAxisTick}
           xCountLabel={xCountLabel}
           yCountLabel={yCountLabel}
           stopsLabel={stopsLabel}

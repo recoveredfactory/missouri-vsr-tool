@@ -30,6 +30,10 @@
   export let meanYLabel = "";
   export let formatValue: (value: number | null | undefined) => string = (value) =>
     value === null || value === undefined ? "—" : String(value);
+  export let formatXAxisTick: (value: number | null | undefined) => string = (value) =>
+    formatValue(value);
+  export let formatYAxisTick: (value: number | null | undefined) => string = (value) =>
+    formatValue(value);
   export let formatCount: (value: number | null | undefined) => string = (value) =>
     value === null || value === undefined ? "—" : String(value);
   export let xLabel = "";
@@ -193,7 +197,9 @@
       ticks={yTicks}
       motion={axisMotion}
       format={(value) =>
-        yScaleType === "log" && !isMajorLogTick(value) ? "" : formatValue(value)
+        yScaleType === "log" && !isMajorLogTick(value)
+          ? ""
+          : formatYAxisTick(value)
       }
       tickLabelProps={{
         style: axisTickStyle,
@@ -225,7 +231,9 @@
         style: axisTickStyle,
       }}
       format={(value) =>
-        xScaleType === "log" && !isMajorLogTick(value) ? "" : formatValue(value)
+        xScaleType === "log" && !isMajorLogTick(value)
+          ? ""
+          : formatXAxisTick(value)
       }
     />
     <Points
