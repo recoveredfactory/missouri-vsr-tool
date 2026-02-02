@@ -149,8 +149,10 @@
   let combinedNote = "";
   let legendMinDotSizePx = 0;
   let legendMaxDotSizePx = 0;
+  let legendMinRadiusPx = 0;
+  let legendMaxRadiusPx = 0;
   const LEGEND_MIN_DOT_RADIUS_PX = 2.1;
-  const LEGEND_MAX_DOT_RADIUS_PX = 11;
+  const LEGEND_MAX_DOT_RADIUS_PX = 12.5;
 
   const numberFormatter = new Intl.NumberFormat(undefined, {
     maximumFractionDigits: 2,
@@ -654,6 +656,8 @@
   }
   $: legendMinDotSizePx = LEGEND_MIN_DOT_RADIUS_PX * 2 * dotRadiusScale;
   $: legendMaxDotSizePx = LEGEND_MAX_DOT_RADIUS_PX * 2 * dotRadiusScale;
+  $: legendMinRadiusPx = legendMinDotSizePx / 2;
+  $: legendMaxRadiusPx = legendMaxDotSizePx / 2;
   $: combinedNote = [summaryNote, excludeAboveXNote].filter(Boolean).join(" ");
   $: {
     legendMinStops = null;
@@ -724,28 +728,41 @@
     </div>
   {/if}
   {#if combinedNote || (sizeByStops && yearPoints.length > 0)}
-    <div class="mt-2 grid gap-y-1 gap-x-5 text-xs text-slate-500 sm:grid-cols-[minmax(0,1fr)_max-content] sm:items-start">
-      <div class="max-w-[34ch]">
+    <div class="mt-2.5 grid gap-y-1 gap-x-7 text-xs text-slate-500 sm:grid-cols-[minmax(0,1fr)_max-content] sm:items-start">
+      <div class="max-w-[32ch]">
         {#if combinedNote}
           <div>{combinedNote}</div>
         {/if}
       </div>
       {#if sizeByStops && yearPoints.length > 0}
-        <div class="justify-self-start text-[11px] text-slate-600 sm:justify-self-end">
-          <div class="flex items-center gap-3 whitespace-nowrap">
-            <div class="flex items-center gap-1.5">
-              <span
-                class="inline-block rounded-full border border-slate-400/80 bg-slate-300/60"
-                style={`width: ${legendMinDotSizePx}px; height: ${legendMinDotSizePx}px;`}
-              ></span>
-              <span>{formatStops(legendMinStops)} {legendStopsDescriptor}</span>
-            </div>
-            <div class="flex items-center gap-1.5">
-              <span
-                class="inline-block rounded-full border border-slate-400/80 bg-slate-300/60"
-                style={`width: ${legendMaxDotSizePx}px; height: ${legendMaxDotSizePx}px;`}
-              ></span>
-              <span>{formatStops(legendMaxStops)} {legendStopsDescriptor}</span>
+        <div class="justify-self-start text-[10px] text-slate-600 sm:justify-self-end">
+          <div class="flex items-center gap-2 whitespace-nowrap">
+            <svg
+              width={legendMaxDotSizePx}
+              height={legendMaxDotSizePx}
+              viewBox={`0 0 ${legendMaxDotSizePx} ${legendMaxDotSizePx}`}
+              class="shrink-0"
+            >
+              <circle
+                cx={legendMaxRadiusPx}
+                cy={legendMaxRadiusPx}
+                r={legendMaxRadiusPx}
+                fill="transparent"
+                stroke="rgb(148 163 184 / 0.8)"
+                stroke-width="1"
+              />
+              <circle
+                cx={legendMaxRadiusPx}
+                cy={legendMaxRadiusPx}
+                r={legendMinRadiusPx}
+                fill="transparent"
+                stroke="rgb(148 163 184 / 0.8)"
+                stroke-width="1"
+              />
+            </svg>
+            <div>
+              {formatStops(legendMaxStops)} {legendStopsDescriptor} ·{" "}
+              {formatStops(legendMinStops)} {legendStopsDescriptor}
             </div>
           </div>
         </div>
