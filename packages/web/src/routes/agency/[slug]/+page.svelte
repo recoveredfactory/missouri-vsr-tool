@@ -6,9 +6,6 @@
   import { Grid, PagingData, PlainTableCssTheme } from "@mediakular/gridcraft";
   import AgencyMap from "$lib/components/AgencyMap.svelte";
   import AgencyRateScatter from "$lib/components/AgencyRateScatter.svelte";
-  import ContrabandDisparityChart from "$lib/components/ContrabandDisparityChart.svelte";
-  import StopOutcomesChart from "$lib/components/StopOutcomesChart.svelte";
-  import StopsByRaceChart from "$lib/components/StopsByRaceChart.svelte";
   import GridMetricCell from "$lib/components/grid/GridMetricCell.svelte";
   import GridTextCell from "$lib/components/grid/GridTextCell.svelte";
   import GridValueCell from "$lib/components/grid/GridValueCell.svelte";
@@ -629,71 +626,7 @@
     "Other",
   ];
   const chartRaceKeys = columnKeys.filter((label) => label !== "Total");
-  const focusedRaceKeys = ["White", "Black", "Hispanic"];
   const priorityPrefix = "rates--totals-";
-
-  // Computed data for the 4 focused charts
-  const getMetricByKey = (entries, key) => {
-    const entry = entries.find(e => e?.row_key === key);
-    return entry || null;
-  };
-
-  // Chart 2: Contraband disparity data (for selected year)
-  $: searchesData = (() => {
-    const entry = getMetricByKey(selectedEntries, "rates-by-race--totals--searches");
-    if (!entry) return {};
-    return {
-      White: entry.White ?? 0,
-      Black: entry.Black ?? 0,
-      Hispanic: entry.Hispanic ?? 0,
-    };
-  })();
-
-  $: contrabandData = (() => {
-    const entry = getMetricByKey(selectedEntries, "rates-by-race--totals--contraband");
-    if (!entry) return {};
-    return {
-      White: entry.White ?? 0,
-      Black: entry.Black ?? 0,
-      Hispanic: entry.Hispanic ?? 0,
-    };
-  })();
-
-  // Chart 3: Stop outcomes by year (historical)
-  $: stopOutcomesByYear = (() => {
-    const result = {};
-    years.forEach(year => {
-      const yearRows = rowsByYear[year] || [];
-      const stopsEntry = getMetricByKey(yearRows, "rates-by-race--totals--all-stops");
-      const citationsEntry = getMetricByKey(yearRows, "rates-by-race--totals--citations");
-      const arrestsEntry = getMetricByKey(yearRows, "rates-by-race--totals--arrests");
-      const searchesEntry = getMetricByKey(yearRows, "rates-by-race--totals--searches");
-      result[year] = {
-        stops: stopsEntry?.Total ?? 0,
-        citations: citationsEntry?.Total ?? 0,
-        arrests: arrestsEntry?.Total ?? 0,
-        searches: searchesEntry?.Total ?? 0,
-      };
-    });
-    return result;
-  })();
-
-  // Chart 4: Stops by race by year (historical)
-  $: stopsByRaceByYear = (() => {
-    const result = {};
-    years.forEach(year => {
-      const yearRows = rowsByYear[year] || [];
-      const stopsEntry = getMetricByKey(yearRows, "rates-by-race--totals--all-stops");
-      result[year] = {
-        White: stopsEntry?.White ?? 0,
-        Black: stopsEntry?.Black ?? 0,
-        Hispanic: stopsEntry?.Hispanic ?? 0,
-      };
-    });
-    return result;
-  })();
-
-  $: sortedYears = [...years].sort((a, b) => Number(a) - Number(b));
 
   const translationKeyForId = (prefix, id) =>
     `${prefix}_${id}`
@@ -1312,74 +1245,92 @@
                     </button>
                   {/each}
                 </div>
-                <!-- 4 Focused Charts -->
-                <div class="grid gap-3 sm:gap-4 lg:grid-cols-2">
-                  <!-- Chart 1: Search rate vs contraband hit rate -->
-                  <div class="rounded-xl border border-slate-200 bg-white p-3 sm:p-4">
-                    <h3 class="mb-1 text-xs sm:text-sm font-semibold text-slate-800">
-                      Agencies that search more don't always find more contraband
-                    </h3>
-                    <p class="mb-2 sm:mb-3 text-[11px] sm:text-xs text-slate-500">Each dot is an agency. This agency is highlighted—hover to compare.</p>
-                    <AgencyRateScatter
-                      selectedYear={selectedYear}
-                      agencyName={agencyData?.agency ?? data.slug}
-                      title=""
-                      domainGroup="search-contraband"
-                      showMeanLines={true}
-                      xLabel="Search rate (%)"
-                      yLabel="Hit rate (%)"
-                      xMetricKey="rates-by-race--totals--searches-rate"
-                      yMetricKey="rates-by-race--totals--contraband-rate"
-                      minStops={500}
-                      sizeByStops={true}
-                      stopsLabel="Total stops"
-                      minCount={25}
-                      minCountKey="rates-by-race--totals--searches"
-                      excludeAboveX={50}
-                      minX={0}
-                      minY={0}
-                      maxX={100}
-                      maxY={100}
-                    />
-                  </div>
-
-                  <!-- Chart 2: Contraband disparity -->
-                  <div class="rounded-xl border border-slate-200 bg-white p-3 sm:p-4">
-                    <h3 class="mb-1 text-xs sm:text-sm font-semibold text-slate-800">
-                      When officers search, how often do they actually find something?
-                    </h3>
-                    <p class="mb-2 sm:mb-3 text-[11px] sm:text-xs text-slate-500">Hit rate shows contraband found as a percentage of searches.</p>
-                    <ContrabandDisparityChart
-                      searchesByRace={searchesData}
-                      contrabandByRace={contrabandData}
-                      raceKeys={focusedRaceKeys}
-                    />
-                  </div>
-
-                  <!-- Chart 3: Stop outcomes over time -->
-                  <div class="rounded-xl border border-slate-200 bg-white p-3 sm:p-4">
-                    <h3 class="mb-1 text-xs sm:text-sm font-semibold text-slate-800">
-                      Citations, arrests, and searches have changed over time
-                    </h3>
-                    <p class="mb-2 sm:mb-3 text-[11px] sm:text-xs text-slate-500">Track how enforcement outcomes have shifted year over year.</p>
-                    <StopOutcomesChart
-                      dataByYear={stopOutcomesByYear}
-                      years={sortedYears}
-                    />
-                  </div>
-
-                  <!-- Chart 4: Stops by race over time -->
-                  <div class="rounded-xl border border-slate-200 bg-white p-3 sm:p-4">
-                    <h3 class="mb-1 text-xs sm:text-sm font-semibold text-slate-800">
-                      The racial breakdown of stops has shifted over the years
-                    </h3>
-                    <p class="mb-2 sm:mb-3 text-[11px] sm:text-xs text-slate-500">Compare how many drivers of each race were stopped year by year.</p>
-                    <StopsByRaceChart
-                      dataByYear={stopsByRaceByYear}
-                      years={sortedYears}
-                      raceKeys={focusedRaceKeys}
-                    />
-                  </div>
+                <div class="grid gap-3 lg:grid-cols-3">
+                  <AgencyRateScatter
+                    selectedYear={selectedYear}
+                    agencyName={agencyData?.agency ?? data.slug}
+                    title="Total stops vs citations"
+                    domainGroup="stops-citations"
+                    showMeanLines={true}
+                    xLabel={m?.agency_scatter_total_stops_label?.() ?? "Total stops"}
+                    yLabel={m?.agency_scatter_citations_label?.() ?? "Citations"}
+                    xMetricKey="rates-by-race--totals--all-stops"
+                    yMetricKey="rates-by-race--totals--citations"
+                    minStops={100}
+                    sizeByStops={true}
+                    stopsLabel={m?.agency_scatter_total_stops_label?.() ?? "Total stops"}
+                    xScaleType="log"
+                    yScaleType="log"
+                    minX={1}
+                    minY={1}
+                  />
+                  <AgencyRateScatter
+                    selectedYear={selectedYear}
+                    agencyName={agencyData?.agency ?? data.slug}
+                    title={
+                      m?.agency_scatter_citation_vs_arrest_heading?.() ??
+                        "Citation rate vs arrest rate"
+                    }
+                    domainGroup="citation-arrest"
+                    showMeanLines={true}
+                    xLabel={m?.agency_scatter_citation_rate_label?.() ?? "Citation rate (%)"}
+                    yLabel={m?.agency_scatter_arrest_rate_label?.() ?? "Arrest rate (%)"}
+                    xMetricKey="rates-by-race--totals--citations-rate"
+                    yMetricKey="rates-by-race--totals--arrests-rate"
+                    xCountKey="rates-by-race--totals--citations"
+                    yCountKey="rates-by-race--totals--arrests"
+                    xCountLabel={m?.agency_scatter_citations_label?.() ?? "Citations"}
+                    yCountLabel={m?.agency_scatter_arrests_label?.() ?? "Arrests"}
+                    minStops={500}
+                    sizeByStops={true}
+                    stopsLabel={m?.agency_scatter_total_stops_label?.() ?? "Total stops"}
+                    minCount={50}
+                    minCountKey="rates-by-race--totals--citations"
+                    minCountMessage={
+                      m?.agency_scatter_min_citations_note?.() ??
+                        "Requires at least 50 citations to display."
+                    }
+                    note={
+                      m?.agency_scatter_min_citations_note?.() ??
+                        "Requires at least 50 citations to display."
+                    }
+                    excludeExactValue={100}
+                    minX={0}
+                    minY={0}
+                    maxX={100}
+                    maxY={100}
+                  />
+                  <AgencyRateScatter
+                    selectedYear={selectedYear}
+                    agencyName={agencyData?.agency ?? data.slug}
+                    title={
+                      m?.agency_scatter_search_vs_hit_heading?.() ??
+                        "Contraband hits vs searches"
+                    }
+                    domainGroup="hits-searches"
+                    showMeanLines={true}
+                    xLabel={m?.agency_scatter_searches_label?.() ?? "Searches"}
+                    yLabel={m?.agency_scatter_contraband_hits_label?.() ?? "Contraband hits"}
+                    xMetricKey="rates-by-race--totals--searches"
+                    yMetricKey="rates-by-race--totals--contraband"
+                    minStops={500}
+                    sizeByStops={true}
+                    stopsLabel={m?.agency_scatter_total_stops_label?.() ?? "Total stops"}
+                    minCount={25}
+                    minCountKey="rates-by-race--totals--searches"
+                    minCountMessage={
+                      m?.agency_scatter_min_searches_note?.() ??
+                        "Requires at least 25 searches to display."
+                    }
+                    note={
+                      m?.agency_scatter_min_searches_note?.() ??
+                        "Requires at least 25 searches to display."
+                    }
+                    xScaleType="log"
+                    yScaleType="log"
+                    minX={1}
+                    minY={1}
+                  />
                 </div>
                 <div
                   role="tablist"

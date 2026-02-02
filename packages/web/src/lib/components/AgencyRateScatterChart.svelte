@@ -8,7 +8,6 @@
     Tooltip,
     Highlight,
     Text,
-    AnnotationLine,
   } from "layerchart";
   import { scaleLinear, scaleLog } from "d3-scale";
 
@@ -242,39 +241,33 @@
       strokeWidth={dotStrokeWidth}
     />
     {#if Number.isFinite(meanX)}
-      <AnnotationLine
-        x={meanX}
-        label={meanXLabel || undefined}
-        labelPlacement="top-right"
-        labelXOffset={6}
-        labelYOffset={6}
-        props={{
-          line: {
-            class: meanLineClass,
-            strokeWidth: 2,
-          },
-          label: {
-            style: meanLabelStyle,
-          },
-        }}
-      />
+      <Rule x={meanX} class={meanLineClass} />
     {/if}
     {#if Number.isFinite(meanY)}
-      <AnnotationLine
+      <Rule y={meanY} class={meanLineClass} />
+    {/if}
+    {#if Number.isFinite(meanX) && meanXLabel}
+      <Text
+        x={meanX}
+        y={resolvedYDomain[1]}
+        value={meanXLabel}
+        textAnchor="start"
+        verticalAnchor="start"
+        dx={6}
+        dy={6}
+        style={meanLabelStyle}
+      />
+    {/if}
+    {#if Number.isFinite(meanY) && meanYLabel}
+      <Text
+        x={resolvedXDomain[1]}
         y={meanY}
-        label={meanYLabel || undefined}
-        labelPlacement="bottom-right"
-        labelXOffset={6}
-        labelYOffset={2}
-        props={{
-          line: {
-            class: meanLineClass,
-            strokeWidth: 2,
-          },
-          label: {
-            style: meanLabelStyle,
-          },
-        }}
+        value={meanYLabel}
+        textAnchor="end"
+        verticalAnchor="end"
+        dx={-6}
+        dy={-2}
+        style={meanLabelStyle}
       />
     {/if}
     {#if activePoint}
