@@ -146,7 +146,6 @@
   let legendMaxStops: number | null = null;
   let legendStopsDescriptor = "stops";
   let summaryNote = "";
-  let combinedNote = "";
   let legendMinDotSizePx = 0;
   let legendMaxDotSizePx = 0;
   let legendMinRadiusPx = 0;
@@ -154,8 +153,8 @@
   const LEGEND_MIN_DOT_RADIUS_PX = 3.1;
   const LEGEND_MAX_DOT_RADIUS_PX = 14.5;
   const LEGEND_STROKE_WIDTH = 0.8;
-  const LEGEND_FILL = "rgba(204, 209, 216, 0.58)";
-  const LEGEND_STROKE = "rgba(126, 139, 156, 0.9)";
+  const LEGEND_FILL = "transparent";
+  const LEGEND_STROKE = "rgba(248, 250, 252, 0.9)";
   const LEGEND_PADDING = 1.2;
 
   const numberFormatter = new Intl.NumberFormat(undefined, {
@@ -622,9 +621,7 @@
 
   $: excludeAboveXNote =
     excludeAboveX !== null && excludeAboveXCount > 0
-      ? `Removes ${formatCount(excludeAboveXCount)} ${
-          excludeAboveXCount === 1 ? "department" : "departments"
-        } with search rates over 50% while we investigate.`
+      ? `Hiding ${excludeAboveXCount === 1 ? "one agency" : `${formatCount(excludeAboveXCount)} agencies`} with a search rate above 50% while we investigate.`
       : "";
   $: resolvedXLabel =
     (xLabel || m?.agency_scatter_hit_rate_label?.()) ?? "Hit rate";
@@ -638,18 +635,29 @@
     .replace(/\btotal\s+/g, "")
     .trim();
   $: {
-    const shownLabel = `${formatCount(shownAgencyCount)} ${
-      shownAgencyCount === 1 ? "agency" : "agencies"
-    } shown.`;
-    if (!note) {
-      summaryNote = `Showing ${formatCount(shownAgencyCount)} ${
-        shownAgencyCount === 1 ? "agency" : "agencies"
-      }.`;
+    if (isLoading || loadError || minCountError || yearPoints.length === 0) {
+      summaryNote = "";
     } else {
-      const thresholdMatch = note.match(/^Requires at least\s+(.+?)\s+to display\.?$/i);
-      summaryNote = thresholdMatch
-        ? `Showing agencies with at least ${thresholdMatch[1]}; ${shownLabel}`
-        : `${note.replace(/\.$/, "")}; ${shownLabel}`;
+      const shownLabel = `${formatCount(shownAgencyCount)} ${
+        shownAgencyCount === 1 ? "agency" : "agencies"
+      } shown.`;
+      if (!note) {
+        summaryNote = shownLabel;
+      } else {
+        const thresholdMatch = note.match(/^Requires at least\s+(.+?)\s+to display\.?$/i);
+        if (thresholdMatch) {
+          const thresholdParts = thresholdMatch[1].trim().split(/\s+/);
+          const thresholdCount = thresholdParts.shift();
+          const thresholdRest = thresholdParts.join(" ");
+          const thresholdPhrase =
+            thresholdCount && thresholdRest
+              ? `${thresholdCount} or more ${thresholdRest}`
+              : `${thresholdMatch[1]} or more`;
+          summaryNote = `Agencies with ${thresholdPhrase}; ${shownLabel}`;
+        } else {
+          summaryNote = `${note.replace(/\.$/, "")}; ${shownLabel}`;
+        }
+      }
     }
   }
   $: legendMinDotSizePx = LEGEND_MIN_DOT_RADIUS_PX * 2 * dotRadiusScale;
@@ -659,7 +667,6 @@
   $: legendSvgSize = legendMaxDotSizePx + LEGEND_PADDING * 2;
   $: legendSvgCenter = LEGEND_PADDING + legendMaxRadiusPx;
   $: legendSmallCy = LEGEND_PADDING + legendMaxDotSizePx - legendMinRadiusPx;
-  $: combinedNote = [summaryNote, excludeAboveXNote].filter(Boolean).join(" ");
   $: {
     legendMinStops = null;
     legendMaxStops = null;
@@ -676,101 +683,109 @@
 
 </script>
 
-<div class="rounded-lg border border-slate-200 bg-white p-3">
-  <div class="mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
-    {(title || m?.agency_scatter_heading?.()) ?? "Search rate vs contraband hit rate"}
-  </div>
-  {#if isLoading}
-    <div class="text-xs text-slate-500">
-      {m?.agency_scatter_loading?.() ?? "Loading rate comparison…"}
-    </div>
-  {:else if loadError}
-    <div class="text-xs text-rose-600">{loadError}</div>
-  {:else if minCountError}
-    <div class="text-xs text-rose-600">{minCountError}</div>
-  {:else if yearPoints.length === 0}
-    <div class="text-xs text-slate-500">
-      {m?.agency_scatter_no_data?.() ?? "No rate data available for this year."}
-    </div>
-  {:else if chartLoadError}
-    <div class="text-xs text-slate-500">
-      {m?.agency_scatter_chart_unavailable?.() ?? "Chart unavailable."}
-    </div>
-    {:else if ChartComponent}
-      <div class="h-[280px] w-full">
-        <svelte:component
-          this={ChartComponent}
-          points={yearPoints}
-          domainPoints={sharedDomainPoints ?? undefined}
-          activePoint={activePoint}
-          meanX={meanX}
-          meanY={meanY}
-          meanXLabel={meanXLabel}
-          meanYLabel={meanYLabel}
-          formatValue={formatValue}
-          formatStops={formatStops}
-          formatCount={formatCount}
-          formatXAxisTick={formatXAxisTick}
-          formatYAxisTick={formatYAxisTick}
-          xCountLabel={xCountLabel}
-          yCountLabel={yCountLabel}
-          stopsLabel={stopsLabel}
-          dotRadiusScale={dotRadiusScale}
-          sizeByStops={sizeByStops}
-          xScaleType={xScaleType}
-          yScaleType={yScaleType}
-          xLabel={resolvedXLabel}
-          yLabel={resolvedYLabel}
-        />
-      </div>
-  {:else}
-    <div class="text-xs text-slate-500">
-      {m?.agency_scatter_chart_loading?.() ?? "Loading chart…"}
-    </div>
-  {/if}
-  {#if combinedNote || (sizeByStops && yearPoints.length > 0)}
-    <div class="mt-2.5 grid gap-y-1 gap-x-8 text-xs text-slate-500 sm:grid-cols-[minmax(0,1fr)_max-content] sm:items-start">
-      <div class="max-w-[52ch]">
-        {#if combinedNote}
-          <div>{combinedNote}</div>
+<div class="overflow-hidden rounded-3xl border border-slate-400 bg-white">
+  <div class="border-b border-slate-600 bg-slate-700 px-2.5 py-3 sm:px-4">
+    <div class="flex items-center justify-between gap-3 sm:items-start">
+      <div class="min-w-0">
+        <div class="text-xs font-semibold uppercase tracking-[0.04em] text-slate-100">
+          {(title || m?.agency_scatter_heading?.()) ?? "Search rate vs contraband hit rate"}
+        </div>
+        {#if summaryNote}
+          <div class="mt-1 hidden text-[11px] text-slate-200 sm:block">{summaryNote}</div>
         {/if}
       </div>
       {#if sizeByStops && yearPoints.length > 0}
-        <div class="justify-self-start text-[10px] text-slate-600 sm:justify-self-end">
-          <div class="flex items-center gap-2 whitespace-nowrap">
-            <div
-              class="flex flex-col justify-between leading-tight text-right"
-              style={`height: ${legendSvgSize}px;`}
-            >
-              <div>{formatStops(legendMaxStops)} {legendStopsDescriptor}</div>
-              <div>{formatStops(legendMinStops)} {legendStopsDescriptor}</div>
-            </div>
-            <svg
-              width={legendSvgSize}
-              height={legendSvgSize}
-              viewBox={`0 0 ${legendSvgSize} ${legendSvgSize}`}
-              class="shrink-0"
-            >
-              <circle
-                cx={legendSvgCenter}
-                cy={legendSvgCenter}
-                r={legendMaxRadiusPx}
-                fill={LEGEND_FILL}
-                stroke={LEGEND_STROKE}
-                stroke-width={LEGEND_STROKE_WIDTH}
-              />
-              <circle
-                cx={legendSvgCenter}
-                cy={legendSmallCy}
-                r={legendMinRadiusPx}
-                fill={LEGEND_FILL}
-                stroke={LEGEND_STROKE}
-                stroke-width={LEGEND_STROKE_WIDTH}
-              />
-            </svg>
+        <div class="shrink-0 flex items-center gap-2 whitespace-nowrap text-[10px] text-slate-100">
+          <div
+            class="flex flex-col justify-between leading-tight text-right"
+            style={`height: ${legendSvgSize}px;`}
+          >
+            <div>{formatStops(legendMaxStops)} {legendStopsDescriptor}</div>
+            <div>{formatStops(legendMinStops)} {legendStopsDescriptor}</div>
           </div>
+          <svg
+            width={legendSvgSize}
+            height={legendSvgSize}
+            viewBox={`0 0 ${legendSvgSize} ${legendSvgSize}`}
+            class="shrink-0"
+          >
+            <circle
+              cx={legendSvgCenter}
+              cy={legendSvgCenter}
+              r={legendMaxRadiusPx}
+              fill={LEGEND_FILL}
+              stroke={LEGEND_STROKE}
+              stroke-width={LEGEND_STROKE_WIDTH}
+            />
+            <circle
+              cx={legendSvgCenter}
+              cy={legendSmallCy}
+              r={legendMinRadiusPx}
+              fill={LEGEND_FILL}
+              stroke={LEGEND_STROKE}
+              stroke-width={LEGEND_STROKE_WIDTH}
+            />
+          </svg>
         </div>
       {/if}
+    </div>
+    {#if summaryNote}
+      <div class="mt-1 text-[11px] text-slate-200 sm:hidden">{summaryNote}</div>
+    {/if}
+  </div>
+  <div class="p-2.5 sm:p-4">
+    {#if isLoading}
+      <div class="text-xs text-slate-500">
+        {m?.agency_scatter_loading?.() ?? "Loading rate comparison…"}
+      </div>
+    {:else if loadError}
+      <div class="text-xs text-rose-600">{loadError}</div>
+    {:else if minCountError}
+      <div class="text-xs text-rose-600">{minCountError}</div>
+    {:else if yearPoints.length === 0}
+      <div class="text-xs text-slate-500">
+        {m?.agency_scatter_no_data?.() ?? "No rate data available for this year."}
+      </div>
+    {:else if chartLoadError}
+      <div class="text-xs text-slate-500">
+        {m?.agency_scatter_chart_unavailable?.() ?? "Chart unavailable."}
+      </div>
+      {:else if ChartComponent}
+        <div class="aspect-[1.15/1] w-full 2xl:mx-auto 2xl:max-w-[520px]">
+          <svelte:component
+            this={ChartComponent}
+            points={yearPoints}
+            domainPoints={sharedDomainPoints ?? undefined}
+            activePoint={activePoint}
+            meanX={meanX}
+            meanY={meanY}
+            meanXLabel={meanXLabel}
+            meanYLabel={meanYLabel}
+            formatValue={formatValue}
+            formatStops={formatStops}
+            formatCount={formatCount}
+            formatXAxisTick={formatXAxisTick}
+            formatYAxisTick={formatYAxisTick}
+            xCountLabel={xCountLabel}
+            yCountLabel={yCountLabel}
+            stopsLabel={stopsLabel}
+            dotRadiusScale={dotRadiusScale}
+            sizeByStops={sizeByStops}
+            xScaleType={xScaleType}
+            yScaleType={yScaleType}
+            xLabel={resolvedXLabel}
+            yLabel={resolvedYLabel}
+          />
+        </div>
+    {:else}
+      <div class="text-xs text-slate-500">
+        {m?.agency_scatter_chart_loading?.() ?? "Loading chart…"}
+      </div>
+    {/if}
+  </div>
+  {#if excludeAboveXNote}
+    <div class="px-2.5 pb-3 text-xs text-slate-500 sm:px-4 sm:pb-4">
+      <div>{excludeAboveXNote}</div>
     </div>
   {/if}
 </div>

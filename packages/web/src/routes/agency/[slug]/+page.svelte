@@ -1251,7 +1251,7 @@
                   {/each}
                 </div>
                 <div class="space-y-4">
-                  <div class="grid gap-3 lg:grid-cols-3">
+                  <div class="grid gap-7 lg:gap-8 lg:grid-cols-3">
                     <AgencyRateScatter
                       selectedYear={selectedYear}
                       agencyName={agencyData?.agency ?? data.slug}
@@ -1348,7 +1348,7 @@
                       minY={1}
                     />
                   </div>
-                  <div class="grid gap-3 lg:grid-cols-3">
+                  <div class="grid gap-7 lg:gap-8 lg:grid-cols-3">
                     <AgencyRateScatter
                       selectedYear={selectedYear}
                       agencyName={agencyData?.agency ?? data.slug}
@@ -1497,7 +1497,7 @@
                       maxY={100}
                     />
                   </div>
-                  <div class="grid gap-3 lg:grid-cols-3">
+                  <div class="grid gap-7 lg:gap-8 lg:grid-cols-3">
                     <AgencyRateScatter
                       selectedYear={selectedYear}
                       agencyName={agencyData?.agency ?? data.slug}

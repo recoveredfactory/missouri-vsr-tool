@@ -52,27 +52,48 @@
   export let formatStops: (value: number | null | undefined) => string = (value) =>
     value === null || value === undefined ? "—" : String(value);
 
-  const axisTickStyle = "fill: #475569; font-size: 11px; font-weight: 600;";
-  const axisLabelStyle = "fill: #0f172a; font-size: 10px; font-weight: 600;";
-  const topLabelStyle = "fill: #0f172a; font-size: 10px; font-weight: 600;";
-  const gridLineMajorClass = "stroke-slate-300/80";
-  const gridLineMinorClass = "stroke-slate-200/35";
+  const axisTickStyle = "fill: #94a3b8; font-size: 10px; font-weight: 500;";
+  const axisLabelStyle = "fill: #334155; font-size: 10px; font-weight: 600;";
+  const topLabelStyle = "fill: #334155; font-size: 10px; font-weight: 600;";
+  const gridLineMajorClass = "stroke-slate-300/60";
+  const gridLineMinorClass = "stroke-slate-200/30";
   const meanLineClass = "stroke-emerald-500/70";
   const meanLineWidth = 2;
   const meanLabelStyle = "fill: #047857; font-size: 10px; font-weight: 600;";
-  const xTickCount = 5;
-  const yTickCount = 5;
+  const getLinearTickStep = (maxValue: number) => {
+    if (!Number.isFinite(maxValue) || maxValue <= 0) return 1;
+    if (maxValue <= 12) return 5;
+    if (maxValue <= 40) return 10;
+    if (maxValue <= 100) return 20;
+    return 25;
+  };
+
+  const buildLinearTicks = (maxValue: number) => {
+    if (!Number.isFinite(maxValue) || maxValue <= 0) {
+      return { ticks: [0], niceMax: 0 };
+    }
+    const step = getLinearTickStep(maxValue);
+    if (!Number.isFinite(step) || step <= 0) {
+      return { ticks: [0], niceMax: maxValue };
+    }
+    const niceMax = Math.ceil(maxValue / step) * step;
+    const ticks: number[] = [];
+    for (let value = 0; value <= niceMax + 1e-6; value += step) {
+      ticks.push(Number(value.toFixed(6)));
+    }
+    return { ticks: ticks.length ? ticks : [0], niceMax };
+  };
   const baseRadius = 2.2;
   const minRadius = 3.1;
   const maxRadius = 14.5;
-  const dotFill = "rgba(204, 209, 216, 0.58)";
-  const dotStroke = "rgba(126, 139, 156, 0.9)";
-  const dotStrokeWidth = 0.8;
+  const dotFill = "rgba(148, 163, 184, 0.32)";
+  const dotStroke = "rgba(100, 116, 139, 0.55)";
+  const dotStrokeWidth = 0.7;
   const scaledBaseRadius = baseRadius * dotRadiusScale;
   const activePointRadius = 5.5 * dotRadiusScale;
   const axisMotion = { type: "tween", duration: 240 };
   const topPadding = 22;
-  const yLabelOffset = -12;
+  const yLabelOffset = -24;
   const logMinorFactors = [2, 3, 4, 5, 6, 7, 8, 9];
 
   const isMajorLogTick = (value: number) => {
@@ -136,43 +157,18 @@
     xScaleType === "log" && xExtent ? getLogTickSets(xExtent) : null;
   $: yLogTicks =
     yScaleType === "log" && yExtent ? getLogTickSets(yExtent) : null;
+  $: xLinearTicks =
+    xScaleType === "log" ? null : buildLinearTicks(xMax || 0);
+  $: yLinearTicks =
+    yScaleType === "log" ? null : buildLinearTicks(yMax || 0);
+  $: xLinearMax = xLinearTicks?.niceMax ?? (xMax || 0);
+  $: yLinearMax = yLinearTicks?.niceMax ?? (yMax || 0);
   $: resolvedXDomain =
-    xScaleType === "log"
-      ? [xExtent?.min ?? 1, xExtent?.max ?? 1]
-      : [0, xMax || 0];
+    xScaleType === "log" ? [xExtent?.min ?? 1, xExtent?.max ?? 1] : [0, xLinearMax];
   $: resolvedYDomain =
-    yScaleType === "log"
-      ? [yExtent?.min ?? 1, yExtent?.max ?? 1]
-      : [0, yMax || 0];
-  $: xTicks = (() => {
-    if (xScaleType === "log") {
-      return xLogTicks?.major ?? [];
-    }
-    const scale = scaleLinear().domain([0, xMax]).nice();
-    const ticks = scale.ticks(xTickCount);
-    return ticks.length ? ticks : [0];
-  })();
-  $: yTicks = (() => {
-    if (yScaleType === "log") {
-      return yLogTicks?.major ?? [];
-    }
-    const scale = scaleLinear().domain([0, yMax]).nice();
-    const ticks = scale.ticks(yTickCount);
-    return ticks.length ? ticks : [0];
-  })();
-  const selectLabelTicks = (ticks: number[], divisor: number) => {
-    if (!ticks.length) return [];
-    const selected = ticks.filter((_, idx) => idx % divisor === 0);
-    const last = ticks[ticks.length - 1];
-    if (!selected.some((value) => almostEqual(value, last))) {
-      selected.push(last);
-    }
-    return selected;
-  };
-  $: xLabelTicks =
-    xScaleType === "log" ? xTicks : selectLabelTicks(xTicks, 2);
-  $: yLabelTicks =
-    yScaleType === "log" ? yTicks : selectLabelTicks(yTicks, 3);
+    yScaleType === "log" ? [yExtent?.min ?? 1, yExtent?.max ?? 1] : [0, yLinearMax];
+  $: xTicks = xScaleType === "log" ? xLogTicks?.major ?? [] : xLinearTicks?.ticks ?? [0];
+  $: yTicks = yScaleType === "log" ? yLogTicks?.major ?? [] : yLinearTicks?.ticks ?? [0];
   $: maxXTick = xTicks.length ? xTicks[xTicks.length - 1] : null;
   $: maxYTick = yTicks.length ? yTicks[yTicks.length - 1] : null;
 </script>
@@ -216,19 +212,13 @@
       tickLength={2}
       ticks={yTicks}
       motion={axisMotion}
-      format={(value) => {
-        if (yScaleType === "log") {
-          return isMajorLogTick(value)
-            ? formatYAxisTick(value, {
-                isMax: Number.isFinite(maxYTick) && almostEqual(value, maxYTick),
-              })
-            : "";
-        }
-        if (!yLabelTicks.some((tick) => almostEqual(tick, value))) return "";
-        return formatYAxisTick(value, {
-          isMax: Number.isFinite(maxYTick) && almostEqual(value, maxYTick),
-        });
-      }}
+      format={(value) =>
+        yScaleType === "log" && !isMajorLogTick(value)
+          ? ""
+          : formatYAxisTick(value, {
+              isMax: Number.isFinite(maxYTick) && almostEqual(value, maxYTick),
+            })
+      }
       tickLabelProps={{
         style: axisTickStyle,
       }}
@@ -236,7 +226,7 @@
     {#if yLabel}
       <Text
         x={0}
-        y={yLabelOffset - 2}
+        y={yLabelOffset}
         value={yLabel}
         textAnchor="start"
         verticalAnchor="start"
@@ -258,19 +248,13 @@
       tickLabelProps={{
         style: axisTickStyle,
       }}
-      format={(value) => {
-        if (xScaleType === "log") {
-          return isMajorLogTick(value)
-            ? formatXAxisTick(value, {
-                isMax: Number.isFinite(maxXTick) && almostEqual(value, maxXTick),
-              })
-            : "";
-        }
-        if (!xLabelTicks.some((tick) => almostEqual(tick, value))) return "";
-        return formatXAxisTick(value, {
-          isMax: Number.isFinite(maxXTick) && almostEqual(value, maxXTick),
-        });
-      }}
+      format={(value) =>
+        xScaleType === "log" && !isMajorLogTick(value)
+          ? ""
+          : formatXAxisTick(value, {
+              isMax: Number.isFinite(maxXTick) && almostEqual(value, maxXTick),
+            })
+      }
     />
     <Points
       data={points}
