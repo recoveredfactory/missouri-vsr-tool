@@ -1245,92 +1245,353 @@
                     </button>
                   {/each}
                 </div>
-                <div class="grid gap-3 lg:grid-cols-3">
-                  <AgencyRateScatter
-                    selectedYear={selectedYear}
-                    agencyName={agencyData?.agency ?? data.slug}
-                    title="Total stops vs citations"
-                    domainGroup="stops-citations"
-                    showMeanLines={true}
-                    xLabel={m?.agency_scatter_total_stops_label?.() ?? "Total stops"}
-                    yLabel={m?.agency_scatter_citations_label?.() ?? "Citations"}
-                    xMetricKey="rates-by-race--totals--all-stops"
-                    yMetricKey="rates-by-race--totals--citations"
-                    minStops={100}
-                    sizeByStops={true}
-                    stopsLabel={m?.agency_scatter_total_stops_label?.() ?? "Total stops"}
-                    xScaleType="log"
-                    yScaleType="log"
-                    minX={1}
-                    minY={1}
-                  />
-                  <AgencyRateScatter
-                    selectedYear={selectedYear}
-                    agencyName={agencyData?.agency ?? data.slug}
-                    title={
-                      m?.agency_scatter_citation_vs_arrest_heading?.() ??
-                        "Citation rate vs arrest rate"
-                    }
-                    domainGroup="citation-arrest"
-                    showMeanLines={true}
-                    xLabel={m?.agency_scatter_citation_rate_label?.() ?? "Citation rate (%)"}
-                    yLabel={m?.agency_scatter_arrest_rate_label?.() ?? "Arrest rate (%)"}
-                    xMetricKey="rates-by-race--totals--citations-rate"
-                    yMetricKey="rates-by-race--totals--arrests-rate"
-                    xCountKey="rates-by-race--totals--citations"
-                    yCountKey="rates-by-race--totals--arrests"
-                    xCountLabel={m?.agency_scatter_citations_label?.() ?? "Citations"}
-                    yCountLabel={m?.agency_scatter_arrests_label?.() ?? "Arrests"}
-                    minStops={500}
-                    sizeByStops={true}
-                    stopsLabel={m?.agency_scatter_total_stops_label?.() ?? "Total stops"}
-                    minCount={50}
-                    minCountKey="rates-by-race--totals--citations"
-                    minCountMessage={
-                      m?.agency_scatter_min_citations_note?.() ??
-                        "Requires at least 50 citations to display."
-                    }
-                    note={
-                      m?.agency_scatter_min_citations_note?.() ??
-                        "Requires at least 50 citations to display."
-                    }
-                    excludeExactValue={100}
-                    minX={0}
-                    minY={0}
-                    maxX={100}
-                    maxY={100}
-                  />
-                  <AgencyRateScatter
-                    selectedYear={selectedYear}
-                    agencyName={agencyData?.agency ?? data.slug}
-                    title={
-                      m?.agency_scatter_search_vs_hit_heading?.() ??
-                        "Contraband hits vs searches"
-                    }
-                    domainGroup="hits-searches"
-                    showMeanLines={true}
-                    xLabel={m?.agency_scatter_searches_label?.() ?? "Searches"}
-                    yLabel={m?.agency_scatter_contraband_hits_label?.() ?? "Contraband hits"}
-                    xMetricKey="rates-by-race--totals--searches"
-                    yMetricKey="rates-by-race--totals--contraband"
-                    minStops={500}
-                    sizeByStops={true}
-                    stopsLabel={m?.agency_scatter_total_stops_label?.() ?? "Total stops"}
-                    minCount={25}
-                    minCountKey="rates-by-race--totals--searches"
-                    minCountMessage={
-                      m?.agency_scatter_min_searches_note?.() ??
-                        "Requires at least 25 searches to display."
-                    }
-                    note={
-                      m?.agency_scatter_min_searches_note?.() ??
-                        "Requires at least 25 searches to display."
-                    }
-                    xScaleType="log"
-                    yScaleType="log"
-                    minX={1}
-                    minY={1}
-                  />
+                <div class="space-y-4">
+                  <div class="grid gap-3 lg:grid-cols-3">
+                    <AgencyRateScatter
+                      selectedYear={selectedYear}
+                      agencyName={agencyData?.agency ?? data.slug}
+                      title="Total stops vs citations"
+                      domainGroup="stops-citations"
+                      showMeanLines={true}
+                      xLabel={m?.agency_scatter_total_stops_label?.() ?? "Total stops"}
+                      yLabel={m?.agency_scatter_citations_label?.() ?? "Citations"}
+                      xMetricKey="rates-by-race--totals--all-stops"
+                      yMetricKey="rates-by-race--totals--citations"
+                      minStops={500}
+                      sizeByStops={true}
+                      stopsLabel={m?.agency_scatter_total_stops_label?.() ?? "Total stops"}
+                      minCount={50}
+                      minCountKey="rates-by-race--totals--citations"
+                      minCountMessage={
+                        m?.agency_scatter_min_citations_note?.() ??
+                          "Requires at least 50 citations to display."
+                      }
+                      note={
+                        m?.agency_scatter_min_citations_note?.() ??
+                          "Requires at least 50 citations to display."
+                      }
+                      xScaleType="log"
+                      yScaleType="log"
+                      minX={1}
+                      minY={1}
+                    />
+                    <AgencyRateScatter
+                      selectedYear={selectedYear}
+                      agencyName={agencyData?.agency ?? data.slug}
+                      title="Non-white stops vs citations"
+                      domainGroup="stops-citations"
+                      showMeanLines={true}
+                      xLabel="Non-white total stops"
+                      yLabel="Non-white citations"
+                      xMetricKey="rates-by-race--totals--all-stops"
+                      yMetricKey="rates-by-race--totals--citations"
+                      xColumn="Non-white"
+                      yColumn="Non-white"
+                      minStops={500}
+                      sizeByStops={true}
+                      stopsColumn="Non-white"
+                      stopsLabel="Non-white total stops"
+                      minCount={25}
+                      minCountKey="rates-by-race--totals--citations"
+                      minCountColumn="Non-white"
+                      minCountMessage={
+                        m?.agency_scatter_min_citations_note_small?.() ??
+                          "Requires at least 25 citations to display."
+                      }
+                      note={
+                        m?.agency_scatter_min_citations_note_small?.() ??
+                          "Requires at least 25 citations to display."
+                      }
+                      xScaleType="log"
+                      yScaleType="log"
+                      minX={1}
+                      minY={1}
+                    />
+                    <AgencyRateScatter
+                      selectedYear={selectedYear}
+                      agencyName={agencyData?.agency ?? data.slug}
+                      title="White stops vs citations"
+                      domainGroup="stops-citations"
+                      showMeanLines={true}
+                      xLabel="White total stops"
+                      yLabel="White citations"
+                      xMetricKey="rates-by-race--totals--all-stops"
+                      yMetricKey="rates-by-race--totals--citations"
+                      xColumn="White"
+                      yColumn="White"
+                      minStops={500}
+                      sizeByStops={true}
+                      stopsColumn="White"
+                      stopsLabel="White total stops"
+                      minCount={25}
+                      minCountKey="rates-by-race--totals--citations"
+                      minCountColumn="White"
+                      minCountMessage={
+                        m?.agency_scatter_min_citations_note_small?.() ??
+                          "Requires at least 25 citations to display."
+                      }
+                      note={
+                        m?.agency_scatter_min_citations_note_small?.() ??
+                          "Requires at least 25 citations to display."
+                      }
+                      xScaleType="log"
+                      yScaleType="log"
+                      minX={1}
+                      minY={1}
+                    />
+                  </div>
+                  <div class="grid gap-3 lg:grid-cols-3">
+                    <AgencyRateScatter
+                      selectedYear={selectedYear}
+                      agencyName={agencyData?.agency ?? data.slug}
+                      title={
+                        m?.agency_scatter_citation_vs_arrest_heading?.() ??
+                          "Citation rate vs arrest rate"
+                      }
+                      domainGroup="citation-arrest"
+                      showMeanLines={true}
+                      xLabel={m?.agency_scatter_citation_rate_label?.() ?? "Citation rate (%)"}
+                      yLabel={m?.agency_scatter_arrest_rate_label?.() ?? "Arrest rate (%)"}
+                      xMetricKey="rates-by-race--totals--citations-rate"
+                      yMetricKey="rates-by-race--totals--arrests-rate"
+                      xCountKey="rates-by-race--totals--citations"
+                      yCountKey="rates-by-race--totals--arrests"
+                      xCountLabel={m?.agency_scatter_citations_label?.() ?? "Citations"}
+                      yCountLabel={m?.agency_scatter_arrests_label?.() ?? "Arrests"}
+                      minStops={500}
+                      sizeByStops={true}
+                      stopsLabel={m?.agency_scatter_total_stops_label?.() ?? "Total stops"}
+                      minCount={50}
+                      minCountKey="rates-by-race--totals--citations"
+                      minCountMessage={
+                        m?.agency_scatter_min_citations_note?.() ??
+                          "Requires at least 50 citations to display."
+                      }
+                      note={
+                        m?.agency_scatter_min_citations_note?.() ??
+                          "Requires at least 50 citations to display."
+                      }
+                      excludeExactValue={100}
+                      minX={0}
+                      minY={0}
+                      maxX={100}
+                      maxY={100}
+                    />
+                    <AgencyRateScatter
+                      selectedYear={selectedYear}
+                      agencyName={agencyData?.agency ?? data.slug}
+                      title={
+                        m?.agency_scatter_citation_vs_arrest_nonwhite_heading?.() ??
+                          "Non-white citation rate vs arrest rate"
+                      }
+                      domainGroup="citation-arrest"
+                      showMeanLines={true}
+                      xLabel={
+                        m?.agency_scatter_citation_rate_nonwhite_label?.() ??
+                          "Non-white citation rate"
+                      }
+                      yLabel={
+                        m?.agency_scatter_arrest_rate_nonwhite_label?.() ??
+                          "Non-white arrest rate"
+                      }
+                      xMetricKey="rates-by-race--totals--citations-rate"
+                      yMetricKey="rates-by-race--totals--arrests-rate"
+                      xColumn="Non-white"
+                      yColumn="Non-white"
+                      xCountKey="rates-by-race--totals--citations"
+                      yCountKey="rates-by-race--totals--arrests"
+                      xCountColumn="Non-white"
+                      yCountColumn="Non-white"
+                      xCountLabel={
+                        m?.agency_scatter_citations_nonwhite_label?.() ??
+                          "Non-white citations"
+                      }
+                      yCountLabel={
+                        m?.agency_scatter_arrests_nonwhite_label?.() ??
+                          "Non-white arrests"
+                      }
+                      minStops={500}
+                      sizeByStops={true}
+                      stopsColumn="Non-white"
+                      stopsLabel="Non-white total stops"
+                      minCount={25}
+                      minCountKey="rates-by-race--totals--citations"
+                      minCountColumn="Non-white"
+                      minCountMessage={
+                        m?.agency_scatter_min_citations_note_small?.() ??
+                          "Requires at least 25 citations to display."
+                      }
+                      note={
+                        m?.agency_scatter_min_citations_note_small?.() ??
+                          "Requires at least 25 citations to display."
+                      }
+                      excludeExactValue={100}
+                      minX={0}
+                      minY={0}
+                      maxX={100}
+                      maxY={100}
+                    />
+                    <AgencyRateScatter
+                      selectedYear={selectedYear}
+                      agencyName={agencyData?.agency ?? data.slug}
+                      title={
+                        m?.agency_scatter_citation_vs_arrest_white_heading?.() ??
+                          "White citation rate vs arrest rate"
+                      }
+                      domainGroup="citation-arrest"
+                      showMeanLines={true}
+                      xLabel={
+                        m?.agency_scatter_citation_rate_white_label?.() ??
+                          "White citation rate"
+                      }
+                      yLabel={
+                        m?.agency_scatter_arrest_rate_white_label?.() ??
+                          "White arrest rate"
+                      }
+                      xMetricKey="rates-by-race--totals--citations-rate"
+                      yMetricKey="rates-by-race--totals--arrests-rate"
+                      xColumn="White"
+                      yColumn="White"
+                      xCountKey="rates-by-race--totals--citations"
+                      yCountKey="rates-by-race--totals--arrests"
+                      xCountColumn="White"
+                      yCountColumn="White"
+                      xCountLabel={m?.agency_scatter_citations_white_label?.() ?? "White citations"}
+                      yCountLabel={m?.agency_scatter_arrests_white_label?.() ?? "White arrests"}
+                      minStops={500}
+                      sizeByStops={true}
+                      stopsColumn="White"
+                      stopsLabel="White total stops"
+                      minCount={25}
+                      minCountKey="rates-by-race--totals--citations"
+                      minCountColumn="White"
+                      minCountMessage={
+                        m?.agency_scatter_min_citations_note_small?.() ??
+                          "Requires at least 25 citations to display."
+                      }
+                      note={
+                        m?.agency_scatter_min_citations_note_small?.() ??
+                          "Requires at least 25 citations to display."
+                      }
+                      excludeExactValue={100}
+                      minX={0}
+                      minY={0}
+                      maxX={100}
+                      maxY={100}
+                    />
+                  </div>
+                  <div class="grid gap-3 lg:grid-cols-3">
+                    <AgencyRateScatter
+                      selectedYear={selectedYear}
+                      agencyName={agencyData?.agency ?? data.slug}
+                      title="Contraband hits vs searches"
+                      domainGroup="hits-searches"
+                      showMeanLines={true}
+                      xLabel={m?.agency_scatter_searches_label?.() ?? "Searches"}
+                      yLabel={m?.agency_scatter_contraband_hits_label?.() ?? "Contraband hits"}
+                      xMetricKey="rates-by-race--totals--searches"
+                      yMetricKey="rates-by-race--totals--contraband"
+                      xCountKey="rates-by-race--totals--searches"
+                      yCountKey="rates-by-race--totals--contraband"
+                      xCountLabel={m?.agency_scatter_searches_label?.() ?? "Searches"}
+                      yCountLabel={
+                        m?.agency_scatter_contraband_hits_label?.() ?? "Contraband hits"
+                      }
+                      minStops={500}
+                      sizeByStops={true}
+                      stopsLabel={m?.agency_scatter_total_stops_label?.() ?? "Total stops"}
+                      minCount={25}
+                      minCountKey="rates-by-race--totals--searches"
+                      minCountMessage={
+                        m?.agency_scatter_min_searches_note?.() ??
+                          "Requires at least 25 searches to display."
+                      }
+                      note={
+                        m?.agency_scatter_min_searches_note?.() ??
+                          "Requires at least 25 searches to display."
+                      }
+                      xScaleType="log"
+                      yScaleType="log"
+                      minX={1}
+                      minY={1}
+                    />
+                    <AgencyRateScatter
+                      selectedYear={selectedYear}
+                      agencyName={agencyData?.agency ?? data.slug}
+                      title="Non-white contraband hits vs searches"
+                      domainGroup="hits-searches"
+                      showMeanLines={true}
+                      xLabel="Non-white searches"
+                      yLabel="Non-white contraband hits"
+                      xMetricKey="rates-by-race--totals--searches"
+                      yMetricKey="rates-by-race--totals--contraband"
+                      xColumn="Non-white"
+                      yColumn="Non-white"
+                      xCountKey="rates-by-race--totals--searches"
+                      yCountKey="rates-by-race--totals--contraband"
+                      xCountColumn="Non-white"
+                      yCountColumn="Non-white"
+                      xCountLabel="Non-white searches"
+                      yCountLabel="Non-white contraband hits"
+                      minStops={500}
+                      sizeByStops={true}
+                      stopsColumn="Non-white"
+                      stopsLabel="Non-white total stops"
+                      minCount={25}
+                      minCountKey="rates-by-race--totals--searches"
+                      minCountColumn="Non-white"
+                      minCountMessage={
+                        m?.agency_scatter_min_searches_note_small?.() ??
+                          "Requires at least 25 searches to display."
+                      }
+                      note={
+                        m?.agency_scatter_min_searches_note_small?.() ??
+                          "Requires at least 25 searches to display."
+                      }
+                      xScaleType="log"
+                      yScaleType="log"
+                      minX={1}
+                      minY={1}
+                    />
+                    <AgencyRateScatter
+                      selectedYear={selectedYear}
+                      agencyName={agencyData?.agency ?? data.slug}
+                      title="White contraband hits vs searches"
+                      domainGroup="hits-searches"
+                      showMeanLines={true}
+                      xLabel="White searches"
+                      yLabel="White contraband hits"
+                      xMetricKey="rates-by-race--totals--searches"
+                      yMetricKey="rates-by-race--totals--contraband"
+                      xColumn="White"
+                      yColumn="White"
+                      xCountKey="rates-by-race--totals--searches"
+                      yCountKey="rates-by-race--totals--contraband"
+                      xCountColumn="White"
+                      yCountColumn="White"
+                      xCountLabel="White searches"
+                      yCountLabel="White contraband hits"
+                      minStops={500}
+                      sizeByStops={true}
+                      stopsColumn="White"
+                      stopsLabel="White total stops"
+                      minCount={25}
+                      minCountKey="rates-by-race--totals--searches"
+                      minCountColumn="White"
+                      minCountMessage={
+                        m?.agency_scatter_min_searches_note_small?.() ??
+                          "Requires at least 25 searches to display."
+                      }
+                      note={
+                        m?.agency_scatter_min_searches_note_small?.() ??
+                          "Requires at least 25 searches to display."
+                      }
+                      xScaleType="log"
+                      yScaleType="log"
+                      minX={1}
+                      minY={1}
+                    />
+                  </div>
                 </div>
                 <div
                   role="tablist"
