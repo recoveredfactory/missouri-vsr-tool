@@ -148,8 +148,8 @@
   let summaryNote = "";
   let legendMinDotSizePx = 0;
   let legendMaxDotSizePx = 0;
-  const LEGEND_MIN_DOT_SIZE_PX = 1.1;
-  const LEGEND_MAX_DOT_SIZE_PX = 14;
+  const LEGEND_MIN_DOT_RADIUS_PX = 2.1;
+  const LEGEND_MAX_DOT_RADIUS_PX = 11;
 
   const numberFormatter = new Intl.NumberFormat(undefined, {
     maximumFractionDigits: 2,
@@ -651,8 +651,8 @@
         : `${note.replace(/\.$/, "")}; ${shownLabel}`;
     }
   }
-  $: legendMinDotSizePx = LEGEND_MIN_DOT_SIZE_PX * dotRadiusScale;
-  $: legendMaxDotSizePx = LEGEND_MAX_DOT_SIZE_PX * dotRadiusScale;
+  $: legendMinDotSizePx = LEGEND_MIN_DOT_RADIUS_PX * 2 * dotRadiusScale;
+  $: legendMaxDotSizePx = LEGEND_MAX_DOT_RADIUS_PX * 2 * dotRadiusScale;
   $: {
     legendMinStops = null;
     legendMaxStops = null;
@@ -722,8 +722,8 @@
     </div>
   {/if}
   {#if summaryNote || excludeAboveXNote || (sizeByStops && yearPoints.length > 0)}
-    <div class="mt-1 grid gap-2 text-xs text-slate-500 sm:grid-cols-[1fr_auto] sm:items-start">
-      <div class="space-y-0.5">
+    <div class="mt-1 grid gap-2 text-xs text-slate-500 sm:grid-cols-[minmax(0,1fr)_max-content] sm:items-start">
+      <div class="max-w-[38ch] space-y-0.5">
         {#if summaryNote}
           <div>{summaryNote}</div>
         {/if}
@@ -733,15 +733,15 @@
       </div>
       {#if sizeByStops && yearPoints.length > 0}
         <div class="justify-self-start text-[11px] text-slate-600 sm:justify-self-end">
-          <div class="flex flex-col gap-1">
-            <div class="flex items-center gap-1">
+          <div class="flex items-center gap-3 whitespace-nowrap">
+            <div class="flex items-center gap-1.5">
               <span
                 class="inline-block rounded-full border border-slate-400/80 bg-slate-300/60"
                 style={`width: ${legendMinDotSizePx}px; height: ${legendMinDotSizePx}px;`}
               ></span>
               <span>{formatStops(legendMinStops)} {legendStopsDescriptor}</span>
             </div>
-            <div class="flex items-center gap-1">
+            <div class="flex items-center gap-1.5">
               <span
                 class="inline-block rounded-full border border-slate-400/80 bg-slate-300/60"
                 style={`width: ${legendMaxDotSizePx}px; height: ${legendMaxDotSizePx}px;`}
