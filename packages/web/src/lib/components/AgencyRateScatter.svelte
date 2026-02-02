@@ -141,6 +141,9 @@
   let meanYLabel = "";
   let resolvedXLabel = "";
   let resolvedYLabel = "";
+  let shownAgencyCount = 0;
+  let legendMinStops: number | null = null;
+  let legendMaxStops: number | null = null;
 
   const numberFormatter = new Intl.NumberFormat(undefined, {
     maximumFractionDigits: 2,
@@ -622,6 +625,20 @@
     ? (m?.agency_scatter_mean_label?.({ label: resolvedYLabel }) ??
       `Mean ${resolvedYLabel}`)
     : "";
+  $: shownAgencyCount = yearPoints.length;
+  $: {
+    legendMinStops = null;
+    legendMaxStops = null;
+    if (sizeByStops && yearPoints.length) {
+      const stops = yearPoints
+        .map((point) => point.stops)
+        .filter((value) => Number.isFinite(value)) as number[];
+      if (stops.length) {
+        legendMinStops = Math.min(...stops);
+        legendMaxStops = Math.max(...stops);
+      }
+    }
+  }
 
 </script>
 
@@ -677,13 +694,38 @@
       {m?.agency_scatter_chart_loading?.() ?? "Loading chart…"}
     </div>
   {/if}
-  {#if note || excludeAboveXNote}
-    <div class="mt-1 space-y-0.5 text-xs text-slate-500">
-      {#if note}
-        <div>{note}</div>
-      {/if}
-      {#if excludeAboveXNote}
-        <div>{excludeAboveXNote}</div>
+  {#if note || excludeAboveXNote || (sizeByStops && yearPoints.length > 0)}
+    <div class="mt-1 grid gap-2 text-xs text-slate-500 sm:grid-cols-[1fr_auto] sm:items-start">
+      <div class="space-y-0.5">
+        {#if note}
+          <div>{note}</div>
+        {/if}
+        {#if excludeAboveXNote}
+          <div>{excludeAboveXNote}</div>
+        {/if}
+      </div>
+      {#if sizeByStops && yearPoints.length > 0}
+        <div class="justify-self-start rounded border border-slate-200 bg-slate-50 px-2 py-1.5 sm:justify-self-end">
+          <div class="mb-1 text-[11px] font-semibold tracking-wide text-slate-600">
+            Legend ({formatCount(shownAgencyCount)} agencies shown)
+          </div>
+          <div class="flex items-center gap-3 text-[11px]">
+            <div class="flex items-center gap-1">
+              <span
+                class="inline-block rounded-full border border-slate-400/80 bg-slate-300/60"
+                style="width: 4px; height: 4px;"
+              ></span>
+              <span>{formatStops(legendMinStops)} stops</span>
+            </div>
+            <div class="flex items-center gap-1">
+              <span
+                class="inline-block rounded-full border border-slate-400/80 bg-slate-300/60"
+                style="width: 14px; height: 14px;"
+              ></span>
+              <span>{formatStops(legendMaxStops)} stops</span>
+            </div>
+          </div>
+        </div>
       {/if}
     </div>
   {/if}
