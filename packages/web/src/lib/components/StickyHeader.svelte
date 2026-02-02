@@ -275,7 +275,7 @@
         </div>
       </div>
 
-      <div class="mt-2 grid grid-cols-1 gap-3 md:mt-2.5 md:grid-cols-[minmax(0,38rem)_auto] md:items-center md:gap-5">
+      <div class="mt-2.5 grid grid-cols-1 gap-3 md:mt-2.5 md:grid-cols-[minmax(0,38rem)_auto] md:items-center md:gap-5">
         <div class="relative w-full">
           <input
             type="search"
@@ -285,7 +285,7 @@
             on:keydown={handleKeydown}
             aria-label={m.search_aria_label()}
             autocomplete="off"
-            class="w-full rounded-lg border-2 border-[#2c9166] bg-white px-4 py-2.5 text-[1.05rem] shadow-[0_8px_24px_-14px_rgba(15,23,42,0.55)] focus:outline-none focus:ring-2 focus:ring-[#2c9166] focus:ring-offset-1"
+            class="w-full rounded-lg border border-[#2c9166]/70 bg-white px-4 py-2.5 text-[1.05rem] shadow-[0_8px_24px_-14px_rgba(15,23,42,0.55)] focus:border-[#2c9166] focus:outline-none focus:ring-2 focus:ring-[#2c9166] focus:ring-offset-1"
           />
           {#if results.length}
             <ul class="absolute left-0 right-0 top-full z-50 mt-1 max-h-80 overflow-y-auto rounded-lg border border-slate-200 bg-white py-1 shadow-lg">
@@ -318,7 +318,7 @@
             </ul>
           {/if}
         </div>
-        <nav class="hidden items-center justify-end gap-3 text-sm md:flex">
+        <nav class="hidden items-center justify-end gap-2.5 text-sm md:flex">
           <a href="#download" class="text-slate-700 no-underline hover:text-[#216d4d]">
             {m.home_toc_download()}
           </a>
