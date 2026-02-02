@@ -199,22 +199,13 @@
   <div class="mx-auto w-full max-w-7xl px-4 sm:px-6 md:w-[85%] md:px-0">
     <div class="py-2 sm:py-2.5">
       <div class="flex items-center justify-between gap-3">
-        <div class="min-w-0 flex items-center gap-4 lg:gap-6">
+        <div class="min-w-0">
           <a
             href="/"
             class="min-w-0 truncate text-lg font-bold text-[#2c9166] no-underline sm:text-xl md:text-[1.45rem]"
           >
             {m.home_header_title()}
           </a>
-          <nav class="hidden items-center gap-3 text-[13px] md:flex lg:gap-4">
-            <a href="#download" class="text-slate-700 no-underline hover:text-[#216d4d]">
-              {m.home_toc_download()}
-            </a>
-            <span class="text-slate-300">•</span>
-            <a href="#about" class="text-slate-700 no-underline hover:text-[#216d4d]">
-              {m.home_toc_learn()}
-            </a>
-          </nav>
         </div>
 
         <div class="flex items-center gap-2">
@@ -271,47 +262,58 @@
         </div>
       </div>
 
-      <div class="relative mx-auto mt-2 w-full max-w-lg md:mt-2.5 md:max-w-xl">
-        <input
-          type="search"
-          placeholder={m.search_placeholder()}
-          bind:value={query}
-          on:input={scheduleSearchTerm}
-          on:keydown={handleKeydown}
-          aria-label={m.search_aria_label()}
-          autocomplete="off"
-          class="w-full rounded-lg border-2 border-[#2c9166] bg-white px-4 py-2.5 text-[1.05rem] shadow-[0_8px_24px_-14px_rgba(15,23,42,0.55)] focus:outline-none focus:ring-2 focus:ring-[#2c9166] focus:ring-offset-1"
-        />
-        {#if results.length}
-          <ul class="absolute left-0 right-0 top-full z-50 mt-1 max-h-80 overflow-y-auto rounded-lg border border-slate-200 bg-white py-1 shadow-lg">
-            {#each results as result, index}
-              {@const slug = toSlug(result.item)}
-              {@const href = slug ? `/agency/${slug}` : "#"}
-              {@const stops = formatStops(toStops(result.item))}
-              <li role="option" aria-selected={index === selectedIndex}>
-                <a
-                  {href}
-                  on:click={(event) => handleResultClick(event, result.item)}
-                  aria-disabled={!slug}
-                  class="flex flex-col gap-1 px-4 py-2 text-sm text-slate-900 no-underline hover:bg-[#2c9166]/10 {index === selectedIndex ? 'bg-[#2c9166]/10' : ''}"
-                >
-                  <span class="font-semibold text-slate-900">{toLabel(result.item)}</span>
-                  {#if stops || toSubLabel(result.item)}
-                    <span class="flex items-center gap-2 text-xs text-slate-500">
-                      {#if stops}
-                        <span class="font-semibold text-slate-800">{stops} stops</span>
-                      {/if}
-                      {#if toSubLabel(result.item)}
-                        <span class="opacity-60">•</span>
-                        <span>{toSubLabel(result.item)}</span>
-                      {/if}
-                    </span>
-                  {/if}
-                </a>
-              </li>
-            {/each}
-          </ul>
-        {/if}
+      <div class="mt-2 grid grid-cols-1 gap-3 md:mt-2.5 md:grid-cols-[minmax(0,38rem)_auto] md:items-center md:gap-5">
+        <div class="relative w-full">
+          <input
+            type="search"
+            placeholder={m.search_placeholder()}
+            bind:value={query}
+            on:input={scheduleSearchTerm}
+            on:keydown={handleKeydown}
+            aria-label={m.search_aria_label()}
+            autocomplete="off"
+            class="w-full rounded-lg border-2 border-[#2c9166] bg-white px-4 py-2.5 text-[1.05rem] shadow-[0_8px_24px_-14px_rgba(15,23,42,0.55)] focus:outline-none focus:ring-2 focus:ring-[#2c9166] focus:ring-offset-1"
+          />
+          {#if results.length}
+            <ul class="absolute left-0 right-0 top-full z-50 mt-1 max-h-80 overflow-y-auto rounded-lg border border-slate-200 bg-white py-1 shadow-lg">
+              {#each results as result, index}
+                {@const slug = toSlug(result.item)}
+                {@const href = slug ? `/agency/${slug}` : "#"}
+                {@const stops = formatStops(toStops(result.item))}
+                <li role="option" aria-selected={index === selectedIndex}>
+                  <a
+                    {href}
+                    on:click={(event) => handleResultClick(event, result.item)}
+                    aria-disabled={!slug}
+                    class="flex flex-col gap-1 px-4 py-2 text-sm text-slate-900 no-underline hover:bg-[#2c9166]/10 {index === selectedIndex ? 'bg-[#2c9166]/10' : ''}"
+                  >
+                    <span class="font-semibold text-slate-900">{toLabel(result.item)}</span>
+                    {#if stops || toSubLabel(result.item)}
+                      <span class="flex items-center gap-2 text-xs text-slate-500">
+                        {#if stops}
+                          <span class="font-semibold text-slate-800">{stops} stops</span>
+                        {/if}
+                        {#if toSubLabel(result.item)}
+                          <span class="opacity-60">•</span>
+                          <span>{toSubLabel(result.item)}</span>
+                        {/if}
+                      </span>
+                    {/if}
+                  </a>
+                </li>
+              {/each}
+            </ul>
+          {/if}
+        </div>
+        <nav class="hidden items-center justify-end gap-3 text-sm md:flex">
+          <a href="#download" class="text-slate-700 no-underline hover:text-[#216d4d]">
+            {m.home_toc_download()}
+          </a>
+          <span class="text-slate-300">•</span>
+          <a href="#about" class="text-slate-700 no-underline hover:text-[#216d4d]">
+            {m.home_toc_learn()}
+          </a>
+        </nav>
       </div>
     </div>
   </div>
