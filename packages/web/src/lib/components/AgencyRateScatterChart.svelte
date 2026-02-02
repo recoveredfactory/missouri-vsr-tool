@@ -108,25 +108,6 @@
     return { min, max };
   };
 
-  const getInsetDomainValue = (
-    domainMin: number,
-    domainMax: number,
-    scaleType: "linear" | "log",
-    insetRatio = 0.04
-  ) => {
-    if (!Number.isFinite(domainMin) || !Number.isFinite(domainMax)) return domainMax;
-    if (scaleType === "log") {
-      const safeMin = Math.max(domainMin, Number.MIN_VALUE);
-      if (domainMax <= safeMin) return domainMax;
-      const spread = domainMax / safeMin;
-      if (!Number.isFinite(spread) || spread <= 1) return domainMax;
-      return domainMax / Math.pow(spread, insetRatio);
-    }
-    const span = domainMax - domainMin;
-    if (!Number.isFinite(span) || span <= 0) return domainMax;
-    return domainMax - span * insetRatio;
-  };
-
   $: domainSource =
     domainPoints && Array.isArray(domainPoints) && domainPoints.length
       ? domainPoints
@@ -153,16 +134,6 @@
     yScaleType === "log"
       ? [yExtent?.min ?? 1, yExtent?.max ?? 1]
       : [0, yMax || 0];
-  $: meanXLabelY = getInsetDomainValue(
-    resolvedYDomain[0],
-    resolvedYDomain[1],
-    yScaleType
-  );
-  $: meanYLabelX = getInsetDomainValue(
-    resolvedXDomain[0],
-    resolvedXDomain[1],
-    xScaleType
-  );
   $: xTicks = (() => {
     if (xScaleType === "log") {
       return xLogTicks?.major ?? [];
@@ -267,33 +238,41 @@
     />
     {#if Number.isFinite(meanX)}
       <Rule x={meanX} class={meanLineClass} />
+      {#if meanXLabel}
+        <Points data={[{ x: meanX, y: resolvedYDomain[1] }]} x="x" y="y" let:points>
+          {#if points[0]}
+            <Text
+              x={points[0].x}
+              y={points[0].y}
+              value={meanXLabel}
+              textAnchor="start"
+              verticalAnchor="start"
+              dx={6}
+              dy={6}
+              style={meanLabelStyle}
+            />
+          {/if}
+        </Points>
+      {/if}
     {/if}
     {#if Number.isFinite(meanY)}
       <Rule y={meanY} class={meanLineClass} />
-    {/if}
-    {#if Number.isFinite(meanX) && meanXLabel}
-      <Text
-        x={meanX}
-        y={meanXLabelY}
-        value={meanXLabel}
-        textAnchor="start"
-        verticalAnchor="start"
-        dx={6}
-        dy={4}
-        style={meanLabelStyle}
-      />
-    {/if}
-    {#if Number.isFinite(meanY) && meanYLabel}
-      <Text
-        x={meanYLabelX}
-        y={meanY}
-        value={meanYLabel}
-        textAnchor="end"
-        verticalAnchor="start"
-        dx={-6}
-        dy={4}
-        style={meanLabelStyle}
-      />
+      {#if meanYLabel}
+        <Points data={[{ x: resolvedXDomain[1], y: meanY }]} x="x" y="y" let:points>
+          {#if points[0]}
+            <Text
+              x={points[0].x}
+              y={points[0].y}
+              value={meanYLabel}
+              textAnchor="end"
+              verticalAnchor="end"
+              dx={-6}
+              dy={-2}
+              style={meanLabelStyle}
+            />
+          {/if}
+        </Points>
+      {/if}
     {/if}
     {#if activePoint}
       <Points

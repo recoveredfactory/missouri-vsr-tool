@@ -1258,6 +1258,7 @@
                       yLabel={m?.agency_scatter_citations_label?.() ?? "Citations"}
                       xMetricKey="rates-by-race--totals--all-stops"
                       yMetricKey="rates-by-race--totals--citations"
+                      excludeAgencies={scatterExcludedAgencies}
                       minStops={500}
                       sizeByStops={true}
                       stopsLabel={m?.agency_scatter_total_stops_label?.() ?? "Total stops"}
@@ -1288,6 +1289,7 @@
                       yMetricKey="rates-by-race--totals--citations"
                       xColumn="Non-white"
                       yColumn="Non-white"
+                      excludeAgencies={scatterExcludedAgencies}
                       minStops={500}
                       sizeByStops={true}
                       stopsColumn="Non-white"
@@ -1320,6 +1322,7 @@
                       yMetricKey="rates-by-race--totals--citations"
                       xColumn="White"
                       yColumn="White"
+                      excludeAgencies={scatterExcludedAgencies}
                       minStops={500}
                       sizeByStops={true}
                       stopsColumn="White"
@@ -1355,6 +1358,7 @@
                       yLabel={m?.agency_scatter_arrest_rate_label?.() ?? "Arrest rate (%)"}
                       xMetricKey="rates-by-race--totals--citations-rate"
                       yMetricKey="rates-by-race--totals--arrests-rate"
+                      excludeAgencies={scatterExcludedAgencies}
                       xCountKey="rates-by-race--totals--citations"
                       yCountKey="rates-by-race--totals--arrests"
                       xCountLabel={m?.agency_scatter_citations_label?.() ?? "Citations"}
@@ -1399,6 +1403,7 @@
                       yMetricKey="rates-by-race--totals--arrests-rate"
                       xColumn="Non-white"
                       yColumn="Non-white"
+                      excludeAgencies={scatterExcludedAgencies}
                       xCountKey="rates-by-race--totals--citations"
                       yCountKey="rates-by-race--totals--arrests"
                       xCountColumn="Non-white"
@@ -1453,6 +1458,7 @@
                       yMetricKey="rates-by-race--totals--arrests-rate"
                       xColumn="White"
                       yColumn="White"
+                      excludeAgencies={scatterExcludedAgencies}
                       xCountKey="rates-by-race--totals--citations"
                       yCountKey="rates-by-race--totals--arrests"
                       xCountColumn="White"
