@@ -1,10 +1,9 @@
 import { readFileSync } from "fs";
-import { join } from "path";
 import { compile } from "mdsvex";
 
 export async function load() {
-  const path = join(process.cwd(), "content", "about-the-data.md");
-  const markdown = readFileSync(path, "utf-8");
+  const markdownPath = new URL("../../content/about-the-data.md", import.meta.url);
+  const markdown = readFileSync(markdownPath, "utf-8");
   const compiled = await compile(markdown);
 
   return {
