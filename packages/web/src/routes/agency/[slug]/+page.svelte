@@ -49,10 +49,10 @@
     style: "percent",
     maximumFractionDigits: 1,
   });
-  const formatPercentTick = (value) =>
+  const formatPercentTick = (value, { isMax } = { isMax: false }) =>
     value === null || value === undefined || Number.isNaN(value)
       ? "—"
-      : `${numberFormatter.format(value)}%`;
+      : `${numberFormatter.format(value)}${isMax ? "%" : ""}`;
 
   let agencyData;
   let metadata;

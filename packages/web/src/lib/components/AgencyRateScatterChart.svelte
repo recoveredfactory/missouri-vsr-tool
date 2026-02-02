@@ -30,10 +30,14 @@
   export let meanYLabel = "";
   export let formatValue: (value: number | null | undefined) => string = (value) =>
     value === null || value === undefined ? "—" : String(value);
-  export let formatXAxisTick: (value: number | null | undefined) => string = (value) =>
-    formatValue(value);
-  export let formatYAxisTick: (value: number | null | undefined) => string = (value) =>
-    formatValue(value);
+  export let formatXAxisTick: (
+    value: number | null | undefined,
+    meta?: { isMax?: boolean }
+  ) => string = (value) => formatValue(value);
+  export let formatYAxisTick: (
+    value: number | null | undefined,
+    meta?: { isMax?: boolean }
+  ) => string = (value) => formatValue(value);
   export let formatCount: (value: number | null | undefined) => string = (value) =>
     value === null || value === undefined ? "—" : String(value);
   export let xLabel = "";
@@ -70,6 +74,7 @@
   const topPadding = 22;
   const yLabelOffset = -12;
   const logMinorFactors = [2, 3, 4, 5, 6, 7, 8, 9];
+  const almostEqual = (a: number, b: number) => Math.abs(a - b) < 1e-9;
 
   const isMajorLogTick = (value: number) => {
     if (!Number.isFinite(value) || value <= 0) return false;
@@ -155,6 +160,8 @@
     const ticks = scale.ticks(yTickCount);
     return ticks.length ? ticks : [0];
   })();
+  $: maxXTick = xTicks.length ? xTicks[xTicks.length - 1] : null;
+  $: maxYTick = yTicks.length ? yTicks[yTicks.length - 1] : null;
 </script>
 
 <Chart
@@ -199,7 +206,9 @@
       format={(value) =>
         yScaleType === "log" && !isMajorLogTick(value)
           ? ""
-          : formatYAxisTick(value)
+          : formatYAxisTick(value, {
+              isMax: Number.isFinite(maxYTick) && almostEqual(value, maxYTick),
+            })
       }
       tickLabelProps={{
         style: axisTickStyle,
@@ -207,8 +216,8 @@
     />
     {#if yLabel}
       <Text
-        x={6}
-        y={yLabelOffset}
+        x={0}
+        y={yLabelOffset - 2}
         value={yLabel}
         textAnchor="start"
         verticalAnchor="start"
@@ -233,7 +242,9 @@
       format={(value) =>
         xScaleType === "log" && !isMajorLogTick(value)
           ? ""
-          : formatXAxisTick(value)
+          : formatXAxisTick(value, {
+              isMax: Number.isFinite(maxXTick) && almostEqual(value, maxXTick),
+            })
       }
     />
     <Points
