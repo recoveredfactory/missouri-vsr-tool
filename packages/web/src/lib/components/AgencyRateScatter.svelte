@@ -683,7 +683,7 @@
 
 </script>
 
-<div class="overflow-hidden rounded-3xl border border-slate-400 bg-white">
+<div class="overflow-hidden rounded-2xl border border-slate-400 bg-white">
   <div class="border-b border-slate-600 bg-slate-700 px-2.5 py-3 sm:px-4">
     <div class="flex items-center justify-between gap-3 sm:items-start">
       <div class="min-w-0">
