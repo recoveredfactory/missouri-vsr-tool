@@ -78,6 +78,7 @@
   let metricSearchTimeout;
   let lastTrackedMetricSearch = "";
   let neighborsExpanded = false;
+  const scatterExcludedAgencies = ["Missouri State Highway Patrol"];
 
   const trackEvent = (event, payload = {}) => {
     if (typeof window === "undefined") return;
@@ -1484,19 +1485,23 @@
                     <AgencyRateScatter
                       selectedYear={selectedYear}
                       agencyName={agencyData?.agency ?? data.slug}
-                      title="Contraband hits vs searches"
+                      title={
+                        m?.agency_scatter_search_vs_hit_heading?.() ??
+                          "Search rate vs contraband hit rate"
+                      }
                       domainGroup="hits-searches"
                       showMeanLines={true}
-                      xLabel={m?.agency_scatter_searches_label?.() ?? "Searches"}
-                      yLabel={m?.agency_scatter_contraband_hits_label?.() ?? "Contraband hits"}
-                      xMetricKey="rates-by-race--totals--searches"
-                      yMetricKey="rates-by-race--totals--contraband"
+                      xLabel={m?.agency_scatter_search_rate_label?.() ?? "Search rate"}
+                      yLabel={m?.agency_scatter_hit_rate_label?.() ?? "Hit rate"}
+                      xMetricKey="rates-by-race--totals--searches-rate"
+                      yMetricKey="rates-by-race--totals--contraband-hit-rate"
                       xCountKey="rates-by-race--totals--searches"
                       yCountKey="rates-by-race--totals--contraband"
                       xCountLabel={m?.agency_scatter_searches_label?.() ?? "Searches"}
                       yCountLabel={
                         m?.agency_scatter_contraband_hits_label?.() ?? "Contraband hits"
                       }
+                      excludeAgencies={scatterExcludedAgencies}
                       minStops={500}
                       sizeByStops={true}
                       stopsLabel={m?.agency_scatter_total_stops_label?.() ?? "Total stops"}
@@ -1510,29 +1515,41 @@
                         m?.agency_scatter_min_searches_note?.() ??
                           "Requires at least 25 searches to display."
                       }
-                      xScaleType="log"
-                      yScaleType="log"
-                      minX={1}
-                      minY={1}
                     />
                     <AgencyRateScatter
                       selectedYear={selectedYear}
                       agencyName={agencyData?.agency ?? data.slug}
-                      title="Non-white contraband hits vs searches"
+                      title={
+                        m?.agency_scatter_search_vs_hit_nonwhite_heading?.() ??
+                          "Non-white search rate vs contraband hit rate"
+                      }
                       domainGroup="hits-searches"
                       showMeanLines={true}
-                      xLabel="Non-white searches"
-                      yLabel="Non-white contraband hits"
-                      xMetricKey="rates-by-race--totals--searches"
-                      yMetricKey="rates-by-race--totals--contraband"
+                      xLabel={
+                        m?.agency_scatter_search_rate_nonwhite_label?.() ??
+                          "Non-white search rate"
+                      }
+                      yLabel={
+                        m?.agency_scatter_hit_rate_nonwhite_label?.() ??
+                          "Non-white hit rate"
+                      }
+                      xMetricKey="rates-by-race--totals--searches-rate"
+                      yMetricKey="rates-by-race--totals--contraband-hit-rate"
                       xColumn="Non-white"
                       yColumn="Non-white"
                       xCountKey="rates-by-race--totals--searches"
                       yCountKey="rates-by-race--totals--contraband"
                       xCountColumn="Non-white"
                       yCountColumn="Non-white"
-                      xCountLabel="Non-white searches"
-                      yCountLabel="Non-white contraband hits"
+                      xCountLabel={
+                        m?.agency_scatter_searches_nonwhite_label?.() ??
+                          "Non-white searches"
+                      }
+                      yCountLabel={
+                        m?.agency_scatter_contraband_hits_nonwhite_label?.() ??
+                          "Non-white contraband hits"
+                      }
+                      excludeAgencies={scatterExcludedAgencies}
                       minStops={500}
                       sizeByStops={true}
                       stopsColumn="Non-white"
@@ -1548,29 +1565,34 @@
                         m?.agency_scatter_min_searches_note_small?.() ??
                           "Requires at least 25 searches to display."
                       }
-                      xScaleType="log"
-                      yScaleType="log"
-                      minX={1}
-                      minY={1}
                     />
                     <AgencyRateScatter
                       selectedYear={selectedYear}
                       agencyName={agencyData?.agency ?? data.slug}
-                      title="White contraband hits vs searches"
+                      title={
+                        m?.agency_scatter_search_vs_hit_white_heading?.() ??
+                          "White search rate vs contraband hit rate"
+                      }
                       domainGroup="hits-searches"
                       showMeanLines={true}
-                      xLabel="White searches"
-                      yLabel="White contraband hits"
-                      xMetricKey="rates-by-race--totals--searches"
-                      yMetricKey="rates-by-race--totals--contraband"
+                      xLabel={
+                        m?.agency_scatter_search_rate_white_label?.() ?? "White search rate"
+                      }
+                      yLabel={m?.agency_scatter_hit_rate_white_label?.() ?? "White hit rate"}
+                      xMetricKey="rates-by-race--totals--searches-rate"
+                      yMetricKey="rates-by-race--totals--contraband-hit-rate"
                       xColumn="White"
                       yColumn="White"
                       xCountKey="rates-by-race--totals--searches"
                       yCountKey="rates-by-race--totals--contraband"
                       xCountColumn="White"
                       yCountColumn="White"
-                      xCountLabel="White searches"
-                      yCountLabel="White contraband hits"
+                      xCountLabel={m?.agency_scatter_searches_white_label?.() ?? "White searches"}
+                      yCountLabel={
+                        m?.agency_scatter_contraband_hits_white_label?.() ??
+                          "White contraband hits"
+                      }
+                      excludeAgencies={scatterExcludedAgencies}
                       minStops={500}
                       sizeByStops={true}
                       stopsColumn="White"
@@ -1586,10 +1608,6 @@
                         m?.agency_scatter_min_searches_note_small?.() ??
                           "Requires at least 25 searches to display."
                       }
-                      xScaleType="log"
-                      yScaleType="log"
-                      minX={1}
-                      minY={1}
                     />
                   </div>
                 </div>
