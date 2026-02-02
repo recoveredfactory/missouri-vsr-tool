@@ -26,3 +26,8 @@ Report dimension labels use ID-based keys:
 
 These are generated from `packages/web/static/data/report_dimensions.json` and
 stored in `packages/web/messages/en.json` and `packages/web/messages/es.json`.
+
+## Git workflow
+
+- Create feature branches as `XXXX-short-description` (example: `0046-nav-header-edits`).
+- When merging a PR tied to an issue, include `closes #<issue_number>` in the PR merge message/body.

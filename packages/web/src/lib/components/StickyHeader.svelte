@@ -178,13 +178,61 @@
 </script>
 
 <header class="sticky top-0 z-50 border-b-6 border-b-[#2c9166] bg-white/95 backdrop-blur-sm shadow-sm">
-  <div class="mx-auto max-w-7xl px-6">
-    <div class="flex flex-col gap-3 py-3 md:flex-row md:items-center md:justify-between md:gap-4">
-      <a href="/" class="shrink-0 text-2xl font-bold text-[#2c9166] no-underline md:text-3xl">
-        {m.home_header_title()}
-      </a>
+  <div class="mx-auto max-w-7xl px-4 sm:px-6">
+    <div class="py-3">
+      <div class="flex items-center justify-between gap-3">
+        <a href="/" class="min-w-0 text-lg font-bold text-[#2c9166] no-underline sm:text-xl md:text-2xl">
+          {m.home_header_title()}
+        </a>
 
-      <div class="relative w-full md:flex-1 md:max-w-2xl md:mx-auto">
+        <div class="flex items-center gap-2">
+          <nav class="hidden items-center gap-3 text-sm md:flex">
+            <a href="#download" class="no-underline text-slate-700 hover:text-[#216d4d]">
+              {m.home_toc_download()}
+            </a>
+            <a href="#about" class="no-underline text-slate-700 hover:text-[#216d4d]">
+              {m.home_toc_learn()}
+            </a>
+          </nav>
+          <select
+            bind:value={currentLocale}
+            on:change={handleLocaleChange}
+            class="hidden rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs font-semibold uppercase tracking-wide text-slate-700 shadow-sm transition-colors hover:border-[#2c9166] focus:border-[#2c9166] focus:outline-none md:block"
+          >
+            {#each locales as locale}
+              <option value={locale}>{locale.toUpperCase()}</option>
+            {/each}
+          </select>
+          <a
+            href="#donate"
+            class="rounded-lg bg-[#2c9166] px-3 py-2 text-sm font-semibold text-white no-underline transition-colors hover:bg-[#216d4d]"
+          >
+            {m.home_donate_button()}
+          </a>
+          <button
+            type="button"
+            class="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 text-slate-600 md:hidden"
+            aria-label="Toggle menu"
+            aria-expanded={mobileMenuOpen}
+            on:click={() => (mobileMenuOpen = !mobileMenuOpen)}
+          >
+            <svg
+              class="h-4 w-4"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M4 7h16M4 12h16M4 17h16" />
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <div class="relative mt-3 w-full md:max-w-xl">
         <input
           type="search"
           placeholder={m.search_placeholder()}
@@ -227,24 +275,37 @@
         {/if}
       </div>
 
-      <!-- Right: Language switcher + Donate -->
-      <div class="flex items-center gap-3">
-        <select
-          bind:value={currentLocale}
-          on:change={handleLocaleChange}
-          class="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs font-semibold uppercase tracking-wide text-slate-700 shadow-sm transition-colors hover:border-[#2c9166] focus:border-[#2c9166] focus:outline-none"
-        >
-          {#each locales as locale}
-            <option value={locale}>{locale.toUpperCase()}</option>
-          {/each}
-        </select>
-        <a
-          href="#donate"
-          class="rounded-lg bg-[#2c9166] px-4 py-2 text-sm font-semibold text-white no-underline transition-colors hover:bg-[#216d4d]"
-        >
-          {m.home_donate_button()}
-        </a>
-      </div>
+      {#if mobileMenuOpen}
+        <div class="mt-3 rounded-lg border border-slate-200 bg-white p-3 md:hidden">
+          <div class="flex items-center justify-between gap-3">
+            <div class="flex items-center gap-4 text-sm">
+              <a
+                href="#download"
+                class="text-slate-700 no-underline"
+                on:click={() => (mobileMenuOpen = false)}
+              >
+                {m.home_toc_download()}
+              </a>
+              <a
+                href="#about"
+                class="text-slate-700 no-underline"
+                on:click={() => (mobileMenuOpen = false)}
+              >
+                {m.home_toc_learn()}
+              </a>
+            </div>
+            <select
+              bind:value={currentLocale}
+              on:change={handleLocaleChange}
+              class="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs font-semibold uppercase tracking-wide text-slate-700 shadow-sm focus:border-[#2c9166] focus:outline-none"
+            >
+              {#each locales as locale}
+                <option value={locale}>{locale.toUpperCase()}</option>
+              {/each}
+            </select>
+          </div>
+        </div>
+      {/if}
     </div>
   </div>
 </header>

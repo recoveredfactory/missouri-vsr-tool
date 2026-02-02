@@ -1225,9 +1225,7 @@
               <path d="M6 8l4 4 4-4" />
             </svg>
             <span class="sr-only">
-              {neighborsExpanded
-                ? m?.agency_neighbors_collapse_label?.() ?? "Hide"
-                : m?.agency_neighbors_expand_label?.() ?? "Show"}
+              {neighborsExpanded ? "Hide" : "Show"}
             </span>
           </span>
           <div>
