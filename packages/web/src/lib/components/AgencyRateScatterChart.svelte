@@ -279,7 +279,7 @@
     {/if}
     <Highlight lines />
   </Svg>
-  <Tooltip.Root>
+  <Tooltip.Root classes={{ container: "agency-scatter-tooltip" }}>
     {#snippet children({ data })}
       {#if data}
         <Tooltip.Header>{data.agency}</Tooltip.Header>
@@ -320,3 +320,17 @@
     {/snippet}
   </Tooltip.Root>
 </Chart>
+
+<style>
+  :global(.agency-scatter-tooltip) {
+    background-color: #fff !important;
+    color: #0f172a !important;
+    border: 1px solid rgb(226 232 240) !important;
+    box-shadow: 0 10px 24px rgb(15 23 42 / 0.16) !important;
+    backdrop-filter: none !important;
+  }
+
+  :global(.agency-scatter-tooltip .label) {
+    color: #475569 !important;
+  }
+</style>
