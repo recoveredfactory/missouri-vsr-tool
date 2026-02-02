@@ -144,6 +144,12 @@
   let shownAgencyCount = 0;
   let legendMinStops: number | null = null;
   let legendMaxStops: number | null = null;
+  let legendStopsDescriptor = "stops";
+  let summaryNote = "";
+  let legendMinDotSizePx = 0;
+  let legendMaxDotSizePx = 0;
+  const LEGEND_MIN_DOT_SIZE_PX = 1.1;
+  const LEGEND_MAX_DOT_SIZE_PX = 14;
 
   const numberFormatter = new Intl.NumberFormat(undefined, {
     maximumFractionDigits: 2,
@@ -626,6 +632,27 @@
       `Mean ${resolvedYLabel}`)
     : "";
   $: shownAgencyCount = yearPoints.length;
+  $: legendStopsDescriptor = (stopsLabel || "stops")
+    .toLowerCase()
+    .replace(/\btotal\s+/g, "")
+    .trim();
+  $: {
+    const shownLabel = `${formatCount(shownAgencyCount)} ${
+      shownAgencyCount === 1 ? "agency" : "agencies"
+    } shown.`;
+    if (!note) {
+      summaryNote = `Showing ${formatCount(shownAgencyCount)} ${
+        shownAgencyCount === 1 ? "agency" : "agencies"
+      }.`;
+    } else {
+      const thresholdMatch = note.match(/^Requires at least\s+(.+?)\s+to display\.?$/i);
+      summaryNote = thresholdMatch
+        ? `Showing agencies with at least ${thresholdMatch[1]}; ${shownLabel}`
+        : `${note.replace(/\.$/, "")}; ${shownLabel}`;
+    }
+  }
+  $: legendMinDotSizePx = LEGEND_MIN_DOT_SIZE_PX * dotRadiusScale;
+  $: legendMaxDotSizePx = LEGEND_MAX_DOT_SIZE_PX * dotRadiusScale;
   $: {
     legendMinStops = null;
     legendMaxStops = null;
@@ -694,35 +721,32 @@
       {m?.agency_scatter_chart_loading?.() ?? "Loading chart…"}
     </div>
   {/if}
-  {#if note || excludeAboveXNote || (sizeByStops && yearPoints.length > 0)}
+  {#if summaryNote || excludeAboveXNote || (sizeByStops && yearPoints.length > 0)}
     <div class="mt-1 grid gap-2 text-xs text-slate-500 sm:grid-cols-[1fr_auto] sm:items-start">
       <div class="space-y-0.5">
-        {#if note}
-          <div>{note}</div>
+        {#if summaryNote}
+          <div>{summaryNote}</div>
         {/if}
         {#if excludeAboveXNote}
           <div>{excludeAboveXNote}</div>
         {/if}
       </div>
       {#if sizeByStops && yearPoints.length > 0}
-        <div class="justify-self-start rounded border border-slate-200 bg-slate-50 px-2 py-1.5 sm:justify-self-end">
-          <div class="mb-1 text-[11px] font-semibold tracking-wide text-slate-600">
-            Legend ({formatCount(shownAgencyCount)} agencies shown)
-          </div>
-          <div class="flex items-center gap-3 text-[11px]">
+        <div class="justify-self-start text-[11px] text-slate-600 sm:justify-self-end">
+          <div class="flex flex-col gap-1">
             <div class="flex items-center gap-1">
               <span
                 class="inline-block rounded-full border border-slate-400/80 bg-slate-300/60"
-                style="width: 4px; height: 4px;"
+                style={`width: ${legendMinDotSizePx}px; height: ${legendMinDotSizePx}px;`}
               ></span>
-              <span>{formatStops(legendMinStops)} stops</span>
+              <span>{formatStops(legendMinStops)} {legendStopsDescriptor}</span>
             </div>
             <div class="flex items-center gap-1">
               <span
                 class="inline-block rounded-full border border-slate-400/80 bg-slate-300/60"
-                style="width: 14px; height: 14px;"
+                style={`width: ${legendMaxDotSizePx}px; height: ${legendMaxDotSizePx}px;`}
               ></span>
-              <span>{formatStops(legendMaxStops)} stops</span>
+              <span>{formatStops(legendMaxStops)} {legendStopsDescriptor}</span>
             </div>
           </div>
         </div>
