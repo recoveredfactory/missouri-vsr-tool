@@ -630,14 +630,8 @@
     (xLabel || m?.agency_scatter_hit_rate_label?.()) ?? "Hit rate";
   $: resolvedYLabel =
     (yLabel || m?.agency_scatter_search_rate_label?.()) ?? "Search rate";
-  $: meanXLabel = showMeanLines
-    ? (m?.agency_scatter_mean_label?.({ label: resolvedXLabel }) ??
-      `Mean ${resolvedXLabel}`)
-    : "";
-  $: meanYLabel = showMeanLines
-    ? (m?.agency_scatter_mean_label?.({ label: resolvedYLabel }) ??
-      `Mean ${resolvedYLabel}`)
-    : "";
+  $: meanXLabel = showMeanLines ? "Mean" : "";
+  $: meanYLabel = "";
   $: shownAgencyCount = yearPoints.length;
   $: legendStopsDescriptor = (stopsLabel || "stops")
     .toLowerCase()

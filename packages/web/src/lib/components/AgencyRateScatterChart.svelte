@@ -52,7 +52,7 @@
   export let formatStops: (value: number | null | undefined) => string = (value) =>
     value === null || value === undefined ? "—" : String(value);
 
-  const axisTickStyle = "fill: #0f172a; font-size: 11px; font-weight: 600;";
+  const axisTickStyle = "fill: #475569; font-size: 11px; font-weight: 600;";
   const axisLabelStyle = "fill: #0f172a; font-size: 10px; font-weight: 600;";
   const topLabelStyle = "fill: #0f172a; font-size: 10px; font-weight: 600;";
   const gridLineMajorClass = "stroke-slate-300/80";
@@ -74,13 +74,13 @@
   const topPadding = 22;
   const yLabelOffset = -12;
   const logMinorFactors = [2, 3, 4, 5, 6, 7, 8, 9];
-  const almostEqual = (a: number, b: number) => Math.abs(a - b) < 1e-9;
 
   const isMajorLogTick = (value: number) => {
     if (!Number.isFinite(value) || value <= 0) return false;
     const logValue = Math.log10(value);
     return Math.abs(logValue - Math.round(logValue)) < 1e-6;
   };
+  const almostEqual = (a: number, b: number) => Math.abs(a - b) < 1e-9;
 
   const getLogTickSets = (extent: { min: number; max: number }) => {
     const major: number[] = [];
@@ -160,6 +160,19 @@
     const ticks = scale.ticks(yTickCount);
     return ticks.length ? ticks : [0];
   })();
+  const selectLabelTicks = (ticks: number[], divisor: number) => {
+    if (!ticks.length) return [];
+    const selected = ticks.filter((_, idx) => idx % divisor === 0);
+    const last = ticks[ticks.length - 1];
+    if (!selected.some((value) => almostEqual(value, last))) {
+      selected.push(last);
+    }
+    return selected;
+  };
+  $: xLabelTicks =
+    xScaleType === "log" ? xTicks : selectLabelTicks(xTicks, 2);
+  $: yLabelTicks =
+    yScaleType === "log" ? yTicks : selectLabelTicks(yTicks, 3);
   $: maxXTick = xTicks.length ? xTicks[xTicks.length - 1] : null;
   $: maxYTick = yTicks.length ? yTicks[yTicks.length - 1] : null;
 </script>
@@ -203,13 +216,19 @@
       tickLength={2}
       ticks={yTicks}
       motion={axisMotion}
-      format={(value) =>
-        yScaleType === "log" && !isMajorLogTick(value)
-          ? ""
-          : formatYAxisTick(value, {
-              isMax: Number.isFinite(maxYTick) && almostEqual(value, maxYTick),
-            })
-      }
+      format={(value) => {
+        if (yScaleType === "log") {
+          return isMajorLogTick(value)
+            ? formatYAxisTick(value, {
+                isMax: Number.isFinite(maxYTick) && almostEqual(value, maxYTick),
+              })
+            : "";
+        }
+        if (!yLabelTicks.some((tick) => almostEqual(tick, value))) return "";
+        return formatYAxisTick(value, {
+          isMax: Number.isFinite(maxYTick) && almostEqual(value, maxYTick),
+        });
+      }}
       tickLabelProps={{
         style: axisTickStyle,
       }}
@@ -239,13 +258,19 @@
       tickLabelProps={{
         style: axisTickStyle,
       }}
-      format={(value) =>
-        xScaleType === "log" && !isMajorLogTick(value)
-          ? ""
-          : formatXAxisTick(value, {
-              isMax: Number.isFinite(maxXTick) && almostEqual(value, maxXTick),
-            })
-      }
+      format={(value) => {
+        if (xScaleType === "log") {
+          return isMajorLogTick(value)
+            ? formatXAxisTick(value, {
+                isMax: Number.isFinite(maxXTick) && almostEqual(value, maxXTick),
+              })
+            : "";
+        }
+        if (!xLabelTicks.some((tick) => almostEqual(tick, value))) return "";
+        return formatXAxisTick(value, {
+          isMax: Number.isFinite(maxXTick) && almostEqual(value, maxXTick),
+        });
+      }}
     />
     <Points
       data={points}
