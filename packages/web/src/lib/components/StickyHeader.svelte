@@ -13,6 +13,7 @@
   let mobileMenuOpen = false;
   let searchTermTimeout;
   let lastTrackedSearchTerm = "";
+  let headerHeight = 0;
 
   let currentLocale = getLocale();
 
@@ -26,9 +27,6 @@
   };
   const toSubLabel = (item) => [item?.city].filter(Boolean).join(" • ");
   const toSlug = (item) => item?.agency_slug || item?.slug || item?.id;
-  const closeMobileMenu = () => {
-    mobileMenuOpen = false;
-  };
 
   $: searchableAgencies = (agencies || []).map((item) => ({
     ...item,
@@ -117,12 +115,16 @@
     });
   };
 
+  const closeMenu = () => {
+    mobileMenuOpen = false;
+  };
+
   const handleSelect = (item) => {
     const slug = toSlug(item);
     if (!slug) return;
     flushSearchTerm();
     trackSearch("select", item, "enter");
-    closeMobileMenu();
+    closeMenu();
     resetSearch();
     goto(`/agency/${slug}`).catch(() => {
       window.location.href = `/agency/${slug}`;
@@ -138,6 +140,7 @@
     }
 
     if (!results.length) return;
+
     if (event.key === "ArrowDown") {
       event.preventDefault();
       selectedIndex = (selectedIndex + 1) % results.length;
@@ -154,9 +157,7 @@
       event.preventDefault();
       const selected = results[selectedIndex]?.item || results[0]?.item;
       if (selected) handleSelect(selected);
-      return;
     }
-
   };
 
   const handleResultClick = (event, item) => {
@@ -167,7 +168,7 @@
     }
     flushSearchTerm();
     trackSearch("select", item, "click");
-    closeMobileMenu();
+    closeMenu();
     resetSearch();
   };
 
@@ -185,29 +186,39 @@
     const nextLocale = event?.currentTarget?.value;
     switchLocale(nextLocale);
   };
+
+  const toggleMenu = () => {
+    mobileMenuOpen = !mobileMenuOpen;
+  };
 </script>
 
-<header class="sticky top-0 z-50 border-b-6 border-b-[#2c9166] bg-white/95 backdrop-blur-sm shadow-sm">
-  <div class="mx-auto max-w-7xl px-4 sm:px-6">
-    <div class="py-3">
+<header
+  bind:clientHeight={headerHeight}
+  class="sticky top-0 z-50 border-b-6 border-b-[#2c9166] bg-white/95 backdrop-blur-sm shadow-sm"
+>
+  <div class="mx-auto w-full max-w-7xl px-4 sm:px-6 md:w-[85%] md:px-0">
+    <div class="py-2.5 sm:py-3">
       <div class="flex items-center justify-between gap-3">
-        <a href="/" class="min-w-0 text-lg font-bold text-[#2c9166] no-underline sm:text-xl md:text-2xl">
-          {m.home_header_title()}
-        </a>
-
-        <div class="flex items-center gap-2">
-          <nav class="hidden items-center gap-3 text-sm md:flex">
-            <a href="#download" class="no-underline text-slate-700 hover:text-[#216d4d]">
+        <div class="min-w-0 flex items-center gap-4 lg:gap-6">
+          <a href="/" class="min-w-0 truncate text-lg font-bold text-[#2c9166] no-underline sm:text-xl md:text-2xl">
+            {m.home_header_title()}
+          </a>
+          <nav class="hidden items-center gap-4 text-sm md:flex">
+            <a href="#download" class="text-slate-700 no-underline hover:text-[#216d4d]">
               {m.home_toc_download()}
             </a>
-            <a href="#about" class="no-underline text-slate-700 hover:text-[#216d4d]">
+            <span class="text-slate-300">•</span>
+            <a href="#about" class="text-slate-700 no-underline hover:text-[#216d4d]">
               {m.home_toc_learn()}
             </a>
           </nav>
+        </div>
+
+        <div class="flex items-center gap-2">
           <select
             bind:value={currentLocale}
             on:change={handleLocaleChange}
-            class="hidden rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs font-semibold uppercase tracking-wide text-slate-700 shadow-sm transition-colors hover:border-[#2c9166] focus:border-[#2c9166] focus:outline-none md:block"
+            class="hidden h-10 rounded-lg border border-slate-200 bg-white px-3 text-sm font-semibold uppercase tracking-wide text-slate-700 shadow-sm transition-colors hover:border-[#2c9166] focus:border-[#2c9166] focus:outline-none md:block"
           >
             {#each locales as locale}
               <option value={locale}>{locale.toUpperCase()}</option>
@@ -215,16 +226,17 @@
           </select>
           <a
             href="#donate"
-            class="rounded-lg bg-[#2c9166] px-3 py-2 text-sm font-semibold text-white no-underline transition-colors hover:bg-[#216d4d]"
+            class="inline-flex h-10 items-center rounded-lg bg-[#2c9166] px-4 text-sm font-semibold text-white no-underline transition-colors hover:bg-[#216d4d]"
           >
             {m.home_donate_button()}
           </a>
           <button
             type="button"
-            class="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 text-slate-600 md:hidden"
-            aria-label="Toggle menu"
+            class="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-slate-200 text-slate-600 md:hidden"
+            aria-controls="mobile-site-menu"
             aria-expanded={mobileMenuOpen}
-            on:click={() => (mobileMenuOpen = !mobileMenuOpen)}
+            aria-label={mobileMenuOpen ? "Close menu" : "Open menu"}
+            on:click={toggleMenu}
           >
             <svg
               class="h-4 w-4"
@@ -242,7 +254,7 @@
         </div>
       </div>
 
-      <div class="relative mt-3 w-full md:max-w-xl">
+      <div class="relative mx-auto mt-2.5 w-full max-w-lg md:mt-3 md:max-w-xl lg:max-w-2xl">
         <input
           type="search"
           placeholder={m.search_placeholder()}
@@ -251,7 +263,7 @@
           on:keydown={handleKeydown}
           aria-label={m.search_aria_label()}
           autocomplete="off"
-          class="w-full rounded-lg border-2 border-[#2c9166] bg-white px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#2c9166] focus:ring-offset-1"
+          class="w-full rounded-lg border-2 border-[#2c9166] bg-white px-4 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-[#2c9166] focus:ring-offset-1"
         />
         {#if results.length}
           <ul class="absolute left-0 right-0 top-full z-50 mt-1 max-h-80 overflow-y-auto rounded-lg border border-slate-200 bg-white py-1 shadow-lg">
@@ -259,7 +271,7 @@
               {@const slug = toSlug(result.item)}
               {@const href = slug ? `/agency/${slug}` : "#"}
               {@const stops = formatStops(toStops(result.item))}
-              <li role="option">
+              <li role="option" aria-selected={index === selectedIndex}>
                 <a
                   {href}
                   on:click={(event) => handleResultClick(event, result.item)}
@@ -284,96 +296,74 @@
           </ul>
         {/if}
       </div>
-
-      {#if mobileMenuOpen}
-        <button
-          type="button"
-          class="fixed inset-0 z-[70] bg-slate-950/35 md:hidden"
-          aria-label="Close menu"
-          on:click={closeMobileMenu}
-        ></button>
-        <aside class="fixed inset-0 z-[80] bg-white md:hidden" aria-label="Mobile navigation">
-          <div class="flex h-full flex-col">
-            <div class="flex items-center justify-between border-b border-slate-200 px-4 py-4">
-              <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
-                Menu
-              </p>
-              <button
-                type="button"
-                class="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 text-slate-600"
-                aria-label="Close menu"
-                on:click={closeMobileMenu}
-              >
-                <svg
-                  class="h-4 w-4"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  aria-hidden="true"
-                >
-                  <path d="M6 6l12 12M18 6L6 18" />
-                </svg>
-              </button>
-            </div>
-
-            <div class="flex-1 overflow-y-auto px-6 py-8">
-              <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">
-                Explore
-              </p>
-              <nav class="mt-3 space-y-3">
-                <a
-                  href="#download"
-                  class="block text-3xl font-semibold leading-tight text-slate-900 no-underline"
-                  on:click={closeMobileMenu}
-                >
-                  {m.home_toc_download()}
-                </a>
-                <a
-                  href="#about"
-                  class="block text-3xl font-semibold leading-tight text-slate-900 no-underline"
-                  on:click={closeMobileMenu}
-                >
-                  {m.home_toc_learn()}
-                </a>
-              </nav>
-
-              <div class="mt-10">
-                <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">
-                  Language
-                </p>
-                <div class="mt-3 grid grid-cols-2 gap-2">
-                  {#each locales as locale}
-                    <button
-                      type="button"
-                      class={`rounded-lg border px-3 py-2 text-sm font-semibold uppercase tracking-wide ${
-                        locale === currentLocale
-                          ? "border-[#2c9166] bg-[#2c9166] text-white"
-                          : "border-slate-200 text-slate-700"
-                      }`}
-                      on:click={() => switchLocale(locale)}
-                    >
-                      {locale.toUpperCase()}
-                    </button>
-                  {/each}
-                </div>
-              </div>
-            </div>
-
-            <div class="border-t border-slate-200 p-6">
-              <a
-                href="#donate"
-                class="inline-flex w-full items-center justify-center rounded-lg bg-[#2c9166] px-4 py-3 text-base font-semibold text-white no-underline transition-colors hover:bg-[#216d4d]"
-                on:click={closeMobileMenu}
-              >
-                {m.home_donate_button()}
-              </a>
-            </div>
-          </div>
-        </aside>
-      {/if}
     </div>
   </div>
+
+  {#if mobileMenuOpen}
+    <div
+      id="mobile-site-menu"
+      class="fixed inset-x-0 z-40 overflow-y-auto border-t border-slate-200 bg-white md:hidden"
+      style={`top: ${headerHeight}px; height: calc(100dvh - ${headerHeight}px);`}
+    >
+      <div class="flex min-h-full flex-col px-6 py-6">
+        <div class="flex items-center justify-between">
+          <p class="text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">Menu</p>
+          <button
+            type="button"
+            class="inline-flex h-9 items-center justify-center rounded-lg border border-slate-200 px-3 text-xs font-semibold uppercase tracking-wide text-slate-600"
+            on:click={closeMenu}
+          >
+            Close
+          </button>
+        </div>
+
+        <p class="mt-8 text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">Explore</p>
+        <nav class="mt-3 space-y-3">
+          <a
+            href="#download"
+            class="block text-3xl font-semibold leading-tight text-slate-900 no-underline"
+            on:click={closeMenu}
+          >
+            {m.home_toc_download()}
+          </a>
+          <a
+            href="#about"
+            class="block text-3xl font-semibold leading-tight text-slate-900 no-underline"
+            on:click={closeMenu}
+          >
+            {m.home_toc_learn()}
+          </a>
+        </nav>
+
+        <div class="mt-10">
+          <p class="text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">Language</p>
+          <div class="mt-3 grid grid-cols-2 gap-2">
+            {#each locales as locale}
+              <button
+                type="button"
+                class={`rounded-lg border px-3 py-2 text-sm font-semibold uppercase tracking-wide ${
+                  locale === currentLocale
+                    ? "border-[#2c9166] bg-[#2c9166] text-white"
+                    : "border-slate-200 text-slate-700"
+                }`}
+                on:click={() => switchLocale(locale)}
+              >
+                {locale.toUpperCase()}
+              </button>
+            {/each}
+          </div>
+        </div>
+
+        <div class="mt-auto pt-8">
+          <a
+            href="#donate"
+            class="inline-flex w-full items-center justify-center rounded-lg bg-[#2c9166] px-4 py-3 text-base font-semibold text-white no-underline transition-colors hover:bg-[#216d4d]"
+            on:click={closeMenu}
+          >
+            {m.home_donate_button()}
+          </a>
+        </div>
+      </div>
+    </div>
+  {/if}
 </header>
