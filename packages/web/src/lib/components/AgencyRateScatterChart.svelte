@@ -50,6 +50,7 @@
   const gridLineMajorClass = "stroke-slate-300/80";
   const gridLineMinorClass = "stroke-slate-200/35";
   const meanLineClass = "stroke-emerald-500/70";
+  const meanLineWidth = 2;
   const meanLabelStyle = "fill: #047857; font-size: 10px; font-weight: 600;";
   const xTickCount = 5;
   const yTickCount = 5;
@@ -237,7 +238,7 @@
       strokeWidth={dotStrokeWidth}
     />
     {#if Number.isFinite(meanX)}
-      <Rule x={meanX} class={meanLineClass} />
+      <Rule x={meanX} class={meanLineClass} strokeWidth={meanLineWidth} />
       {#if meanXLabel}
         <Points data={[{ x: meanX, y: resolvedYDomain[1] }]} x="x" y="y" let:points>
           {#if points[0]}
@@ -248,7 +249,7 @@
               textAnchor="start"
               verticalAnchor="start"
               dx={6}
-              dy={6}
+              dy={0}
               style={meanLabelStyle}
             />
           {/if}
@@ -256,7 +257,7 @@
       {/if}
     {/if}
     {#if Number.isFinite(meanY)}
-      <Rule y={meanY} class={meanLineClass} />
+      <Rule y={meanY} class={meanLineClass} strokeWidth={meanLineWidth} />
       {#if meanYLabel}
         <Points data={[{ x: resolvedXDomain[1], y: meanY }]} x="x" y="y" let:points>
           {#if points[0]}
@@ -265,9 +266,9 @@
               y={points[0].y}
               value={meanYLabel}
               textAnchor="end"
-              verticalAnchor="end"
-              dx={-6}
-              dy={-2}
+              verticalAnchor="start"
+              dx={0}
+              dy={6}
               style={meanLabelStyle}
             />
           {/if}
