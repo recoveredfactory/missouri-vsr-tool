@@ -1507,6 +1507,7 @@
                       stopsLabel={m?.agency_scatter_total_stops_label?.() ?? "Total stops"}
                       minCount={25}
                       minCountKey="rates-by-race--totals--searches"
+                      excludeAboveX={50}
                       minCountMessage={
                         m?.agency_scatter_min_searches_note?.() ??
                           "Requires at least 25 searches to display."
@@ -1557,6 +1558,7 @@
                       minCount={25}
                       minCountKey="rates-by-race--totals--searches"
                       minCountColumn="Non-white"
+                      excludeAboveX={50}
                       minCountMessage={
                         m?.agency_scatter_min_searches_note_small?.() ??
                           "Requires at least 25 searches to display."
@@ -1600,6 +1602,7 @@
                       minCount={25}
                       minCountKey="rates-by-race--totals--searches"
                       minCountColumn="White"
+                      excludeAboveX={50}
                       minCountMessage={
                         m?.agency_scatter_min_searches_note_small?.() ??
                           "Requires at least 25 searches to display."

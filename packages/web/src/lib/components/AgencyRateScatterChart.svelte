@@ -108,6 +108,25 @@
     return { min, max };
   };
 
+  const getInsetDomainValue = (
+    domainMin: number,
+    domainMax: number,
+    scaleType: "linear" | "log",
+    insetRatio = 0.04
+  ) => {
+    if (!Number.isFinite(domainMin) || !Number.isFinite(domainMax)) return domainMax;
+    if (scaleType === "log") {
+      const safeMin = Math.max(domainMin, Number.MIN_VALUE);
+      if (domainMax <= safeMin) return domainMax;
+      const spread = domainMax / safeMin;
+      if (!Number.isFinite(spread) || spread <= 1) return domainMax;
+      return domainMax / Math.pow(spread, insetRatio);
+    }
+    const span = domainMax - domainMin;
+    if (!Number.isFinite(span) || span <= 0) return domainMax;
+    return domainMax - span * insetRatio;
+  };
+
   $: domainSource =
     domainPoints && Array.isArray(domainPoints) && domainPoints.length
       ? domainPoints
@@ -134,6 +153,16 @@
     yScaleType === "log"
       ? [yExtent?.min ?? 1, yExtent?.max ?? 1]
       : [0, yMax || 0];
+  $: meanXLabelY = getInsetDomainValue(
+    resolvedYDomain[0],
+    resolvedYDomain[1],
+    yScaleType
+  );
+  $: meanYLabelX = getInsetDomainValue(
+    resolvedXDomain[0],
+    resolvedXDomain[1],
+    xScaleType
+  );
   $: xTicks = (() => {
     if (xScaleType === "log") {
       return xLogTicks?.major ?? [];
@@ -245,24 +274,24 @@
     {#if Number.isFinite(meanX) && meanXLabel}
       <Text
         x={meanX}
-        y={resolvedYDomain[1]}
+        y={meanXLabelY}
         value={meanXLabel}
         textAnchor="start"
         verticalAnchor="start"
         dx={6}
-        dy={6}
+        dy={4}
         style={meanLabelStyle}
       />
     {/if}
     {#if Number.isFinite(meanY) && meanYLabel}
       <Text
-        x={resolvedXDomain[1]}
+        x={meanYLabelX}
         y={meanY}
         value={meanYLabel}
         textAnchor="end"
-        verticalAnchor="end"
+        verticalAnchor="start"
         dx={-6}
-        dy={-2}
+        dy={4}
         style={meanLabelStyle}
       />
     {/if}
@@ -328,6 +357,7 @@
     border: 1px solid rgb(226 232 240) !important;
     box-shadow: 0 10px 24px rgb(15 23 42 / 0.16) !important;
     backdrop-filter: none !important;
+    padding: 8px 12px !important;
   }
 
   :global(.agency-scatter-tooltip .label) {

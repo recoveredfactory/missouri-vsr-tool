@@ -598,10 +598,9 @@
 
   $: excludeAboveXNote =
     excludeAboveX !== null && excludeAboveXCount > 0
-      ? (m?.agency_scatter_search_rate_outlier_note?.({
-          count: formatCount(excludeAboveXCount),
-        }) ??
-        `Removes ${formatCount(excludeAboveXCount)} depts with search rates over 50% while we investigate.`)
+      ? `Removes ${formatCount(excludeAboveXCount)} ${
+          excludeAboveXCount === 1 ? "department" : "departments"
+        } with search rates over 50% while we investigate.`
       : "";
   $: resolvedXLabel =
     (xLabel || m?.agency_scatter_hit_rate_label?.()) ?? "Hit rate";
