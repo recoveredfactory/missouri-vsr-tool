@@ -115,7 +115,12 @@
     });
   };
 
-  const closeMenu = () => {
+  const closeMenu = (source = "unknown") => {
+    if (!mobileMenuOpen) return;
+    trackEvent("mobile_menu_toggle", {
+      action: "close",
+      source,
+    });
     mobileMenuOpen = false;
   };
 
@@ -124,7 +129,7 @@
     if (!slug) return;
     flushSearchTerm();
     trackSearch("select", item, "enter");
-    closeMenu();
+    closeMenu("search_select");
     resetSearch();
     goto(`/agency/${slug}`).catch(() => {
       window.location.href = `/agency/${slug}`;
@@ -168,7 +173,7 @@
     }
     flushSearchTerm();
     trackSearch("select", item, "click");
-    closeMenu();
+    closeMenu("search_select");
     resetSearch();
   };
 
@@ -188,7 +193,15 @@
   };
 
   const toggleMenu = () => {
-    mobileMenuOpen = !mobileMenuOpen;
+    if (mobileMenuOpen) {
+      closeMenu("toggle");
+      return;
+    }
+    mobileMenuOpen = true;
+    trackEvent("mobile_menu_toggle", {
+      action: "open",
+      source: "toggle",
+    });
   };
 </script>
 
@@ -330,7 +343,7 @@
           <button
             type="button"
             class="inline-flex h-9 items-center justify-center rounded-lg border border-slate-200 px-3 text-xs font-semibold uppercase tracking-wide text-slate-600"
-            on:click={closeMenu}
+            on:click={() => closeMenu("close_button")}
           >
             Close
           </button>
@@ -341,14 +354,14 @@
           <a
             href="#download"
             class="block text-3xl font-semibold leading-tight text-slate-900 no-underline"
-            on:click={closeMenu}
+            on:click={() => closeMenu("nav")}
           >
             {m.home_toc_download()}
           </a>
           <a
             href="#about"
             class="block text-3xl font-semibold leading-tight text-slate-900 no-underline"
-            on:click={closeMenu}
+            on:click={() => closeMenu("nav")}
           >
             {m.home_toc_learn()}
           </a>
@@ -377,7 +390,7 @@
           <a
             href="#donate"
             class="inline-flex w-full items-center justify-center rounded-lg bg-[#2c9166] px-4 py-3 text-base font-semibold text-white no-underline transition-colors hover:bg-[#216d4d]"
-            on:click={closeMenu}
+            on:click={() => closeMenu("donate")}
           >
             {m.home_donate_button()}
           </a>
