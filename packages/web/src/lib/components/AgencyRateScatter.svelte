@@ -146,6 +146,7 @@
   let legendMaxStops: number | null = null;
   let legendStopsDescriptor = "stops";
   let summaryNote = "";
+  let combinedNote = "";
   let legendMinDotSizePx = 0;
   let legendMaxDotSizePx = 0;
   const LEGEND_MIN_DOT_RADIUS_PX = 2.1;
@@ -653,6 +654,7 @@
   }
   $: legendMinDotSizePx = LEGEND_MIN_DOT_RADIUS_PX * 2 * dotRadiusScale;
   $: legendMaxDotSizePx = LEGEND_MAX_DOT_RADIUS_PX * 2 * dotRadiusScale;
+  $: combinedNote = [summaryNote, excludeAboveXNote].filter(Boolean).join(" ");
   $: {
     legendMinStops = null;
     legendMaxStops = null;
@@ -721,14 +723,11 @@
       {m?.agency_scatter_chart_loading?.() ?? "Loading chart…"}
     </div>
   {/if}
-  {#if summaryNote || excludeAboveXNote || (sizeByStops && yearPoints.length > 0)}
-    <div class="mt-1 grid gap-2 text-xs text-slate-500 sm:grid-cols-[minmax(0,1fr)_max-content] sm:items-start">
-      <div class="max-w-[38ch] space-y-0.5">
-        {#if summaryNote}
-          <div>{summaryNote}</div>
-        {/if}
-        {#if excludeAboveXNote}
-          <div>{excludeAboveXNote}</div>
+  {#if combinedNote || (sizeByStops && yearPoints.length > 0)}
+    <div class="mt-2 grid gap-y-1 gap-x-5 text-xs text-slate-500 sm:grid-cols-[minmax(0,1fr)_max-content] sm:items-start">
+      <div class="max-w-[34ch]">
+        {#if combinedNote}
+          <div>{combinedNote}</div>
         {/if}
       </div>
       {#if sizeByStops && yearPoints.length > 0}
