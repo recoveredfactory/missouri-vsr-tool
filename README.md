@@ -46,6 +46,7 @@ These live in `packages/web/messages/en.json` and `packages/web/messages/es.json
 - `search_action`: search box usage on home/agency header (payload: `action`, `method`, `term`, `slug`).
 - `search_term`: header search debounced term (payload: `term`).
 - `language_switch`: locale selector change (payload: `from`, `to`).
+- `mobile_menu_toggle`: mobile menu open/close (payload: `action`, `source`).
 - `download_click`: homepage dataset download CTA (payload: `label`, `href`).
 - `agency_year_select`: agency page year selector click (payload: `year`, `source`, `agency`).
 - `metric_search`: agency page metric search, debounced (payload: `term`, `year`, `agency`).
