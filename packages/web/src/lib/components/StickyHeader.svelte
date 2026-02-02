@@ -197,13 +197,16 @@
   class="sticky top-0 z-50 border-b-6 border-b-[#2c9166] bg-white/95 backdrop-blur-sm shadow-sm"
 >
   <div class="mx-auto w-full max-w-7xl px-4 sm:px-6 md:w-[85%] md:px-0">
-    <div class="py-2.5 sm:py-3">
+    <div class="py-2 sm:py-2.5">
       <div class="flex items-center justify-between gap-3">
         <div class="min-w-0 flex items-center gap-4 lg:gap-6">
-          <a href="/" class="min-w-0 truncate text-lg font-bold text-[#2c9166] no-underline sm:text-xl md:text-2xl">
+          <a
+            href="/"
+            class="min-w-0 truncate text-lg font-bold text-[#2c9166] no-underline sm:text-xl md:text-[1.45rem]"
+          >
             {m.home_header_title()}
           </a>
-          <nav class="hidden items-center gap-4 text-sm md:flex">
+          <nav class="hidden items-center gap-3 text-[13px] md:flex lg:gap-4">
             <a href="#download" class="text-slate-700 no-underline hover:text-[#216d4d]">
               {m.home_toc_download()}
             </a>
@@ -215,24 +218,38 @@
         </div>
 
         <div class="flex items-center gap-2">
-          <select
-            bind:value={currentLocale}
-            on:change={handleLocaleChange}
-            class="hidden h-10 rounded-lg border border-slate-200 bg-white px-3 text-sm font-semibold uppercase tracking-wide text-slate-700 shadow-sm transition-colors hover:border-[#2c9166] focus:border-[#2c9166] focus:outline-none md:block"
-          >
-            {#each locales as locale}
-              <option value={locale}>{locale.toUpperCase()}</option>
-            {/each}
-          </select>
+          <div class="relative hidden md:block">
+            <select
+              bind:value={currentLocale}
+              on:change={handleLocaleChange}
+              class="h-9 appearance-none rounded-lg border border-slate-200 bg-white pl-2.5 pr-7 text-sm font-semibold uppercase tracking-wide text-slate-700 shadow-sm transition-colors hover:border-[#2c9166] focus:border-[#2c9166] focus:outline-none"
+            >
+              {#each locales as locale}
+                <option value={locale}>{locale.toUpperCase()}</option>
+              {/each}
+            </select>
+            <svg
+              class="pointer-events-none absolute right-1.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500"
+              viewBox="0 0 20 20"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M6 8l4 4 4-4" />
+            </svg>
+          </div>
           <a
             href="#donate"
-            class="inline-flex h-10 items-center rounded-lg bg-[#2c9166] px-4 text-sm font-semibold text-white no-underline transition-colors hover:bg-[#216d4d]"
+            class="inline-flex h-9 items-center rounded-lg bg-[#2c9166] px-4 text-sm font-semibold text-white no-underline transition-colors hover:bg-[#216d4d]"
           >
             {m.home_donate_button()}
           </a>
           <button
             type="button"
-            class="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-slate-200 text-slate-600 md:hidden"
+            class="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 text-slate-600 md:hidden"
             aria-controls="mobile-site-menu"
             aria-expanded={mobileMenuOpen}
             aria-label={mobileMenuOpen ? "Close menu" : "Open menu"}
@@ -254,7 +271,7 @@
         </div>
       </div>
 
-      <div class="relative mx-auto mt-2.5 w-full max-w-lg md:mt-3 md:max-w-xl lg:max-w-2xl">
+      <div class="relative mx-auto mt-2 w-full max-w-lg md:mt-2.5 md:max-w-xl">
         <input
           type="search"
           placeholder={m.search_placeholder()}
@@ -263,7 +280,7 @@
           on:keydown={handleKeydown}
           aria-label={m.search_aria_label()}
           autocomplete="off"
-          class="w-full rounded-lg border-2 border-[#2c9166] bg-white px-4 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-[#2c9166] focus:ring-offset-1"
+          class="w-full rounded-lg border-2 border-[#2c9166] bg-white px-4 py-2.5 text-[1.05rem] shadow-[0_8px_24px_-14px_rgba(15,23,42,0.55)] focus:outline-none focus:ring-2 focus:ring-[#2c9166] focus:ring-offset-1"
         />
         {#if results.length}
           <ul class="absolute left-0 right-0 top-full z-50 mt-1 max-h-80 overflow-y-auto rounded-lg border border-slate-200 bg-white py-1 shadow-lg">
