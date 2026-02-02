@@ -152,7 +152,11 @@
   let legendMinRadiusPx = 0;
   let legendMaxRadiusPx = 0;
   const LEGEND_MIN_DOT_RADIUS_PX = 2.1;
-  const LEGEND_MAX_DOT_RADIUS_PX = 12.5;
+  const LEGEND_MAX_DOT_RADIUS_PX = 14.5;
+  const LEGEND_STROKE_WIDTH = 0.8;
+  const LEGEND_FILL = "rgba(204, 209, 216, 0.58)";
+  const LEGEND_STROKE = "rgba(126, 139, 156, 0.9)";
+  const LEGEND_PADDING = 1.2;
 
   const numberFormatter = new Intl.NumberFormat(undefined, {
     maximumFractionDigits: 2,
@@ -658,6 +662,9 @@
   $: legendMaxDotSizePx = LEGEND_MAX_DOT_RADIUS_PX * 2 * dotRadiusScale;
   $: legendMinRadiusPx = legendMinDotSizePx / 2;
   $: legendMaxRadiusPx = legendMaxDotSizePx / 2;
+  $: legendSvgSize = legendMaxDotSizePx + LEGEND_PADDING * 2;
+  $: legendSvgCenter = LEGEND_PADDING + legendMaxRadiusPx;
+  $: legendSmallCy = LEGEND_PADDING + legendMaxDotSizePx - legendMinRadiusPx;
   $: combinedNote = [summaryNote, excludeAboveXNote].filter(Boolean).join(" ");
   $: {
     legendMinStops = null;
@@ -728,8 +735,8 @@
     </div>
   {/if}
   {#if combinedNote || (sizeByStops && yearPoints.length > 0)}
-    <div class="mt-2.5 grid gap-y-1 gap-x-7 text-xs text-slate-500 sm:grid-cols-[minmax(0,1fr)_max-content] sm:items-start">
-      <div class="max-w-[32ch]">
+    <div class="mt-2.5 grid gap-y-1 gap-x-8 text-xs text-slate-500 sm:grid-cols-[minmax(0,1fr)_max-content] sm:items-start">
+      <div class="max-w-[40ch]">
         {#if combinedNote}
           <div>{combinedNote}</div>
         {/if}
@@ -738,31 +745,31 @@
         <div class="justify-self-start text-[10px] text-slate-600 sm:justify-self-end">
           <div class="flex items-center gap-2 whitespace-nowrap">
             <svg
-              width={legendMaxDotSizePx}
-              height={legendMaxDotSizePx}
-              viewBox={`0 0 ${legendMaxDotSizePx} ${legendMaxDotSizePx}`}
+              width={legendSvgSize}
+              height={legendSvgSize}
+              viewBox={`0 0 ${legendSvgSize} ${legendSvgSize}`}
               class="shrink-0"
             >
               <circle
-                cx={legendMaxRadiusPx}
-                cy={legendMaxRadiusPx}
+                cx={legendSvgCenter}
+                cy={legendSvgCenter}
                 r={legendMaxRadiusPx}
-                fill="transparent"
-                stroke="rgb(148 163 184 / 0.8)"
-                stroke-width="1"
+                fill={LEGEND_FILL}
+                stroke={LEGEND_STROKE}
+                stroke-width={LEGEND_STROKE_WIDTH}
               />
               <circle
-                cx={legendMaxRadiusPx}
-                cy={legendMaxDotSizePx - legendMinRadiusPx}
+                cx={legendSvgCenter}
+                cy={legendSmallCy}
                 r={legendMinRadiusPx}
-                fill="transparent"
-                stroke="rgb(148 163 184 / 0.8)"
-                stroke-width="1"
+                fill={LEGEND_FILL}
+                stroke={LEGEND_STROKE}
+                stroke-width={LEGEND_STROKE_WIDTH}
               />
             </svg>
             <div
               class="flex flex-col justify-between leading-tight"
-              style={`height: ${legendMaxDotSizePx}px;`}
+              style={`height: ${legendSvgSize}px;`}
             >
               <div>{formatStops(legendMaxStops)} {legendStopsDescriptor}</div>
               <div>{formatStops(legendMinStops)} {legendStopsDescriptor}</div>
