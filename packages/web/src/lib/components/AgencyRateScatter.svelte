@@ -151,7 +151,7 @@
   let legendMaxDotSizePx = 0;
   let legendMinRadiusPx = 0;
   let legendMaxRadiusPx = 0;
-  const LEGEND_MIN_DOT_RADIUS_PX = 2.1;
+  const LEGEND_MIN_DOT_RADIUS_PX = 3.1;
   const LEGEND_MAX_DOT_RADIUS_PX = 14.5;
   const LEGEND_STROKE_WIDTH = 0.8;
   const LEGEND_FILL = "rgba(204, 209, 216, 0.58)";
@@ -736,7 +736,7 @@
   {/if}
   {#if combinedNote || (sizeByStops && yearPoints.length > 0)}
     <div class="mt-2.5 grid gap-y-1 gap-x-8 text-xs text-slate-500 sm:grid-cols-[minmax(0,1fr)_max-content] sm:items-start">
-      <div class="max-w-[40ch]">
+      <div class="max-w-[52ch]">
         {#if combinedNote}
           <div>{combinedNote}</div>
         {/if}
@@ -744,6 +744,13 @@
       {#if sizeByStops && yearPoints.length > 0}
         <div class="justify-self-start text-[10px] text-slate-600 sm:justify-self-end">
           <div class="flex items-center gap-2 whitespace-nowrap">
+            <div
+              class="flex flex-col justify-between leading-tight text-right"
+              style={`height: ${legendSvgSize}px;`}
+            >
+              <div>{formatStops(legendMaxStops)} {legendStopsDescriptor}</div>
+              <div>{formatStops(legendMinStops)} {legendStopsDescriptor}</div>
+            </div>
             <svg
               width={legendSvgSize}
               height={legendSvgSize}
@@ -767,13 +774,6 @@
                 stroke-width={LEGEND_STROKE_WIDTH}
               />
             </svg>
-            <div
-              class="flex flex-col justify-between leading-tight"
-              style={`height: ${legendSvgSize}px;`}
-            >
-              <div>{formatStops(legendMaxStops)} {legendStopsDescriptor}</div>
-              <div>{formatStops(legendMinStops)} {legendStopsDescriptor}</div>
-            </div>
           </div>
         </div>
       {/if}

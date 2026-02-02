@@ -63,7 +63,7 @@
   const xTickCount = 5;
   const yTickCount = 5;
   const baseRadius = 2.2;
-  const minRadius = 2.1;
+  const minRadius = 3.1;
   const maxRadius = 14.5;
   const dotFill = "rgba(204, 209, 216, 0.58)";
   const dotStroke = "rgba(126, 139, 156, 0.9)";
