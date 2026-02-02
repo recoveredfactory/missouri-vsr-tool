@@ -197,11 +197,7 @@
       tickLabelProps={{
         style: axisTickStyle,
       }}
-    >
-      {#snippet tickLabel({ props })}
-        <Text {...props} value={props.value} />
-      {/snippet}
-    </Axis>
+    />
     {#if yLabel}
       <Text
         x={6}
