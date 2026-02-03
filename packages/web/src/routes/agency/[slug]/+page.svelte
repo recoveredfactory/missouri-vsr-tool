@@ -993,7 +993,7 @@
 <StickyHeader agencies={data.agencies} />
 
 <main class="mx-auto w-full max-w-5xl px-4 pb-16 pt-12 sm:px-6">
-  <header class="mb-10">
+  <header class="mb-1">
     <h1 class="mt-3 text-3xl font-semibold tracking-tight text-slate-900 md:text-4xl">
       {agencyData?.agency ?? data.slug}
     </h1>
