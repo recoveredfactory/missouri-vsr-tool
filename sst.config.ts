@@ -13,6 +13,9 @@ export default $config({
     new sst.aws.SvelteKit("Web", {
       path: "packages/web",
       domain: "vsr.grupovisual.org",
+      environment: {
+        PUBLIC_DONATE_URL: process.env.PUBLIC_DONATE_URL ?? "",
+      },
     });
   },
 });
