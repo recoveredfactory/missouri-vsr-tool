@@ -1224,7 +1224,50 @@
           <p class="mt-4 text-sm text-slate-500">{agency_no_rows()}</p>
         {:else}
           <div class="mb-6 max-w-full overflow-visible rounded-xl border border-slate-200 bg-white md:mx-[calc(50%-50vw+2rem)] md:w-[calc(100vw-4rem)] md:max-w-none">
-            <div class="border-b border-slate-200 bg-slate-50">
+            <div class="border-b border-slate-200 px-3 py-3 sm:px-4">
+              <input
+                type="search"
+                class="h-9 w-full rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-700 placeholder:text-slate-400 focus:border-slate-400 focus:outline-none sm:w-64"
+                placeholder={m?.agency_metric_search_placeholder?.() ?? "Search metrics"}
+                aria-label={m?.agency_metric_search_label?.() ?? "Search metrics"}
+                bind:value={metricSearch}
+                on:input={(event) => scheduleMetricSearch(event.currentTarget.value)}
+                on:blur={flushMetricSearch}
+              />
+            </div>
+            <div
+              class="gridcraft-table"
+              bind:this={gridTableEl}
+              style="
+                --gc-main-color: #ffffff;
+                --gc-secondary-color: #f8fafc;
+                --gc-tertiary-color: #ffffff;
+                --gc-text-color: #0f172a;
+                --gc-th-font-size: 0.65rem;
+                --gc-th-padding: 0.4rem 0.6rem;
+                --gc-th-text-transform: uppercase;
+                --gc-td-padding: 0.3rem 0.45rem;
+                --gc-table-radius: 0px;
+                --gc-tr-groupby-bg-color: #cbd5e1;
+                --gc-tr-groupby-border: 0px solid transparent;
+                --gc-td-groupby-content-font-size: 0.72rem;
+                --gc-td-groupby-content-font-weight: 700;
+                --gc-td-groupby-content-color: #0f172a;
+                --gc-td-groupby-padding: 0px;
+                --gc-groupby-sticky-width: 180px;
+              "
+            >
+              <Grid
+                data={gridRows}
+                columns={gridColumns}
+                filters={gridFilters}
+                groupBy={groupBy}
+                groupsExpandedDefault={true}
+                paging={gridPaging}
+                theme={PlainTableCssTheme}
+              />
+            </div>
+            <div class="border-t border-slate-200 bg-slate-50">
               <div class="flex flex-col gap-3 px-3 py-4 sm:px-4">
                 <div class="text-lg font-semibold text-slate-900 sm:text-xl">
                   {m?.agency_annual_stops_heading?.() ?? "Annual stops"}: {agencyData?.agency ?? data.slug}
@@ -1658,49 +1701,6 @@
                   {/each}
                 </div>
               </div>
-              <div class="flex flex-wrap items-center gap-3 border-t border-slate-200 px-3 py-3 sm:px-4">
-                <input
-                  type="search"
-                  class="h-9 w-full rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-700 placeholder:text-slate-400 focus:border-slate-400 focus:outline-none sm:w-64"
-                  placeholder={m?.agency_metric_search_placeholder?.() ?? "Search metrics"}
-                  aria-label={m?.agency_metric_search_label?.() ?? "Search metrics"}
-                  bind:value={metricSearch}
-                  on:input={(event) => scheduleMetricSearch(event.currentTarget.value)}
-                  on:blur={flushMetricSearch}
-                />
-              </div>
-            </div>
-            <div
-              class="gridcraft-table"
-              bind:this={gridTableEl}
-              style="
-                --gc-main-color: #ffffff;
-                --gc-secondary-color: #f8fafc;
-                --gc-tertiary-color: #ffffff;
-                --gc-text-color: #0f172a;
-                --gc-th-font-size: 0.65rem;
-                --gc-th-padding: 0.4rem 0.6rem;
-                --gc-th-text-transform: uppercase;
-                --gc-td-padding: 0.3rem 0.45rem;
-                --gc-table-radius: 0px;
-                --gc-tr-groupby-bg-color: #cbd5e1;
-                --gc-tr-groupby-border: 0px solid transparent;
-                --gc-td-groupby-content-font-size: 0.72rem;
-                --gc-td-groupby-content-font-weight: 700;
-                --gc-td-groupby-content-color: #0f172a;
-                --gc-td-groupby-padding: 0px;
-                --gc-groupby-sticky-width: 180px;
-              "
-            >
-              <Grid
-                data={gridRows}
-                columns={gridColumns}
-                filters={gridFilters}
-                groupBy={groupBy}
-                groupsExpandedDefault={true}
-                paging={gridPaging}
-                theme={PlainTableCssTheme}
-              />
             </div>
           </div>
         {/if}
