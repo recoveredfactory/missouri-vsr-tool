@@ -40,7 +40,7 @@
 
   const chartTypeForMetric = (key, sample) => {
     if (!key) return "bar";
-    if (sample && typeof sample === "object" && !Array.isArray(sample)) return "bar";
+    if (sample && typeof sample === "object" && !Array.isArray(sample)) return "line";
     return "bar";
   };
 
@@ -154,6 +154,7 @@
   const raceColor = (race) => raceColors[race] || "#94a3b8";
 
   $: stackedRaceKeys = stackRaceKeys(resolvedRaceKeys);
+  $: lineRaceKeys = stackedRaceKeys.length ? stackedRaceKeys : ["Total"];
 
   const formatChartValue = (value) => {
     if (value === null || value === undefined) return "—";
@@ -194,7 +195,7 @@
   };
 
   $: stackedData = buildStackedData(metricRowsSorted);
-  $: lineSeries = stackedRaceKeys.map((race) => ({
+  $: lineSeries = lineRaceKeys.map((race) => ({
     race,
     data: metricRowsSorted
       .filter((row) => row?.year !== null && row?.year !== undefined)
@@ -213,6 +214,7 @@
     });
     return acc;
   }, {});
+  $: chartLegendKeys = chartType === "line" ? lineRaceKeys : stackedRaceKeys;
 
   $: baselineEntries = Array.isArray(baselines)
     ? baselines.filter((entry) => entry?.row_key === metricKey)
@@ -366,39 +368,21 @@
       </div>
 
       <div class="mt-6 rounded-xl border border-slate-200 bg-slate-50 p-4">
-        {#if chartType === "bar"}
-          {#if stackedData.length === 0}
+        {#if chartType === "line"}
+          {#if lineData.length === 0}
             <p class="text-sm text-slate-500">{modal_no_data()}</p>
           {:else if chartLoadError}
             <p class="text-sm text-slate-500">{modal_chart_unavailable()}</p>
           {:else}
             <div class="space-y-3">
               <div class="h-[280px]">
-                {#if isRateMetric}
-                  {#if LineComponent}
-                    <svelte:component
-                      this={LineComponent}
-                      lineSeries={lineSeries}
-                      lineData={lineData}
-                      lineValuesByYear={lineValuesByYear}
-                      raceKeys={stackedRaceKeys}
-                      raceLabel={raceLabel}
-                      raceColor={raceColor}
-                      formatChartValue={formatChartValue}
-                    />
-                  {:else}
-                    <div
-                      class="flex h-full items-center justify-center text-sm text-slate-500"
-                      aria-busy="true"
-                    >
-                      Loading chart…
-                    </div>
-                  {/if}
-                {:else if ChartComponent}
+                {#if LineComponent}
                   <svelte:component
-                    this={ChartComponent}
-                    stackedData={stackedData}
-                    stackedRaceKeys={stackedRaceKeys}
+                    this={LineComponent}
+                    lineSeries={lineSeries}
+                    lineData={lineData}
+                    lineValuesByYear={lineValuesByYear}
+                    raceKeys={lineRaceKeys}
                     raceLabel={raceLabel}
                     raceColor={raceColor}
                     formatChartValue={formatChartValue}
@@ -413,7 +397,7 @@
                 {/if}
               </div>
               <div class="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-slate-600">
-                {#each stackedRaceKeys as race}
+                {#each chartLegendKeys as race}
                   <span class="flex items-center gap-2">
                     <span
                       class="h-2.5 w-2.5 rounded-full"
@@ -423,6 +407,43 @@
                   </span>
                 {/each}
               </div>
+            </div>
+          {/if}
+        {:else if chartType === "bar"}
+          {#if stackedData.length === 0}
+            <p class="text-sm text-slate-500">{modal_no_data()}</p>
+          {:else if chartLoadError}
+            <p class="text-sm text-slate-500">{modal_chart_unavailable()}</p>
+          {:else if ChartComponent}
+            <div class="space-y-3">
+              <div class="h-[280px]">
+                <svelte:component
+                  this={ChartComponent}
+                  stackedData={stackedData}
+                  stackedRaceKeys={stackedRaceKeys}
+                  raceLabel={raceLabel}
+                  raceColor={raceColor}
+                  formatChartValue={formatChartValue}
+                />
+              </div>
+              <div class="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-slate-600">
+                {#each chartLegendKeys as race}
+                  <span class="flex items-center gap-2">
+                    <span
+                      class="h-2.5 w-2.5 rounded-full"
+                      style={`background:${raceColor(race)}`}
+                    ></span>
+                    {raceLabel(race)}
+                  </span>
+                {/each}
+              </div>
+            </div>
+          {:else}
+            <div
+              class="flex h-[280px] items-center justify-center text-sm text-slate-500"
+              aria-busy="true"
+            >
+              Loading chart…
             </div>
           {/if}
         {:else}
