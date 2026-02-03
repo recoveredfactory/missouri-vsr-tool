@@ -309,15 +309,14 @@
 {#if open}
   <div
     bind:this={backdropEl}
-    class="fixed inset-x-0 bottom-0 z-40 flex items-stretch justify-center bg-slate-950/60 sm:items-center sm:px-4 sm:py-8"
-    style="top: var(--site-header-height); height: calc(100svh - var(--site-header-height));"
+    class="fixed inset-0 z-[60] flex items-stretch justify-center bg-slate-950/60 sm:items-center sm:px-4 sm:py-8"
     on:click={handleBackdrop}
     on:keydown={handleKeydown}
     role="presentation"
     tabindex="0"
   >
     <div
-      class="w-full max-w-full rounded-none bg-white p-4 shadow-2xl sm:max-w-4xl sm:rounded-2xl sm:p-6 max-h-[calc(100svh-var(--site-header-height))] overflow-y-auto overflow-x-hidden sm:max-h-[90vh]"
+      class="w-full max-w-full rounded-none bg-white p-4 shadow-2xl sm:max-w-4xl sm:rounded-2xl sm:p-6 max-h-[100svh] overflow-y-auto overflow-x-hidden sm:max-h-[90vh]"
       role="dialog"
       aria-modal="true"
     >
