@@ -17,7 +17,7 @@
 
 <button
   type="button"
-  class="block w-full text-left text-xs font-medium text-slate-700 whitespace-normal break-words leading-tight sm:text-sm"
+  class="block w-full text-left text-xs font-semibold text-emerald-900 underline decoration-emerald-900 decoration-1 underline-offset-2 whitespace-normal break-words leading-tight transition-colors hover:text-emerald-600 hover:decoration-emerald-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-200 sm:text-sm"
   on:click={handleClick}
 >
   {displayValue}
