@@ -1702,27 +1702,6 @@
                     />
                   </div>
                 </div>
-                <div
-                  role="tablist"
-                  aria-label={agency_yearly_data_heading()}
-                  class="flex flex-wrap items-center gap-2 pt-1"
-                >
-                  {#each years as year}
-                    <button
-                      type="button"
-                      role="tab"
-                      aria-selected={year === selectedYear}
-                      class={`rounded-md border px-3 py-1.5 text-sm font-semibold tracking-wide transition sm:text-base ${
-                        year === selectedYear
-                          ? "border-slate-900 bg-slate-900 text-white"
-                          : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:text-slate-900"
-                      }`}
-                      on:click={() => selectYear(year, "bottom")}
-                    >
-                      {year}
-                    </button>
-                  {/each}
-                </div>
               </div>
             </div>
           </div>
