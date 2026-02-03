@@ -5,7 +5,7 @@
   export let stackedData = [];
   export let stackedRaceKeys = [];
   export let raceLabel = (value) => value;
-  export let raceColor = () => "#94a3b8";
+  export let raceColor = () => "#4d9078";
   export let formatChartValue = (value) =>
     value === null || value === undefined ? "—" : String(value);
 

@@ -6,10 +6,10 @@
   export let years = [];
 
   const outcomeColors = {
-    citations: "#095771",
-    arrests: "#2d898b",
-    searches: "#219255",
-    noAction: "#94a3b8"
+    citations: "#5fad56",
+    arrests: "#f2c14e",
+    searches: "#f78154",
+    noAction: "#4d9078"
   };
 
   const outcomeLabels = {
