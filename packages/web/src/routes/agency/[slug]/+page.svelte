@@ -1224,9 +1224,9 @@
           <p class="mt-4 text-sm text-slate-500">{agency_no_rows()}</p>
         {:else}
           <div class="mb-6 max-w-full overflow-visible rounded-xl border border-slate-200 bg-white md:mx-[calc(50%-50vw+2rem)] md:w-[calc(100vw-4rem)] md:max-w-none">
-            <div class="border-b border-slate-200 bg-slate-50 px-3 py-4 sm:px-4">
-              <div class="text-lg font-semibold text-slate-900 sm:text-xl">
-                {m?.agency_annual_stops_heading?.() ?? "Annual statistics"}: {agencyData?.agency ?? data.slug}
+            <div class="mx-3 mt-4 sm:mx-4">
+              <div class="text-2xl font-semibold text-slate-900 sm:text-3xl">
+                Annual vehicle stops statistics
               </div>
               <div
                 role="tablist"
@@ -1253,8 +1253,8 @@
             <div class="border-b border-slate-200 px-3 py-3 sm:px-4">
               <input
                 type="search"
-                class="h-9 w-full rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-700 placeholder:text-slate-400 focus:border-slate-400 focus:outline-none sm:w-64"
-                placeholder={m?.agency_metric_search_placeholder?.() ?? "Search metrics"}
+                class="h-10 w-full rounded-md border border-slate-400 bg-white px-3 text-sm text-slate-700 placeholder:text-slate-500 focus:border-slate-500 focus:outline-none sm:w-80 md:w-96"
+                placeholder={'Search for a metric ("citation", "contraband")'}
                 aria-label={m?.agency_metric_search_label?.() ?? "Search metrics"}
                 bind:value={metricSearch}
                 on:input={(event) => scheduleMetricSearch(event.currentTarget.value)}
