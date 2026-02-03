@@ -1130,7 +1130,7 @@
         data.slug}
       basemapPmtilesUrl="https://pmtiles.grupovisual.org/latest.pmtiles"
       basemapStyleUrl={basemapStyleUrl}
-      pmtilesUrl="/data/tiles/mo_jurisdictions_2024_500k.pmtiles"
+      pmtilesUrl="/data/dist/tiles/mo_jurisdictions_2024_500k.pmtiles"
       boundaryDataOverride={boundaryData}
     />
   </section>
