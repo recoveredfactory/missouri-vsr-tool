@@ -45,8 +45,9 @@
         data={series.data}
         x="year"
         y="value"
-        class="stroke-[3.5]"
+        strokeWidth={3.5}
         stroke={raceColor(series.race)}
+        fill="none"
       />
     {/each}
     <Points data={lineData} x="year" y="value" r={4.5} />
