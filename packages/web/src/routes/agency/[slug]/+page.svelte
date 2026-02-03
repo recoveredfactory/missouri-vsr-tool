@@ -1784,6 +1784,14 @@
     box-shadow: 6px 0 8px -6px rgba(15, 23, 42, 0.15);
   }
 
+  :global(.gridcraft-table .gc-table tbody tr:not(.gc-tr__groupby):hover td) {
+    background: #e2e8f0;
+  }
+
+  :global(.gridcraft-table .gc-table tbody tr:not(.gc-tr__groupby):hover td:first-child) {
+    background: #e2e8f0;
+  }
+
   :global(.gridcraft-table .gc-tr__groupby td:first-child) {
     background: var(--gc-tr-groupby-bg-color, var(--gc-main-color));
     border-right: none;
