@@ -990,7 +990,10 @@
   }
 </script>
 
-<StickyHeader agencies={data.agencies} />
+<StickyHeader
+  agencies={data.agencies}
+  selectedAgencyLabel={agencyData?.agency ?? data.data?.agency ?? data.slug}
+/>
 
 <main class="mx-auto w-full max-w-5xl px-4 pb-16 pt-12 sm:px-6">
   <header class="mb-10">

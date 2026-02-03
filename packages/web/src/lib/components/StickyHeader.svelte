@@ -5,6 +5,7 @@
   import { getLocale, locales, setLocale } from "$lib/paraglide/runtime";
 
   export let agencies = [];
+  export let selectedAgencyLabel = "";
 
   let query = "";
   let results = [];
@@ -14,6 +15,8 @@
   let searchTermTimeout;
   let lastTrackedSearchTerm = "";
   let headerHeight = 0;
+  let prefillActive = false;
+  let lastPrefillLabel = "";
 
   let currentLocale = getLocale();
   const donateUrl =
@@ -51,7 +54,13 @@
     selectedIndex = -1;
   }
 
-  $: if (query.trim() && scorer) {
+  $: if (selectedAgencyLabel && selectedAgencyLabel !== lastPrefillLabel) {
+    query = selectedAgencyLabel;
+    lastPrefillLabel = selectedAgencyLabel;
+    prefillActive = true;
+  }
+
+  $: if (query.trim() && scorer && !prefillActive) {
     const scored = scorer.search(query.trim());
     const reranked = scored
       .slice(0, 25)
@@ -75,6 +84,7 @@
     selectedIndex = -1;
     if (searchTermTimeout) clearTimeout(searchTermTimeout);
     lastTrackedSearchTerm = "";
+    prefillActive = false;
   };
 
   const trackEvent = (event, payload = {}) => {
@@ -83,6 +93,7 @@
   };
 
   const scheduleSearchTerm = () => {
+    prefillActive = false;
     const term = query.trim();
     if (!term) {
       lastTrackedSearchTerm = "";
@@ -99,6 +110,7 @@
   };
 
   const flushSearchTerm = () => {
+    prefillActive = false;
     const term = query.trim();
     if (!term || term === lastTrackedSearchTerm) return;
     if (searchTermTimeout) clearTimeout(searchTermTimeout);
@@ -116,6 +128,12 @@
       term,
       slug: slug ?? null,
     });
+  };
+
+  const clearPrefill = () => {
+    if (!prefillActive) return;
+    if (query !== lastPrefillLabel) return;
+    resetSearch();
   };
 
   const closeMenu = (source = "unknown") => {
@@ -285,6 +303,7 @@
             placeholder={m.search_placeholder()}
             bind:value={query}
             on:input={scheduleSearchTerm}
+            on:focus={clearPrefill}
             on:keydown={handleKeydown}
             aria-label={m.search_aria_label()}
             autocomplete="off"
