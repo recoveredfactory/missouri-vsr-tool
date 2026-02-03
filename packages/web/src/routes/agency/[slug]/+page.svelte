@@ -1223,7 +1223,7 @@
         {#if metricGroups.length === 0}
           <p class="mt-4 text-sm text-slate-500">{agency_no_rows()}</p>
         {:else}
-          <div class="mb-6 max-w-full overflow-visible rounded-xl border border-slate-200 bg-white md:mx-[calc(50%-50vw+2rem)] md:w-[calc(100vw-4rem)] md:max-w-none">
+          <div class="mb-6 max-w-full overflow-visible md:mx-[calc(50%-50vw+2rem)] md:w-[calc(100vw-4rem)] md:max-w-none">
             <div class="mt-4">
               <div class="text-2xl font-semibold text-slate-900 sm:text-3xl">
                 Annual vehicle stops statistics
@@ -1293,12 +1293,12 @@
                 theme={PlainTableCssTheme}
               />
             </div>
-            <div class="border-t border-slate-200 bg-slate-50">
-              <div class="flex flex-col gap-3 px-3 py-4 sm:px-4">
+            <div class="mt-12">
+              <div class="flex flex-col gap-3">
                 <div
                   role="tablist"
                   aria-label={agency_yearly_data_heading()}
-                  class="mt-10 flex flex-wrap items-center gap-2"
+                  class="mt-12 flex flex-wrap items-center gap-2"
                 >
                   {#each years as year}
                     <button
@@ -1316,7 +1316,7 @@
                     </button>
                   {/each}
                 </div>
-                <div class="mt-10 space-y-4">
+                <div class="mt-4 space-y-4">
                   <div class="grid gap-7 lg:gap-8 lg:grid-cols-3">
                     <AgencyRateScatter
                       selectedYear={selectedYear}
