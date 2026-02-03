@@ -1224,6 +1224,32 @@
           <p class="mt-4 text-sm text-slate-500">{agency_no_rows()}</p>
         {:else}
           <div class="mb-6 max-w-full overflow-visible rounded-xl border border-slate-200 bg-white md:mx-[calc(50%-50vw+2rem)] md:w-[calc(100vw-4rem)] md:max-w-none">
+            <div class="border-b border-slate-200 bg-slate-50 px-3 py-4 sm:px-4">
+              <div class="text-lg font-semibold text-slate-900 sm:text-xl">
+                {m?.agency_annual_stops_heading?.() ?? "Annual statistics"}: {agencyData?.agency ?? data.slug}
+              </div>
+              <div
+                role="tablist"
+                aria-label={agency_yearly_data_heading()}
+                class="mt-3 flex flex-wrap items-center gap-2"
+              >
+                {#each years as year}
+                  <button
+                    type="button"
+                    role="tab"
+                    aria-selected={year === selectedYear}
+                    class={`rounded-md border px-3 py-1.5 text-sm font-semibold tracking-wide transition sm:text-base ${
+                      year === selectedYear
+                        ? "border-slate-900 bg-slate-900 text-white"
+                        : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:text-slate-900"
+                    }`}
+                    on:click={() => selectYear(year, "top")}
+                  >
+                    {year}
+                  </button>
+                {/each}
+              </div>
+            </div>
             <div class="border-b border-slate-200 px-3 py-3 sm:px-4">
               <input
                 type="search"
@@ -1269,9 +1295,6 @@
             </div>
             <div class="border-t border-slate-200 bg-slate-50">
               <div class="flex flex-col gap-3 px-3 py-4 sm:px-4">
-                <div class="text-lg font-semibold text-slate-900 sm:text-xl">
-                  {m?.agency_annual_stops_heading?.() ?? "Annual stops"}: {agencyData?.agency ?? data.slug}
-                </div>
                 <div
                   role="tablist"
                   aria-label={agency_yearly_data_heading()}
@@ -1287,7 +1310,7 @@
                           ? "border-slate-900 bg-slate-900 text-white"
                           : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:text-slate-900"
                       }`}
-                      on:click={() => selectYear(year, "top")}
+                      on:click={() => selectYear(year, "bottom")}
                     >
                       {year}
                     </button>
