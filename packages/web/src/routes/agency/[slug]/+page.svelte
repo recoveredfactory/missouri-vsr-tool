@@ -993,13 +993,13 @@
 <StickyHeader agencies={data.agencies} />
 
 <main class="mx-auto w-full max-w-5xl px-4 pb-16 pt-12 sm:px-6">
-  <header class="mb-1">
+  <header class="mb-10">
     <h1 class="mt-3 text-3xl font-semibold tracking-tight text-slate-900 md:text-4xl">
       {agencyData?.agency ?? data.slug}
     </h1>
   </header>
 
-  <section class="mb-10 grid gap-4 md:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] md:items-start">
+  <section class="mb-1 grid gap-4 md:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] md:items-start">
     <div class="rounded-2xl border border-slate-200 bg-white p-3">
       {#if stopVolumeLead}
         <p class="mb-4 text-xl font-normal text-slate-800 leading-snug">
