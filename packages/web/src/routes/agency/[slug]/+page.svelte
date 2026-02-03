@@ -1250,10 +1250,10 @@
                 {/each}
               </div>
             </div>
-            <div class="mt-8">
+            <div class="mt-8 mb-6">
               <input
                 type="search"
-                class="h-10 w-full rounded-md border border-slate-400 bg-white px-3 text-sm text-slate-700 placeholder:text-slate-500 focus:border-slate-500 focus:outline-none sm:w-80 md:w-96"
+                class="h-10 w-full rounded-md border border-slate-400 bg-white px-2.5 text-sm text-slate-700 placeholder:text-slate-500 focus:border-slate-500 focus:outline-none sm:w-80 md:w-96"
                 placeholder={'Search for a metric ("citation", "contraband")'}
                 aria-label={m?.agency_metric_search_label?.() ?? "Search metrics"}
                 bind:value={metricSearch}
