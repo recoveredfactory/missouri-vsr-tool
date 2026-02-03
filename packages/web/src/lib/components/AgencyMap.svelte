@@ -481,7 +481,7 @@
           />
           <svelte:component
             this={LineLayer}
-            id="mo-jurisdictions-counties-hover"
+            id="mo-jurisdictions-counties-hover-outline"
             source="mo-jurisdictions"
             source-layer="counties"
             paint={hoverLinePaintCounties}
@@ -511,7 +511,7 @@
           />
           <svelte:component
             this={LineLayer}
-            id="mo-jurisdictions-places-hover"
+            id="mo-jurisdictions-places-hover-outline"
             source="mo-jurisdictions"
             source-layer="places"
             paint={hoverLinePaintPlaces}
