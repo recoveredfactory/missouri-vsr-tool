@@ -9,6 +9,20 @@
     --year-header-height: 1.75rem;
   }
 
+  /* Layerchart theme variables */
+  .lc-root-container {
+    --color-surface-content: #334155; /* slate-700 - neutral content color */
+    --color-surface-100: #f8fafc; /* slate-50 - lightest surface */
+    --color-surface-200: #f1f5f9; /* slate-100 */
+    --color-surface-300: #e2e8f0; /* slate-200 */
+    --color-primary: #059669; /* emerald-600 - primary accent */
+    --color-secondary: #64748b; /* slate-500 */
+    --color-success: #10b981; /* emerald-500 */
+    --color-warning: #f59e0b; /* amber-500 */
+    --color-danger: #ef4444; /* red-500 */
+    --color-info: #3b82f6; /* blue-500 */
+  }
+
   body {
     @apply bg-slate-50 font-sans text-slate-900 antialiased;
   }
