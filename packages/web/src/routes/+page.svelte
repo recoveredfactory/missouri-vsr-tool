@@ -12,6 +12,9 @@
 
   // Tooltip state
   let tooltip = { show: false, x: 0, y: 0, content: "" };
+  const donateUrl =
+    import.meta.env.PUBLIC_DONATE_URL ??
+    "https://buy.stripe.com/6oU9AU1KEa7Z6gcdr6fAc03";
 
   const trackEvent = (event, payload = {}) => {
     if (typeof window === "undefined") return;
@@ -592,7 +595,7 @@
         </p>
         <a
           id="donate"
-          href="mailto:contact@example.com"
+          href={donateUrl}
           class="inline-block rounded-lg bg-[#2c9166] px-6 py-3 font-semibold text-white no-underline transition-colors hover:bg-[#216d4d]"
         >
           {m.home_footer_contact()}
