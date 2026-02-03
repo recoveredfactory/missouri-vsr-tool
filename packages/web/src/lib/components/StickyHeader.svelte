@@ -16,6 +16,9 @@
   let headerHeight = 0;
 
   let currentLocale = getLocale();
+  const donateUrl =
+    import.meta.env.PUBLIC_DONATE_URL ??
+    "https://buy.stripe.com/6oU9AU1KEa7Z6gcdr6fAc03";
 
   const toLabel = (item) =>
     item?.canonical_name || item?.names?.[0] || item?.agency_slug || "Unknown agency";
@@ -246,7 +249,7 @@
             </svg>
           </div>
           <a
-            href="#donate"
+            href={donateUrl}
             class="inline-flex h-9 items-center rounded-lg bg-[#2c9166] px-4 text-sm font-semibold text-white no-underline transition-colors hover:bg-[#216d4d]"
           >
             {m.home_donate_button()}
@@ -388,7 +391,7 @@
 
         <div class="mt-auto pt-8">
           <a
-            href="#donate"
+            href={donateUrl}
             class="inline-flex w-full items-center justify-center rounded-lg bg-[#2c9166] px-4 py-3 text-base font-semibold text-white no-underline transition-colors hover:bg-[#216d4d]"
             on:click={() => closeMenu("donate")}
           >
