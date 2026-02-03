@@ -1231,7 +1231,7 @@
               <div
                 role="tablist"
                 aria-label={agency_yearly_data_heading()}
-                class="mt-5 flex flex-wrap items-center gap-2"
+                class="mt-10 flex flex-wrap items-center gap-2"
               >
                 {#each years as year}
                   <button
@@ -1250,7 +1250,7 @@
                 {/each}
               </div>
             </div>
-            <div class="border-b border-slate-200 px-3 py-3 sm:px-4">
+            <div class="mt-8">
               <input
                 type="search"
                 class="h-10 w-full rounded-md border border-slate-400 bg-white px-3 text-sm text-slate-700 placeholder:text-slate-500 focus:border-slate-500 focus:outline-none sm:w-80 md:w-96"
@@ -1298,7 +1298,7 @@
                 <div
                   role="tablist"
                   aria-label={agency_yearly_data_heading()}
-                  class="flex flex-wrap items-center gap-2"
+                  class="mt-10 flex flex-wrap items-center gap-2"
                 >
                   {#each years as year}
                     <button
@@ -1316,7 +1316,7 @@
                     </button>
                   {/each}
                 </div>
-                <div class="space-y-4">
+                <div class="mt-10 space-y-4">
                   <div class="grid gap-7 lg:gap-8 lg:grid-cols-3">
                     <AgencyRateScatter
                       selectedYear={selectedYear}
