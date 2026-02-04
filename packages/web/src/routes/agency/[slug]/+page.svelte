@@ -154,7 +154,7 @@
     : "";
   $: selectedCommentParagraphs = selectedCommentText
     ? selectedCommentText
-        .split(/\n\s*\n/)
+        .split(/\r?\n+/)
         .map((segment) => segment.trim())
         .filter(Boolean)
     : [];
@@ -1286,7 +1286,7 @@
                 {#if selectedAgencyComment?.has_comment && selectedCommentParagraphs.length}
                   <div class="mt-2 space-y-3 text-sm leading-relaxed text-slate-700">
                     {#each selectedCommentParagraphs as paragraph}
-                      <p class="whitespace-pre-line">{paragraph}</p>
+                      <p>{paragraph}</p>
                     {/each}
                   </div>
                   {#if selectedAgencyComment?.source_url}
