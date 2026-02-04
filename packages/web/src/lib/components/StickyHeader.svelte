@@ -1,6 +1,7 @@
 <script>
   import * as m from "$lib/paraglide/messages";
   import { goto } from "$app/navigation";
+  import { page } from "$app/stores";
   import { QuickScore } from "quick-score";
   import { getLocale, locales, setLocale } from "$lib/paraglide/runtime";
 
@@ -18,7 +19,10 @@
   let prefillActive = false;
   let lastPrefillLabel = "";
 
-  let currentLocale = getLocale();
+  let currentLocale;
+  // Re-evaluate locale when page changes (fixes language switcher not updating)
+  $: $page, (currentLocale = getLocale());
+
   const donateUrl =
     import.meta.env.PUBLIC_DONATE_URL ??
     "https://buy.stripe.com/6oU9AU1KEa7Z6gcdr6fAc03";
