@@ -14,6 +14,7 @@
   export let agencyId = "";
   export let pmtilesUrl = "";
   export let pmtilesSourceLayer = "counties";
+  export let showJurisdictionTiles = false;
   export let agencyBoundaryBasePath = "/data/dist/agency_boundaries";
   export let boundaryDataOverride = undefined;
   export let basemapPmtilesUrl = "";
@@ -113,7 +114,7 @@
     }
   }
 
-  $: pmtilesSourceUrl = pmtilesUrl
+  $: pmtilesSourceUrl = showJurisdictionTiles && pmtilesUrl
     ? pmtilesUrl.startsWith("pmtiles://")
       ? pmtilesUrl
       : `pmtiles://${pmtilesUrl}`
@@ -157,7 +158,7 @@
       }
     }
 
-    if (pmtilesUrl) {
+    if (pmtilesUrl || basemapPmtilesUrl) {
       try {
         const pmtilesModule = await import("pmtiles");
         pmtilesProtocol = new pmtilesModule.Protocol();
@@ -427,7 +428,7 @@
     };
   };
 
-  $: if (mapInstance && pmtilesReady && pmtilesSourceUrl) {
+  $: if (showJurisdictionTiles && mapInstance && pmtilesReady && pmtilesSourceUrl) {
     bindHoverHandlers();
   }
 </script>
@@ -446,7 +447,13 @@
         zoom={14}
         attributionControl={true}
         customAttribution="© OpenStreetMap contributors"
+        interactive={false}
         dragRotate={false}
+        dragPan={false}
+        scrollZoom={false}
+        doubleClickZoom={false}
+        boxZoom={false}
+        keyboard={false}
         touchPitch={false}
         touchZoomRotate={false}
         pitchWithRotate={false}
@@ -455,7 +462,7 @@
         pitch={0}
         onload={handleMapLoad}
       >
-        {#if pmtilesReady && pmtilesSourceUrl && VectorTileSource}
+        {#if showJurisdictionTiles && pmtilesReady && pmtilesSourceUrl && VectorTileSource}
           <svelte:component this={VectorTileSource} id="mo-jurisdictions" url={pmtilesSourceUrl} />
           <svelte:component
             this={FillLayer}
