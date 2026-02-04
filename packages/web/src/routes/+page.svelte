@@ -532,53 +532,56 @@
         Download the complete Missouri Vehicle Stop Report dataset for your own analysis.
       </p>
 
-      <div class="grid gap-6 md:grid-cols-2">
-        <div class="rounded-lg border-2 border-slate-200 bg-slate-50 p-6">
-          <h3 class="mb-3 text-xl font-bold text-slate-900">
-            Agency Index
-          </h3>
-          <p class="mb-4 text-slate-600">
-            Complete list of all law enforcement agencies in Missouri with summary statistics.
+      <div class="grid gap-6 md:grid-cols-3">
+        <div class="flex flex-col rounded-lg border-2 border-slate-200 bg-slate-50 p-6 text-center">
+          <h3 class="mb-2 text-xl font-bold text-slate-900">CSV</h3>
+          <p class="mb-4 flex-1 text-sm text-slate-600">
+            Spreadsheet-compatible. Works with Excel, Google Sheets, etc.
           </p>
           <a
-            href="/data/dist/agency_index.json"
+            href="/data/rf_vsr_data.csv"
             download
-            on:click={() => handleDownloadClick("agency_index_json", "/data/dist/agency_index.json")}
-            class="inline-block rounded-lg bg-[#2c9166] px-6 py-3 font-semibold text-white no-underline transition-colors hover:bg-[#216d4d]"
+            on:click={() => handleDownloadClick("full_dataset_csv", "/data/rf_vsr_data.csv")}
+            class="inline-block rounded-lg bg-[#2c9166] px-5 py-2.5 font-semibold text-white no-underline transition-colors hover:bg-[#216d4d]"
+          >
+            Download CSV
+          </a>
+        </div>
+
+        <div class="flex flex-col rounded-lg border-2 border-slate-200 bg-slate-50 p-6 text-center">
+          <h3 class="mb-2 text-xl font-bold text-slate-900">Parquet</h3>
+          <p class="mb-4 flex-1 text-sm text-slate-600">
+            Efficient columnar format. Best for Python, R, or SQL analysis.
+          </p>
+          <a
+            href="/data/rf_vsr_data.parquet"
+            download
+            on:click={() => handleDownloadClick("full_dataset_parquet", "/data/rf_vsr_data.parquet")}
+            class="inline-block rounded-lg bg-[#2c9166] px-5 py-2.5 font-semibold text-white no-underline transition-colors hover:bg-[#216d4d]"
+          >
+            Download Parquet
+          </a>
+        </div>
+
+        <div class="flex flex-col rounded-lg border-2 border-slate-200 bg-slate-50 p-6 text-center">
+          <h3 class="mb-2 text-xl font-bold text-slate-900">JSON</h3>
+          <p class="mb-4 flex-1 text-sm text-slate-600">
+            Structured format. Ideal for web apps and APIs.
+          </p>
+          <a
+            href="/data/rf_vsr_data.json"
+            download
+            on:click={() => handleDownloadClick("full_dataset_json", "/data/rf_vsr_data.json")}
+            class="inline-block rounded-lg bg-[#2c9166] px-5 py-2.5 font-semibold text-white no-underline transition-colors hover:bg-[#216d4d]"
           >
             Download JSON
           </a>
         </div>
-
-        <div class="rounded-lg border-2 border-slate-200 bg-slate-50 p-6">
-          <h3 class="mb-3 text-xl font-bold text-slate-900">
-            Full Dataset
-          </h3>
-          <p class="mb-4 text-slate-600">
-            Raw vehicle stop records by agency and year, including demographics and outcomes.
-          </p>
-          <a
-            href="/data/dist/agency_index.json"
-            download
-            on:click={() => handleDownloadClick("full_dataset", "/data/dist/agency_index.json")}
-            class="inline-block rounded-lg border-2 border-[#2c9166] bg-white px-6 py-3 font-semibold text-[#2c9166] no-underline transition-colors hover:bg-green-50"
-          >
-            Coming soon
-          </a>
-        </div>
       </div>
 
-      <div class="mt-8 rounded-lg border border-slate-200 bg-white p-6">
-        <h3 class="mb-3 font-semibold text-slate-900">
-          Data format and usage
-        </h3>
-        <ul class="space-y-2 text-sm text-slate-600">
-          <li>• Data is provided in JSON format</li>
-          <li>• Includes agency metadata, stop counts, demographics, and detailed metrics</li>
-          <li>• Free to use for journalism, research, and public interest projects</li>
-          <li>• Attribution appreciated when using this data</li>
-        </ul>
-      </div>
+      <p class="mt-8 text-center text-sm text-slate-600">
+        See the <a href="#about" class="text-[#2c9166] underline hover:text-[#216d4d]">About the Data</a> section for usage details and methodology.
+      </p>
     </div>
   </section>
 
