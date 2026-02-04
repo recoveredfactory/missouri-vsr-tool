@@ -85,6 +85,7 @@
   let agencyComments = [];
   let selectedAgencyComment = null;
   let selectedCommentText = "";
+  let selectedCommentParagraphs = [];
   let commentHeading = "";
   let noCommentText = "";
   const scatterExcludedAgencies = ["Missouri State Highway Patrol"];
@@ -151,6 +152,12 @@
   $: selectedCommentText = selectedAgencyComment?.comment
     ? String(selectedAgencyComment.comment).trim()
     : "";
+  $: selectedCommentParagraphs = selectedCommentText
+    ? selectedCommentText
+        .split(/\n\s*\n/)
+        .map((segment) => segment.trim())
+        .filter(Boolean)
+    : [];
   $: commentHeading = selectedYear
     ? `Agency comment (${selectedYear})`
     : "Agency comment";
@@ -1276,10 +1283,12 @@
                 <div class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">
                   {commentHeading}
                 </div>
-                {#if selectedAgencyComment?.has_comment && selectedCommentText}
-                  <p class="mt-2 text-sm leading-relaxed text-slate-700 whitespace-pre-line">
-                    {selectedCommentText}
-                  </p>
+                {#if selectedAgencyComment?.has_comment && selectedCommentParagraphs.length}
+                  <div class="mt-2 space-y-3 text-sm leading-relaxed text-slate-700">
+                    {#each selectedCommentParagraphs as paragraph}
+                      <p class="whitespace-pre-line">{paragraph}</p>
+                    {/each}
+                  </div>
                   {#if selectedAgencyComment?.source_url}
                     <a
                       class="mt-2 inline-flex text-xs text-slate-500 underline"
