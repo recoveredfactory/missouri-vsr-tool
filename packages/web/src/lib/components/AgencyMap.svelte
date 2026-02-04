@@ -158,7 +158,7 @@
       }
     }
 
-    if (showJurisdictionTiles && pmtilesUrl) {
+    if (pmtilesUrl || basemapPmtilesUrl) {
       try {
         const pmtilesModule = await import("pmtiles");
         pmtilesProtocol = new pmtilesModule.Protocol();
