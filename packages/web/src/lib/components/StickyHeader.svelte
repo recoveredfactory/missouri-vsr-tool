@@ -236,7 +236,7 @@
         <div class="min-w-0">
           <a
             href="/"
-            class="min-w-0 truncate text-lg font-bold text-[#2c9166] no-underline sm:text-xl md:text-[1.45rem]"
+            class="min-w-0 font-bold text-[#2c9166] no-underline text-[clamp(0.95rem,4vw,1.45rem)] leading-tight"
           >
             {m.home_header_title()}
           </a>
