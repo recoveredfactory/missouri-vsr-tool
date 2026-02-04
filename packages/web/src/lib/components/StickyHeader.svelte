@@ -17,6 +17,7 @@
   let headerHeight = 0;
   let prefillActive = false;
   let lastPrefillLabel = "";
+  const showLanguageSwitcher = false;
 
   let currentLocale = getLocale();
   const donateUrl =
@@ -243,29 +244,31 @@
         </div>
 
         <div class="flex items-center gap-2">
-          <div class="relative hidden md:block">
-            <select
-              bind:value={currentLocale}
-              on:change={handleLocaleChange}
-              class="h-9 appearance-none rounded-lg border border-slate-200 bg-white pl-2.5 pr-7 text-sm font-semibold uppercase tracking-wide text-slate-700 shadow-sm transition-colors hover:border-[#2c9166] focus:border-[#2c9166] focus:outline-none"
-            >
-              {#each locales as locale}
-                <option value={locale}>{locale.toUpperCase()}</option>
-              {/each}
-            </select>
-            <svg
-              class="pointer-events-none absolute right-1.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500"
-              viewBox="0 0 20 20"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              aria-hidden="true"
-            >
-              <path d="M6 8l4 4 4-4" />
-            </svg>
-          </div>
+          {#if showLanguageSwitcher}
+            <div class="relative hidden md:block">
+              <select
+                bind:value={currentLocale}
+                on:change={handleLocaleChange}
+                class="h-9 appearance-none rounded-lg border border-slate-200 bg-white pl-2.5 pr-7 text-sm font-semibold uppercase tracking-wide text-slate-700 shadow-sm transition-colors hover:border-[#2c9166] focus:border-[#2c9166] focus:outline-none"
+              >
+                {#each locales as locale}
+                  <option value={locale}>{locale.toUpperCase()}</option>
+                {/each}
+              </select>
+              <svg
+                class="pointer-events-none absolute right-1.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500"
+                viewBox="0 0 20 20"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M6 8l4 4 4-4" />
+              </svg>
+            </div>
+          {/if}
           <a
             href={donateUrl}
             class="inline-flex h-9 items-center rounded-lg bg-[#2c9166] px-4 text-sm font-semibold text-white no-underline transition-colors hover:bg-[#216d4d]"
@@ -389,24 +392,26 @@
           </a>
         </nav>
 
-        <div class="mt-10">
-          <p class="text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">Language</p>
-          <div class="mt-3 grid grid-cols-2 gap-2">
-            {#each locales as locale}
-              <button
-                type="button"
-                class={`rounded-lg border px-3 py-2 text-sm font-semibold uppercase tracking-wide ${
-                  locale === currentLocale
-                    ? "border-[#2c9166] bg-[#2c9166] text-white"
-                    : "border-slate-200 text-slate-700"
-                }`}
-                on:click={() => switchLocale(locale)}
-              >
-                {locale.toUpperCase()}
-              </button>
-            {/each}
+        {#if showLanguageSwitcher}
+          <div class="mt-10">
+            <p class="text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">Language</p>
+            <div class="mt-3 grid grid-cols-2 gap-2">
+              {#each locales as locale}
+                <button
+                  type="button"
+                  class={`rounded-lg border px-3 py-2 text-sm font-semibold uppercase tracking-wide ${
+                    locale === currentLocale
+                      ? "border-[#2c9166] bg-[#2c9166] text-white"
+                      : "border-slate-200 text-slate-700"
+                  }`}
+                  on:click={() => switchLocale(locale)}
+                >
+                  {locale.toUpperCase()}
+                </button>
+              {/each}
+            </div>
           </div>
-        </div>
+        {/if}
 
         <div class="mt-auto pt-8">
           <a
