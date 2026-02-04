@@ -143,15 +143,15 @@
   };
 
   const raceColors = {
-    White: "#e2e8f0",
-    Black: "#94a3b8",
-    Hispanic: "#fcd34d",
-    "Native American": "#a7f3d0",
-    Asian: "#bae6fd",
-    Other: "#f9a8d4",
+    White: "#5fad56",
+    Black: "#f2c14e",
+    Hispanic: "#f78154",
+    "Native American": "#4d9078",
+    Asian: "#b4436c",
+    Other: "#4d9078",
   };
 
-  const raceColor = (race) => raceColors[race] || "#94a3b8";
+  const raceColor = (race) => raceColors[race] || "#4d9078";
 
   $: stackedRaceKeys = stackRaceKeys(resolvedRaceKeys);
   $: lineRaceKeys = stackedRaceKeys.length ? stackedRaceKeys : ["Total"];

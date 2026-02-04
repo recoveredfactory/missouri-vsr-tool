@@ -7,9 +7,9 @@
   export let raceKeys = ["White", "Black", "Hispanic"];
 
   const raceColors = {
-    White: "#095771",
-    Black: "#2d898b",
-    Hispanic: "#219255"
+    White: "#5fad56",
+    Black: "#f2c14e",
+    Hispanic: "#f78154"
   };
 
   const formatNumber = (value) => {
@@ -23,7 +23,7 @@
 
   $: lineSeries = raceKeys.map(race => ({
     race,
-    color: raceColors[race] || "#94a3b8",
+    color: raceColors[race] || "#4d9078",
     data: years.map(year => ({
       year,
       value: Number(dataByYear[year]?.[race]) || 0,

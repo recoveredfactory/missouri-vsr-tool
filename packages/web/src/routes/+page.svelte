@@ -215,7 +215,7 @@
           </div>
 
           {#if statsData}
-            {@const raceColors = { White: "#095771", Black: "#2d898b", Hispanic: "#219255", Other: "#94a3b8" }}
+            {@const raceColors = { White: "#5fad56", Black: "#f2c14e", Hispanic: "#f78154", Other: "#4d9078" }}
             {@const population = { White: 79.1, Black: 11.8, Hispanic: 4.4, Other: 4.7 }}
             {@const totalStops = statsData.total_stops}
             {@const stopsData = {
@@ -345,7 +345,7 @@
           </div>
 
           {#if historicalOutcomes && historicalOutcomes.data.length > 0}
-            {@const outcomeColors = { citations: "#095771", arrests: "#2d898b", searches: "#219255", noAction: "#94a3b8" }}
+            {@const outcomeColors = { citations: "#5fad56", arrests: "#f2c14e", searches: "#f78154", noAction: "#4d9078" }}
             {@const outcomeLabels = { citations: "Citations", arrests: "Arrests", searches: "Searches", noAction: "No Action" }}
             {@const maxY = Math.ceil(Math.max(...historicalOutcomes.data.flatMap(d => [d.citations, d.arrests, d.searches, d.noAction])) / 10) * 10}
             {@const years = historicalOutcomes.years}
@@ -438,7 +438,7 @@
           </div>
 
           {#if historicalByRace && historicalByRace.data.length > 0}
-            {@const raceColors = { White: "#095771", Black: "#2d898b", Hispanic: "#219255", Other: "#94a3b8" }}
+            {@const raceColors = { White: "#5fad56", Black: "#f2c14e", Hispanic: "#f78154", Other: "#4d9078" }}
             {@const raceOrder = ["White", "Black", "Hispanic", "Other"]}
             {@const years = historicalByRace.years}
             {@const maxY = Math.ceil(Math.max(...historicalByRace.data.flatMap(d => [d.White, d.Black, d.Hispanic, d.Other])) / 10) * 10}
