@@ -61,11 +61,11 @@
   }
 
   .content h2 {
-    @apply text-xl font-semibold leading-snug mt-10 mb-3 text-slate-900;
+    @apply text-2xl font-semibold leading-snug mt-10 mb-3 text-slate-900;
   }
 
   .content h3 {
-    @apply text-lg font-semibold leading-snug mt-8 mb-2 text-slate-900;
+    @apply text-xl font-semibold leading-snug mt-8 mb-2 text-slate-900;
   }
 
   /* First heading shouldn't have top margin */
@@ -95,7 +95,7 @@
   }
 
   .content li {
-    @apply mb-1.5;
+    @apply mb-1;
   }
 
   .content li > ul,
@@ -138,12 +138,12 @@
 
   /* Tables */
   .content table {
-    @apply w-full border-collapse my-6 text-sm;
+    @apply w-full border-collapse my-5 text-xs font-mono leading-5;
   }
 
   .content th,
   .content td {
-    @apply px-3 py-2 border-b border-slate-200 text-left;
+    @apply px-2 py-1 border-b border-slate-200 text-left;
   }
 
   .content th {
