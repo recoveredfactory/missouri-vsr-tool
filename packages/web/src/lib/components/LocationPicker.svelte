@@ -56,7 +56,7 @@
     const trimmedQuery = query.trim();
     const queryTokens = tokensFor(trimmedQuery);
     const queryNorm = normalizeText(trimmedQuery);
-    const scored = scorer.search(trimmedQuery).slice(0, 25);
+    const scored = scorer.search(trimmedQuery);
     const exactMatches = [];
     const strongMatches = [];
     const fuzzyMatches = [];

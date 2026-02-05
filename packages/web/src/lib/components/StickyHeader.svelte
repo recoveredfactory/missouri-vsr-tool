@@ -65,7 +65,7 @@
     const queryNorm = trimmedQuery.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
     const queryTokens = queryNorm.split(" ").filter(Boolean);
 
-    const scored = scorer.search(trimmedQuery).slice(0, 25);
+    const scored = scorer.search(trimmedQuery);
 
     const perfectMatches = [];
     const strongMatches = [];
