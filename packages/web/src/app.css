@@ -137,8 +137,19 @@
   }
 
   /* Tables */
+  .content .table-wrapper {
+    @apply overflow-x-auto -mx-6 px-6;
+  }
+
   .content table {
     @apply w-full border-collapse my-5 text-xs font-mono leading-5;
+  }
+
+  /* Allow long strings in table cells to break on mobile */
+  .content td,
+  .content th {
+    @apply break-words;
+    word-break: break-word;
   }
 
   .content th,
