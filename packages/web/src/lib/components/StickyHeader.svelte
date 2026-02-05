@@ -66,19 +66,71 @@
   }
 
   $: if (query.trim() && scorer && !prefillActive) {
-    const scored = scorer.search(query.trim());
-    const reranked = scored
-      .slice(0, 25)
-      .sort((a, b) => {
-        const aStops = toStops(a.item);
-        const bStops = toStops(b.item);
-        const aValue = typeof aStops === "string" ? Number(aStops) : aStops ?? 0;
-        const bValue = typeof bStops === "string" ? Number(bStops) : bStops ?? 0;
-        if (bValue !== aValue) return bValue - aValue;
-        return b.score - a.score;
-      })
-      .slice(0, 10);
-    results = reranked;
+    const trimmedQuery = query.trim();
+    const queryNorm = trimmedQuery.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+    const queryTokens = queryNorm.split(" ").filter(Boolean);
+
+    const scored = scorer.search(trimmedQuery);
+
+    const perfectMatches = [];
+    const strongMatches = [];
+    const fuzzyMatches = [];
+
+    const STRONG_THRESHOLD = 0.8;
+
+    const stopValue = (item) => {
+      const stops = toStops(item);
+      const numeric = typeof stops === "string" ? Number(stops) : stops;
+      return Number.isFinite(numeric) ? numeric : 0;
+    };
+
+    const hasAllTokens = (item) => {
+      if (!queryTokens.length) return false;
+      const haystack = (toLabel(item) + " " + toSlug(item)).toLowerCase().replace(/[^a-z0-9]+/g, " ");
+      return queryTokens.every(token => haystack.includes(token));
+    };
+
+    const isExactSubstring = (item) => {
+      if (!queryNorm) return false;
+      const haystack = (toLabel(item) + " " + toSlug(item)).toLowerCase().replace(/[^a-z0-9]+/g, " ");
+      return haystack.includes(queryNorm);
+    };
+
+    for (const entry of scored) {
+      const isPerfect = entry.score === 1 || isExactSubstring(entry.item);
+      const isStrong = entry.score >= STRONG_THRESHOLD && hasAllTokens(entry.item);
+
+      if (isPerfect) {
+        perfectMatches.push(entry);
+      } else if (isStrong) {
+        strongMatches.push(entry);
+      } else {
+        fuzzyMatches.push(entry);
+      }
+    }
+
+    // Perfect: stops desc, then score desc
+    perfectMatches.sort((a, b) => {
+      const stopsDiff = stopValue(b.item) - stopValue(a.item);
+      if (stopsDiff !== 0) return stopsDiff;
+      return b.score - a.score;
+    });
+
+    // Strong: score desc, then stops desc
+    strongMatches.sort((a, b) => {
+      const scoreDiff = b.score - a.score;
+      if (scoreDiff !== 0) return scoreDiff;
+      return stopValue(b.item) - stopValue(a.item);
+    });
+
+    // Fuzzy: stops desc, then score desc
+    fuzzyMatches.sort((a, b) => {
+      const stopsDiff = stopValue(b.item) - stopValue(a.item);
+      if (stopsDiff !== 0) return stopsDiff;
+      return b.score - a.score;
+    });
+
+    results = [...perfectMatches, ...strongMatches, ...fuzzyMatches].slice(0, 10);
   } else {
     results = [];
   }
