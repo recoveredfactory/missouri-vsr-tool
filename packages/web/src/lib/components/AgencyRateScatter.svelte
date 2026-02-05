@@ -620,7 +620,12 @@
   }
 
   $: excludeAboveXNote =
-    excludeAboveX !== null && excludeAboveXCount > 0
+    excludeAboveX !== null &&
+    excludeAboveXCount > 0 &&
+    !isLoading &&
+    !loadError &&
+    !minCountError &&
+    yearPoints.length > 0
       ? `Hiding ${excludeAboveXCount === 1 ? "one agency" : `${formatCount(excludeAboveXCount)} agencies`} with a search rate above 50% while we investigate.`
       : "";
   $: resolvedXLabel =
