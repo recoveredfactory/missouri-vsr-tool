@@ -120,16 +120,28 @@
     });
   }
 
+  // For axis labels: whole numbers (123K, 1M)
+  const formatStopsAxis = (value) => {
+    const numeric = typeof value === "string" ? Number(value) : value;
+    if (!Number.isFinite(numeric)) return "0";
+    if (numeric >= 1000000) {
+      return `${Math.round(numeric / 1000000)}M`;
+    }
+    if (numeric >= 1000) {
+      return `${Math.round(numeric / 1000)}K`;
+    }
+    return new Intl.NumberFormat(undefined, { maximumFractionDigits: 0 }).format(numeric);
+  };
+
+  // For tooltips and labels: one decimal (123.4K, 1.2M)
   const formatStops = (value) => {
     const numeric = typeof value === "string" ? Number(value) : value;
     if (!Number.isFinite(numeric)) return "0";
     if (numeric >= 1000000) {
-      const m = Math.round(numeric / 1000000);
-      return `${m}M`;
+      return `${(numeric / 1000000).toFixed(1)}M`;
     }
     if (numeric >= 1000) {
-      const k = Math.round(numeric / 1000);
-      return `${k}K`;
+      return `${(numeric / 1000).toFixed(1)}K`;
     }
     return new Intl.NumberFormat(undefined, { maximumFractionDigits: 0 }).format(numeric);
   };
@@ -201,12 +213,12 @@
                 <line x1={padding.left} y1={padding.top + height} x2={padding.left + width} y2={padding.top + height} stroke="#94a3b8" stroke-width="1" />
 
                 <!-- Left Y-axis labels (Total Stops) -->
-                <text x={padding.left - 8} y={padding.top + 4} text-anchor="end" font-size="8" fill={stopsColor} font-weight="600">{formatStops(stopsMax)}</text>
+                <text x={padding.left - 8} y={padding.top + 4} text-anchor="end" font-size="8" fill={stopsColor} font-weight="600">{formatStopsAxis(stopsMax)}</text>
                 <text x={padding.left - 8} y={padding.top + height + 3} text-anchor="end" font-size="8" fill={stopsColor} font-weight="600">0</text>
                 <text x={padding.left - 8} y={padding.top - 10} text-anchor="end" font-size="7" fill={stopsColor} font-weight="600">Total Stops</text>
 
                 <!-- Right Y-axis labels (Consent Searches) -->
-                <text x={padding.left + width + 8} y={padding.top + 4} text-anchor="start" font-size="8" fill={consentColor} font-weight="600">{formatStops(consentMax)}</text>
+                <text x={padding.left + width + 8} y={padding.top + 4} text-anchor="start" font-size="8" fill={consentColor} font-weight="600">{formatStopsAxis(consentMax)}</text>
                 <text x={padding.left + width + 8} y={padding.top + height + 3} text-anchor="start" font-size="8" fill={consentColor} font-weight="600">0</text>
                 <text x={padding.left + width + 8} y={padding.top - 10} text-anchor="start" font-size="7" fill={consentColor} font-weight="600">Consent Searches</text>
 
