@@ -1,15 +1,9 @@
-import type { Handle } from '@sveltejs/kit';
-import { paraglideMiddleware } from '$lib/paraglide/server';
+import { redirect } from "@sveltejs/kit";
 
-// creating a handle to use the paraglide middleware
-const paraglideHandle: Handle = ({ event, resolve }) =>
-	paraglideMiddleware(event.request, ({ request: localizedRequest, locale }) => {
-		event.request = localizedRequest;
-		return resolve(event, {
-			transformPageChunk: ({ html }) => {
-				return html.replace('%lang%', locale);
-			}
-		});
-	});
+export const handle = async ({ event, resolve }) => {
+  if (event.url.pathname === "/") {
+    throw redirect(308, "/en");
+  }
 
-export const handle: Handle = paraglideHandle;
+  return resolve(event);
+};

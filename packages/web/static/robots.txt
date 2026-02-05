@@ -1,0 +1,551 @@
+# robots.txt for Missouri Vehicle Stop Report (VSR) Tool
+# https://vsr.grupovisual.org
+# Last updated: 2025
+#
+# This file controls how search engines and other bots crawl this site.
+# For more information: https://developers.google.com/search/docs/crawling-indexing/robots/intro
+
+# =============================================================================
+# GENERAL CRAWLERS (Google, Bing, etc.)
+# =============================================================================
+
+User-agent: *
+# Allow indexing of all public pages
+Allow: /
+Allow: /agency/
+
+# Disallow crawling of data files (JSON APIs)
+Disallow: /data/
+Disallow: /*.json$
+Disallow: /*__data.json$
+
+# Disallow crawling of internal/system paths
+Disallow: /_app/
+Disallow: /.svelte-kit/
+Disallow: /.well-known/
+Disallow: /node_modules/
+
+# Disallow map tile assets (PMTiles, vector tiles)
+Disallow: /map/
+Disallow: /*.pmtiles$
+Disallow: /*.pbf$
+
+# Disallow query string variations to prevent duplicate content
+Disallow: /*?*
+Disallow: /*&*
+
+# Disallow hash fragments (shouldn't be crawled anyway)
+Disallow: /*#*
+
+# =============================================================================
+# GOOGLEBOT - Main Google crawler
+# =============================================================================
+
+User-agent: Googlebot
+Allow: /
+Allow: /about-the-data
+Allow: /agency/
+Disallow: /data/
+Disallow: /*.json$
+Disallow: /_app/
+Disallow: /map/
+
+# =============================================================================
+# GOOGLEBOT-IMAGE - Google Image crawler
+# =============================================================================
+
+User-agent: Googlebot-Image
+Allow: /favicon.png
+Disallow: /data/
+Disallow: /map/
+
+# =============================================================================
+# BINGBOT - Microsoft Bing crawler
+# =============================================================================
+
+User-agent: Bingbot
+Allow: /
+Allow: /about-the-data
+Allow: /agency/
+Disallow: /data/
+Disallow: /*.json$
+Disallow: /_app/
+Disallow: /map/
+
+# =============================================================================
+# DUCKDUCKBOT - DuckDuckGo crawler
+# =============================================================================
+
+User-agent: DuckDuckBot
+Allow: /
+Allow: /about-the-data
+Allow: /agency/
+Disallow: /data/
+Disallow: /*.json$
+Disallow: /_app/
+Disallow: /map/
+
+# =============================================================================
+# YANDEX - Yandex search crawler
+# =============================================================================
+
+User-agent: Yandex
+Allow: /
+Allow: /about-the-data
+Allow: /agency/
+Disallow: /data/
+Disallow: /*.json$
+Disallow: /_app/
+Disallow: /map/
+
+# =============================================================================
+# BAIDU - Baidu search crawler
+# =============================================================================
+
+User-agent: Baiduspider
+Allow: /
+Allow: /about-the-data
+Allow: /agency/
+Disallow: /data/
+Disallow: /*.json$
+Disallow: /_app/
+Disallow: /map/
+
+# =============================================================================
+# SOCIAL MEDIA CRAWLERS
+# =============================================================================
+
+# Facebook
+User-agent: facebookexternalhit
+Allow: /
+
+# Twitter/X
+User-agent: Twitterbot
+Allow: /
+
+# LinkedIn
+User-agent: LinkedInBot
+Allow: /
+
+# Pinterest
+User-agent: Pinterest
+Allow: /
+
+# Slack
+User-agent: Slackbot
+Allow: /
+
+# Discord
+User-agent: Discordbot
+Allow: /
+
+# WhatsApp
+User-agent: WhatsApp
+Allow: /
+
+# Telegram
+User-agent: TelegramBot
+Allow: /
+
+# =============================================================================
+# AI/LLM CRAWLERS - Block AI training data collection
+# =============================================================================
+
+# OpenAI / ChatGPT
+User-agent: GPTBot
+Disallow: /
+
+User-agent: ChatGPT-User
+Disallow: /
+
+# Google AI (Bard/Gemini training)
+User-agent: Google-Extended
+Disallow: /
+
+# Common Crawl (used for AI training datasets)
+User-agent: CCBot
+Disallow: /
+
+# Anthropic
+User-agent: anthropic-ai
+Disallow: /
+
+User-agent: Claude-Web
+Disallow: /
+
+# Cohere
+User-agent: cohere-ai
+Disallow: /
+
+# Meta AI
+User-agent: FacebookBot
+Disallow: /
+
+# Perplexity AI
+User-agent: PerplexityBot
+Disallow: /
+
+# ByteDance / TikTok AI
+User-agent: Bytespider
+Disallow: /
+
+# Apple AI (Applebot-Extended for AI training)
+User-agent: Applebot-Extended
+Disallow: /
+
+# Amazon AI
+User-agent: Amazonbot
+Disallow: /
+
+# Omgili / Webz.io (data mining)
+User-agent: omgili
+Disallow: /
+
+User-agent: omgilibot
+Disallow: /
+
+# Diffbot (AI data extraction)
+User-agent: Diffbot
+Disallow: /
+
+# YouChat / You.com
+User-agent: YouBot
+Disallow: /
+
+# Neeva AI (now part of Snowflake)
+User-agent: NeevaBot
+Disallow: /
+
+# Siri/Apple Knowledge
+User-agent: Applebot
+Allow: /
+# But block extended AI training
+User-agent: Applebot-Extended
+Disallow: /
+
+# AI21 Labs
+User-agent: AI2Bot
+Disallow: /
+
+# Hugging Face dataset collection
+User-agent: HuggingFaceBot
+Disallow: /
+
+# Writesonic / other AI writing tools
+User-agent: Writesonicbot
+Disallow: /
+
+# Jasper AI
+User-agent: JasperBot
+Disallow: /
+
+# Copy.ai
+User-agent: CopyaiBot
+Disallow: /
+
+# Scrapy-based AI scrapers (generic)
+User-agent: Scrapy
+Disallow: /
+
+# =============================================================================
+# SEO/RESEARCH CRAWLERS - Allow with restrictions
+# =============================================================================
+
+# Ahrefs
+User-agent: AhrefsBot
+Crawl-delay: 10
+Allow: /
+Disallow: /data/
+Disallow: /_app/
+
+# SEMrush
+User-agent: SemrushBot
+Crawl-delay: 10
+Allow: /
+Disallow: /data/
+Disallow: /_app/
+
+# Moz
+User-agent: rogerbot
+Crawl-delay: 10
+Allow: /
+Disallow: /data/
+Disallow: /_app/
+
+User-agent: dotbot
+Crawl-delay: 10
+Allow: /
+Disallow: /data/
+Disallow: /_app/
+
+# Majestic
+User-agent: MJ12bot
+Crawl-delay: 10
+Allow: /
+Disallow: /data/
+Disallow: /_app/
+
+# =============================================================================
+# AGGRESSIVE/MALICIOUS CRAWLERS - Block entirely
+# =============================================================================
+
+# Known aggressive scrapers
+User-agent: MauiBot
+Disallow: /
+
+User-agent: SemrushBot-BA
+Disallow: /
+
+User-agent: BLEXBot
+Disallow: /
+
+User-agent: BacklinkCrawler
+Disallow: /
+
+User-agent: MegaIndex
+Disallow: /
+
+User-agent: Sogou
+Disallow: /
+
+User-agent: serpstatbot
+Disallow: /
+
+User-agent: DataForSeoBot
+Disallow: /
+
+User-agent: Seekport
+Disallow: /
+
+User-agent: PetalBot
+Disallow: /
+
+User-agent: ZoominfoBot
+Disallow: /
+
+User-agent: BomboraBot
+Disallow: /
+
+# Archive crawlers (allow Internet Archive, block others)
+User-agent: ia_archiver
+Allow: /
+
+User-agent: archive.org_bot
+Allow: /
+
+# =============================================================================
+# EMAIL HARVESTERS & SPAM BOTS - Block entirely
+# =============================================================================
+
+User-agent: EmailCollector
+Disallow: /
+
+User-agent: EmailSiphon
+Disallow: /
+
+User-agent: WebBandit
+Disallow: /
+
+User-agent: EmailWolf
+Disallow: /
+
+User-agent: ExtractorPro
+Disallow: /
+
+User-agent: Harvest
+Disallow: /
+
+User-agent: ContactBot
+Disallow: /
+
+# =============================================================================
+# CONTENT SCRAPERS & MIRROR BOTS - Block entirely
+# =============================================================================
+
+User-agent: HTTrack
+Disallow: /
+
+User-agent: WebCopier
+Disallow: /
+
+User-agent: WebStripper
+Disallow: /
+
+User-agent: WebZIP
+Disallow: /
+
+User-agent: Offline Explorer
+Disallow: /
+
+User-agent: SiteSnagger
+Disallow: /
+
+User-agent: TeleportPro
+Disallow: /
+
+User-agent: WebReaper
+Disallow: /
+
+User-agent: Wget
+Disallow: /
+
+User-agent: curl
+Disallow: /
+
+# =============================================================================
+# VULNERABILITY SCANNERS - Block entirely
+# =============================================================================
+
+User-agent: Nikto
+Disallow: /
+
+User-agent: sqlmap
+Disallow: /
+
+User-agent: Nessus
+Disallow: /
+
+User-agent: OpenVAS
+Disallow: /
+
+User-agent: w3af
+Disallow: /
+
+User-agent: Acunetix
+Disallow: /
+
+User-agent: Nmap
+Disallow: /
+
+User-agent: masscan
+Disallow: /
+
+# =============================================================================
+# PRICE/CONTENT MONITORING - Block (not relevant for this site)
+# =============================================================================
+
+User-agent: PriceSpy
+Disallow: /
+
+User-agent: Pricemachine
+Disallow: /
+
+User-agent: Nutch
+Disallow: /
+
+User-agent: CrawlBot
+Disallow: /
+
+# =============================================================================
+# ACADEMIC/RESEARCH CRAWLERS - Allow with delay
+# =============================================================================
+
+User-agent: Citeseerxbot
+Crawl-delay: 10
+Allow: /
+
+User-agent: SurveyBot
+Crawl-delay: 10
+Allow: /
+
+# =============================================================================
+# ACCESSIBILITY CHECKERS - Allow
+# =============================================================================
+
+User-agent: AXE
+Allow: /
+
+User-agent: Lighthouse
+Allow: /
+
+User-agent: WAVE
+Allow: /
+
+User-agent: pa11y
+Allow: /
+
+# =============================================================================
+# MONITORING & UPTIME SERVICES - Allow
+# =============================================================================
+
+User-agent: UptimeRobot
+Allow: /
+
+User-agent: Pingdom
+Allow: /
+
+User-agent: StatusCake
+Allow: /
+
+User-agent: Site24x7
+Allow: /
+
+User-agent: NewRelicPinger
+Allow: /
+
+User-agent: DatadogSynthetics
+Allow: /
+
+# =============================================================================
+# SITEMAP
+# =============================================================================
+
+Sitemap: https://vsr.grupovisual.org/sitemap.xml
+
+# =============================================================================
+# HOST DIRECTIVE (for Yandex and others)
+# =============================================================================
+
+Host: https://vsr.grupovisual.org
+
+# =============================================================================
+# CRAWL RATE LIMITS
+# =============================================================================
+
+# Request delay for unspecified crawlers (in seconds)
+# Note: Not all crawlers respect this directive
+Crawl-delay: 1
+
+# =============================================================================
+# CLEAN-PARAM (for Yandex - ignore tracking parameters)
+# =============================================================================
+
+Clean-param: utm_source&utm_medium&utm_campaign&utm_content&utm_term
+Clean-param: fbclid&gclid&msclkid&ref&source
+
+# =============================================================================
+# NOTES
+# =============================================================================
+#
+# This robots.txt is designed for the Missouri Vehicle Stop Report tool,
+# a public interest data journalism project analyzing police traffic stop data.
+#
+# Site structure:
+# - / (homepage with statewide analysis and about section)
+# - /agency/[slug] (individual agency pages with detailed metrics)
+#
+# Key decisions:
+# - Allow search engines to index public pages for discoverability
+# - Block AI training crawlers to protect original analysis
+# - Block raw data files to encourage use of the interactive tool
+# - Allow social media crawlers for link previews
+# - Rate limit SEO tools to reduce server load
+# - Block known aggressive/malicious crawlers
+# - Block vulnerability scanners and content scrapers
+# - Allow accessibility checkers and uptime monitors
+# - Allow academic research crawlers with rate limiting
+#
+# Data files blocked:
+# - /data/*.json (raw agency data)
+# - /map/*.pmtiles (map vector tiles)
+# - /_app/* (SvelteKit build assets)
+#
+# For questions: https://github.com/eads/missouri-vsr-tool
+#
+# =============================================================================
+# CONTACT
+# =============================================================================
+#
+# If you're a legitimate crawler being blocked incorrectly, please open
+# an issue at: https://github.com/eads/missouri-vsr-tool/issues
+#

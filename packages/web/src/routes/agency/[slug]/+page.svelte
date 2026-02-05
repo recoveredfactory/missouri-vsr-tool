@@ -82,6 +82,12 @@
   let metricSearchTimeout;
   let lastTrackedMetricSearch = "";
   let neighborsExpanded = false;
+  let agencyComments = [];
+  let selectedAgencyComment = null;
+  let selectedCommentText = "";
+  let selectedCommentParagraphs = [];
+  let commentHeading = "";
+  let noCommentText = "";
   const scatterExcludedAgencies = ["Missouri State Highway Patrol"];
 
   const trackEvent = (event, payload = {}) => {
@@ -137,6 +143,27 @@
   }
 
   $: selectedEntries = selectedYear ? rowsByYear[selectedYear] ?? [] : [];
+  $: agencyComments = Array.isArray(agencyData?.agency_comments)
+    ? agencyData.agency_comments
+    : [];
+  $: selectedAgencyComment =
+    agencyComments.find((entry) => String(entry?.year) === String(selectedYear)) ??
+    null;
+  $: selectedCommentText = selectedAgencyComment?.comment
+    ? String(selectedAgencyComment.comment).trim()
+    : "";
+  $: selectedCommentParagraphs = selectedCommentText
+    ? selectedCommentText
+        .split(/\r?\n+/)
+        .map((segment) => segment.trim())
+        .filter(Boolean)
+    : [];
+  $: commentHeading = selectedYear
+    ? `Agency comment (${selectedYear})`
+    : "Agency comment";
+  $: noCommentText = selectedYear
+    ? `No comments submitted for ${selectedYear}.`
+    : "No comments submitted.";
   $: metricGroups = getMetricGroups(selectedEntries);
   $: {
     const priorityGroups = [
@@ -1251,6 +1278,30 @@
                     {year}
                   </button>
                 {/each}
+              </div>
+              <div class="mt-6 max-w-2xl">
+                <div class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">
+                  {commentHeading}
+                </div>
+                {#if selectedAgencyComment?.has_comment && selectedCommentParagraphs.length}
+                  <div class="mt-2 space-y-3 text-sm leading-relaxed text-slate-700">
+                    {#each selectedCommentParagraphs as paragraph}
+                      <p>{paragraph}</p>
+                    {/each}
+                  </div>
+                  {#if selectedAgencyComment?.source_url}
+                    <a
+                      class="mt-2 inline-flex text-xs text-slate-500 underline"
+                      href={selectedAgencyComment.source_url}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      Source PDF
+                    </a>
+                  {/if}
+                {:else}
+                  <p class="mt-2 text-sm text-slate-500">{noCommentText}</p>
+                {/if}
               </div>
             </div>
             <div class="mt-8 mb-6">
