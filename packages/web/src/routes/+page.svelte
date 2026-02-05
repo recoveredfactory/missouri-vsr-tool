@@ -40,7 +40,7 @@
   };
 
   const downloadLabelMatchers = [
-    { test: /vsr_statistics/i, label: "Vehicle stops report statistics by agency" },
+    { test: /vsr_statistics/i, label: "All datasets combined" },
     { test: /agency_index/i, label: "Agency list" },
     { test: /agency_comments/i, label: "Agency comments by year" },
     { test: /downloads/i, label: "Raw stop-level data" }
@@ -70,6 +70,9 @@
     const orderedGroups = [];
     manifest.files.forEach((file) => {
       const group = file.group || "other";
+      if (group === "json" && !/vsr_statistics\.json$/i.test(file.path)) {
+        return;
+      }
       if (!groups.has(group)) {
         groups.set(group, []);
         orderedGroups.push(group);
@@ -609,7 +612,7 @@
               <h3 class="mb-2 text-xl font-bold text-slate-900">
                 {downloadGroupMeta[downloadGroup.group]?.title ?? downloadGroup.group.toUpperCase()}
               </h3>
-              <p class="mb-4 flex-1 text-sm text-slate-600">
+              <p class="mb-4 min-h-[72px] text-sm text-slate-600">
                 {downloadGroupMeta[downloadGroup.group]?.description ??
                   "Download data in this format."}
               </p>
