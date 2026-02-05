@@ -3,6 +3,7 @@
   import AgencyRateScatter from "$lib/components/AgencyRateScatter.svelte";
   import * as m from "$lib/paraglide/messages";
   import { onMount } from "svelte";
+  import { raceColors, raceTextColors, outcomeColors } from "$lib/colors.js";
 
   export let data;
 
@@ -292,7 +293,6 @@
           </div>
 
           {#if statsData}
-            {@const raceColors = { White: "#5fad56", Black: "#f2c14e", Hispanic: "#f78154", Other: "#4d9078" }}
             {@const population = { White: 79.1, Black: 11.8, Hispanic: 4.4, Other: 4.7 }}
             {@const totalStops = statsData.total_stops}
             {@const stopsData = {
@@ -322,7 +322,7 @@
                       aria-label="{race} population"
                     >
                       {#if width > 10}
-                        <span class="text-[9px] sm:text-[10px] font-bold text-white">{Math.round(width)}%</span>
+                        <span class="text-[9px] sm:text-[10px] font-bold" style="color: {raceTextColors[race] || '#ffffff'}">{Math.round(width)}%</span>
                       {/if}
                     </div>
                   {/each}
@@ -347,7 +347,7 @@
                       aria-label="{race} stops"
                     >
                       {#if width > 10}
-                        <span class="text-[9px] sm:text-[10px] font-bold text-white">{Math.round(width)}%</span>
+                        <span class="text-[9px] sm:text-[10px] font-bold" style="color: {raceTextColors[race] || '#ffffff'}">{Math.round(width)}%</span>
                       {/if}
                     </div>
                   {/each}
@@ -422,7 +422,6 @@
           </div>
 
           {#if historicalOutcomes && historicalOutcomes.data.length > 0}
-            {@const outcomeColors = { citations: "#5fad56", arrests: "#f2c14e", searches: "#f78154", noAction: "#4d9078" }}
             {@const outcomeLabels = { citations: "Citations", arrests: "Arrests", searches: "Searches", noAction: "No Action" }}
             {@const maxY = Math.ceil(Math.max(...historicalOutcomes.data.flatMap(d => [d.citations, d.arrests, d.searches, d.noAction])) / 10) * 10}
             {@const years = historicalOutcomes.years}
@@ -515,7 +514,6 @@
           </div>
 
           {#if historicalByRace && historicalByRace.data.length > 0}
-            {@const raceColors = { White: "#5fad56", Black: "#f2c14e", Hispanic: "#f78154", Other: "#4d9078" }}
             {@const raceOrder = ["White", "Black", "Hispanic", "Other"]}
             {@const years = historicalByRace.years}
             {@const maxY = Math.ceil(Math.max(...historicalByRace.data.flatMap(d => [d.White, d.Black, d.Hispanic, d.Other])) / 10) * 10}
@@ -609,38 +607,39 @@
         Download the complete Missouri Vehicle Stop Report dataset for your own analysis.
       </p>
 
-      {#if downloadGroups.length}
-        <div class="grid gap-6 md:grid-cols-3">
-          {#each downloadGroups as downloadGroup}
-            <div class="flex flex-col rounded-lg border-2 border-slate-200 bg-slate-50 p-6 text-center">
-              <h3 class="mb-2 text-xl font-bold text-slate-900">
-                {downloadGroupMeta[downloadGroup.group]?.title ?? downloadGroup.group.toUpperCase()}
-              </h3>
-              <p class="mb-4 min-h-[72px] text-sm text-slate-600">
-                {downloadGroupMeta[downloadGroup.group]?.description ??
-                  "Download data in this format."}
-              </p>
-              {#each downloadGroup.files as file, index (file.path)}
-                <a
-                  href={`/data/downloads/${file.path}`}
-                  download
-                  on:click={() => handleDownloadClick(file, `/data/downloads/${file.path}`)}
-                  class={`block rounded-lg bg-[#2c9166] px-5 py-2.5 text-sm font-semibold text-white no-underline transition-colors hover:bg-[#216d4d] ${
-                    index === downloadGroup.files.length - 1 ? "" : "mb-3"
-                  }`}
-                >
-                  <span class="block">{getDownloadLabel(file)}</span>
-                  <span class="mt-1 block text-[11px] font-medium text-white/85">
-                    {formatBytes(file.size_bytes)}
-                  </span>
-                </a>
-              {/each}
-            </div>
-          {/each}
+      <div class="grid gap-6 md:grid-cols-2">
+        <div class="rounded-lg border-2 border-slate-200 bg-slate-50 p-6">
+          <h3 class="mb-3 text-xl font-bold text-slate-900">
+            Agency Index
+          </h3>
+          <p class="mb-4 text-slate-600">
+            Complete list of all law enforcement agencies in Missouri with summary statistics.
+          </p>
+          <a
+            href="/data/dist/agency_index.json"
+            download
+            on:click={() => handleDownloadClick("agency_index_json", "/data/dist/agency_index.json")}
+            class="inline-block rounded-lg bg-[#0f766e] px-6 py-3 font-semibold text-white no-underline transition-colors hover:bg-[#065f46]"
+          >
+            Download JSON
+          </a>
         </div>
-      {:else}
-        <div class="flex h-[180px] items-center justify-center rounded-lg border-2 border-slate-200 bg-slate-50">
-          <span class="text-sm text-slate-500">Download links are loading…</span>
+
+        <div class="rounded-lg border-2 border-slate-200 bg-slate-50 p-6">
+          <h3 class="mb-3 text-xl font-bold text-slate-900">
+            Full Dataset
+          </h3>
+          <p class="mb-4 text-slate-600">
+            Raw vehicle stop records by agency and year, including demographics and outcomes.
+          </p>
+          <a
+            href="/data/dist/agency_index.json"
+            download
+            on:click={() => handleDownloadClick("full_dataset", "/data/dist/agency_index.json")}
+            class="inline-block rounded-lg border-2 border-[#0f766e] bg-white px-6 py-3 font-semibold text-[#0f766e] no-underline transition-colors hover:bg-teal-50"
+          >
+            Coming soon
+          </a>
         </div>
       {/if}
 
@@ -657,14 +656,14 @@
         {@html data.aboutDataHtml}
       </div>
 
-      <div class="mt-12 rounded-lg border-2 border-green-100 bg-green-50 p-6">
+      <div class="mt-12 rounded-lg border-2 border-teal-100 bg-teal-50 p-6">
         <p class="mb-4 text-lg font-semibold text-slate-900">
           {m.home_footer_cta()}
         </p>
         <a
           id="donate"
           href={donateUrl}
-          class="inline-block rounded-lg bg-[#2c9166] px-6 py-3 font-semibold text-white no-underline transition-colors hover:bg-[#216d4d]"
+          class="inline-block rounded-lg bg-[#0f766e] px-6 py-3 font-semibold text-white no-underline transition-colors hover:bg-[#065f46]"
         >
           {m.home_footer_contact()}
         </a>

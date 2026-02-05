@@ -1,7 +1,12 @@
 import { compile } from "mdsvex";
 import aboutMarkdown from "../../content/about-the-data.md?raw";
 
-const aboutDataHtmlPromise = compile(aboutMarkdown).then((compiled) => compiled.code);
+const unwrapHtmlBlocks = (html) =>
+  html.replace(/{@html\s+`([\s\S]*?)`}/g, (_match, inner) => inner);
+
+const aboutDataHtmlPromise = compile(aboutMarkdown).then((compiled) =>
+  unwrapHtmlBlocks(compiled.code),
+);
 
 export async function load({ fetch }) {
   let downloadManifest = null;

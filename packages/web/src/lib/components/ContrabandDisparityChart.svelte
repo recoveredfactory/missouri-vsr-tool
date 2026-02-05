@@ -1,15 +1,10 @@
 <script>
   import { browser } from "$app/environment";
+  import { raceColors } from "$lib/colors.js";
 
   export let searchesByRace = {};
   export let contrabandByRace = {};
   export let raceKeys = ["White", "Black", "Hispanic"];
-
-  const raceColors = {
-    White: "#5fad56",
-    Black: "#f2c14e",
-    Hispanic: "#f78154"
-  };
 
   const formatNumber = (value) => {
     if (value === null || value === undefined) return "—";
@@ -35,7 +30,7 @@
       searches,
       contraband,
       hitRate,
-      color: raceColors[race] || "#4d9078"
+      color: raceColors[race] || "#0f766e"
     };
   });
 

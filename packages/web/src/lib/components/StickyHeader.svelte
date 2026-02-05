@@ -1,6 +1,7 @@
 <script>
   import * as m from "$lib/paraglide/messages";
   import { goto } from "$app/navigation";
+  import { page } from "$app/stores";
   import { QuickScore } from "quick-score";
   import { getLocale, locales, setLocale } from "$lib/paraglide/runtime";
 
@@ -17,8 +18,12 @@
   let headerHeight = 0;
   let prefillActive = false;
   let lastPrefillLabel = "";
+  const showLanguageSwitcher = false;
 
-  let currentLocale = getLocale();
+  let currentLocale;
+  // Re-evaluate locale when page changes (fixes language switcher not updating)
+  $: $page, (currentLocale = getLocale());
+
   const donateUrl =
     import.meta.env.PUBLIC_DONATE_URL ??
     "https://buy.stripe.com/6oU9AU1KEa7Z6gcdr6fAc03";
@@ -31,7 +36,7 @@
     if (!Number.isFinite(numeric)) return null;
     return new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 }).format(numeric);
   };
-  const toSubLabel = (item) => [item?.city].filter(Boolean).join(" • ");
+  const toSubLabel = (item) => item?.county || "";
   const toSlug = (item) => item?.agency_slug || item?.slug || item?.id;
 
   $: searchableAgencies = (agencies || []).map((item) => ({
@@ -61,19 +66,71 @@
   }
 
   $: if (query.trim() && scorer && !prefillActive) {
-    const scored = scorer.search(query.trim());
-    const reranked = scored
-      .slice(0, 25)
-      .sort((a, b) => {
-        const aStops = toStops(a.item);
-        const bStops = toStops(b.item);
-        const aValue = typeof aStops === "string" ? Number(aStops) : aStops ?? 0;
-        const bValue = typeof bStops === "string" ? Number(bStops) : bStops ?? 0;
-        if (bValue !== aValue) return bValue - aValue;
-        return b.score - a.score;
-      })
-      .slice(0, 10);
-    results = reranked;
+    const trimmedQuery = query.trim();
+    const queryNorm = trimmedQuery.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+    const queryTokens = queryNorm.split(" ").filter(Boolean);
+
+    const scored = scorer.search(trimmedQuery);
+
+    const perfectMatches = [];
+    const strongMatches = [];
+    const fuzzyMatches = [];
+
+    const STRONG_THRESHOLD = 0.8;
+
+    const stopValue = (item) => {
+      const stops = toStops(item);
+      const numeric = typeof stops === "string" ? Number(stops) : stops;
+      return Number.isFinite(numeric) ? numeric : 0;
+    };
+
+    const hasAllTokens = (item) => {
+      if (!queryTokens.length) return false;
+      const haystack = (toLabel(item) + " " + toSlug(item)).toLowerCase().replace(/[^a-z0-9]+/g, " ");
+      return queryTokens.every(token => haystack.includes(token));
+    };
+
+    const isExactSubstring = (item) => {
+      if (!queryNorm) return false;
+      const haystack = (toLabel(item) + " " + toSlug(item)).toLowerCase().replace(/[^a-z0-9]+/g, " ");
+      return haystack.includes(queryNorm);
+    };
+
+    for (const entry of scored) {
+      const isPerfect = entry.score === 1 || isExactSubstring(entry.item);
+      const isStrong = entry.score >= STRONG_THRESHOLD && hasAllTokens(entry.item);
+
+      if (isPerfect) {
+        perfectMatches.push(entry);
+      } else if (isStrong) {
+        strongMatches.push(entry);
+      } else {
+        fuzzyMatches.push(entry);
+      }
+    }
+
+    // Perfect: stops desc, then score desc
+    perfectMatches.sort((a, b) => {
+      const stopsDiff = stopValue(b.item) - stopValue(a.item);
+      if (stopsDiff !== 0) return stopsDiff;
+      return b.score - a.score;
+    });
+
+    // Strong: score desc, then stops desc
+    strongMatches.sort((a, b) => {
+      const scoreDiff = b.score - a.score;
+      if (scoreDiff !== 0) return scoreDiff;
+      return stopValue(b.item) - stopValue(a.item);
+    });
+
+    // Fuzzy: stops desc, then score desc
+    fuzzyMatches.sort((a, b) => {
+      const stopsDiff = stopValue(b.item) - stopValue(a.item);
+      if (stopsDiff !== 0) return stopsDiff;
+      return b.score - a.score;
+    });
+
+    results = [...perfectMatches, ...strongMatches, ...fuzzyMatches].slice(0, 10);
   } else {
     results = [];
   }
@@ -228,7 +285,7 @@
 
 <header
   bind:clientHeight={headerHeight}
-  class="sticky top-0 z-50 border-b-6 border-b-[#2c9166] bg-white/95 backdrop-blur-sm shadow-sm"
+  class="sticky top-0 z-50 border-b-6 border-b-[#0f766e] bg-white/95 backdrop-blur-sm shadow-sm"
 >
   <div class="mx-auto w-full max-w-7xl px-4 sm:px-6 md:w-[85%] md:px-0">
     <div class="py-2 sm:py-2.5">
@@ -236,39 +293,41 @@
         <div class="min-w-0">
           <a
             href="/"
-            class="min-w-0 truncate text-lg font-bold text-[#2c9166] no-underline sm:text-xl md:text-[1.45rem]"
+            class="min-w-0 font-bold text-[#2c9166] no-underline text-[clamp(0.95rem,4vw,1.45rem)] leading-tight"
           >
             {m.home_header_title()}
           </a>
         </div>
 
         <div class="flex items-center gap-2">
-          <div class="relative hidden md:block">
-            <select
-              bind:value={currentLocale}
-              on:change={handleLocaleChange}
-              class="h-9 appearance-none rounded-lg border border-slate-200 bg-white pl-2.5 pr-7 text-sm font-semibold uppercase tracking-wide text-slate-700 shadow-sm transition-colors hover:border-[#2c9166] focus:border-[#2c9166] focus:outline-none"
-            >
-              {#each locales as locale}
-                <option value={locale}>{locale.toUpperCase()}</option>
-              {/each}
-            </select>
-            <svg
-              class="pointer-events-none absolute right-1.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500"
-              viewBox="0 0 20 20"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              aria-hidden="true"
-            >
-              <path d="M6 8l4 4 4-4" />
-            </svg>
-          </div>
+          {#if showLanguageSwitcher}
+            <div class="relative hidden md:block">
+              <select
+                bind:value={currentLocale}
+                on:change={handleLocaleChange}
+                class="h-9 appearance-none rounded-lg border border-slate-200 bg-white pl-2.5 pr-7 text-sm font-semibold uppercase tracking-wide text-slate-700 shadow-sm transition-colors hover:border-[#2c9166] focus:border-[#2c9166] focus:outline-none"
+              >
+                {#each locales as locale}
+                  <option value={locale}>{locale.toUpperCase()}</option>
+                {/each}
+              </select>
+              <svg
+                class="pointer-events-none absolute right-1.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500"
+                viewBox="0 0 20 20"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M6 8l4 4 4-4" />
+              </svg>
+            </div>
+          {/if}
           <a
             href={donateUrl}
-            class="inline-flex h-9 items-center rounded-lg bg-[#2c9166] px-4 text-sm font-semibold text-white no-underline transition-colors hover:bg-[#216d4d]"
+            class="inline-flex h-9 items-center rounded-lg bg-[#0f766e] px-4 text-sm font-semibold text-white no-underline transition-colors hover:bg-[#065f46]"
           >
             {m.home_donate_button()}
           </a>
@@ -307,7 +366,7 @@
             on:keydown={handleKeydown}
             aria-label={m.search_aria_label()}
             autocomplete="off"
-            class="w-full rounded-lg border border-[#2c9166]/70 bg-white px-4 py-2.5 text-[1.05rem] shadow-[0_8px_24px_-14px_rgba(15,23,42,0.55)] focus:border-[#2c9166] focus:outline-none focus:ring-2 focus:ring-[#2c9166] focus:ring-offset-1"
+            class="w-full rounded-lg border border-[#0f766e]/70 bg-white px-4 py-2.5 text-[1.05rem] shadow-[0_8px_24px_-14px_rgba(15,23,42,0.55)] focus:border-[#0f766e] focus:outline-none focus:ring-2 focus:ring-[#0f766e] focus:ring-offset-1"
           />
           {#if results.length}
             <ul class="absolute left-0 right-0 top-full z-50 mt-1 max-h-80 overflow-y-auto rounded-lg border border-slate-200 bg-white py-1 shadow-lg">
@@ -320,7 +379,7 @@
                     {href}
                     on:click={(event) => handleResultClick(event, result.item)}
                     aria-disabled={!slug}
-                    class="flex flex-col gap-1 px-4 py-2 text-sm text-slate-900 no-underline hover:bg-[#2c9166]/10 {index === selectedIndex ? 'bg-[#2c9166]/10' : ''}"
+                    class="flex flex-col gap-1 px-4 py-2 text-sm text-slate-900 no-underline hover:bg-[#0f766e]/10 {index === selectedIndex ? 'bg-[#0f766e]/10' : ''}"
                   >
                     <span class="font-semibold text-slate-900">{toLabel(result.item)}</span>
                     {#if stops || toSubLabel(result.item)}
@@ -341,11 +400,11 @@
           {/if}
         </div>
         <nav class="hidden items-center justify-end gap-2.5 text-sm md:flex">
-          <a href="#download" class="text-slate-700 no-underline hover:text-[#216d4d]">
+          <a href="#download" class="text-slate-700 no-underline hover:text-[#065f46]">
             {m.home_toc_download()}
           </a>
           <span class="text-slate-300">•</span>
-          <a href="#about" class="text-slate-700 no-underline hover:text-[#216d4d]">
+          <a href="#about" class="text-slate-700 no-underline hover:text-[#065f46]">
             {m.home_toc_learn()}
           </a>
         </nav>
@@ -389,29 +448,31 @@
           </a>
         </nav>
 
-        <div class="mt-10">
-          <p class="text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">Language</p>
-          <div class="mt-3 grid grid-cols-2 gap-2">
-            {#each locales as locale}
-              <button
-                type="button"
-                class={`rounded-lg border px-3 py-2 text-sm font-semibold uppercase tracking-wide ${
-                  locale === currentLocale
-                    ? "border-[#2c9166] bg-[#2c9166] text-white"
-                    : "border-slate-200 text-slate-700"
-                }`}
-                on:click={() => switchLocale(locale)}
-              >
-                {locale.toUpperCase()}
-              </button>
-            {/each}
+        {#if showLanguageSwitcher}
+          <div class="mt-10">
+            <p class="text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">Language</p>
+            <div class="mt-3 grid grid-cols-2 gap-2">
+              {#each locales as locale}
+                <button
+                  type="button"
+                  class={`rounded-lg border px-3 py-2 text-sm font-semibold uppercase tracking-wide ${
+                    locale === currentLocale
+                      ? "border-[#2c9166] bg-[#2c9166] text-white"
+                      : "border-slate-200 text-slate-700"
+                  }`}
+                  on:click={() => switchLocale(locale)}
+                >
+                  {locale.toUpperCase()}
+                </button>
+              {/each}
+            </div>
           </div>
-        </div>
+        {/if}
 
         <div class="mt-auto pt-8">
           <a
             href={donateUrl}
-            class="inline-flex w-full items-center justify-center rounded-lg bg-[#2c9166] px-4 py-3 text-base font-semibold text-white no-underline transition-colors hover:bg-[#216d4d]"
+            class="inline-flex w-full items-center justify-center rounded-lg bg-[#0f766e] px-4 py-3 text-base font-semibold text-white no-underline transition-colors hover:bg-[#065f46]"
             on:click={() => closeMenu("donate")}
           >
             {m.home_donate_button()}
