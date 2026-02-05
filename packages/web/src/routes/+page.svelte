@@ -21,6 +21,82 @@
     window.umami?.track?.(event, payload);
   };
 
+  const downloadManifest = data?.downloadManifest;
+
+  const downloadGroupMeta = {
+    csv: {
+      title: "CSV",
+      description:
+        "Spreadsheet-compatible. Works with Excel, Google Sheets, etc."
+    },
+    parquet: {
+      title: "Parquet",
+      description: "Efficient columnar format. Best for Python, R, or SQL analysis."
+    },
+    json: {
+      title: "JSON",
+      description: "Structured format. Ideal for web apps and APIs."
+    }
+  };
+
+  const downloadLabelMatchers = [
+    { test: /agency_index/i, label: "Agency list" },
+    { test: /agency_comments/i, label: "Agency comments by year" },
+    { test: /downloads/i, label: "Raw stop-level data" }
+  ];
+
+  function getDownloadLabel(file) {
+    if (/vsr_statistics/i.test(file.path)) {
+      return file.group === "json"
+        ? "All datasets combined"
+        : "Vehicle stops report statistics by agency";
+    }
+    const match = downloadLabelMatchers.find((entry) => entry.test.test(file.path));
+    return match ? match.label : file.path;
+  }
+
+  function formatBytes(bytes) {
+    if (!Number.isFinite(bytes)) return "";
+    const units = ["B", "KB", "MB", "GB"];
+    let value = bytes;
+    let idx = 0;
+    while (value >= 1024 && idx < units.length - 1) {
+      value /= 1024;
+      idx += 1;
+    }
+    const decimals = value >= 100 || idx === 0 ? 0 : 1;
+    return `${value.toFixed(decimals)} ${units[idx]}`;
+  }
+
+  function buildDownloadGroups(manifest) {
+    if (!manifest?.files?.length) return [];
+    const groups = new Map();
+    const orderedGroups = [];
+    manifest.files.forEach((file) => {
+      const group = file.group || "other";
+      if (group === "json" && !/vsr_statistics\.json$/i.test(file.path)) {
+        return;
+      }
+      if (!groups.has(group)) {
+        groups.set(group, []);
+        orderedGroups.push(group);
+      }
+      groups.get(group).push(file);
+    });
+    const preferredOrder = Object.keys(downloadGroupMeta);
+    const remaining = orderedGroups.filter((group) => !preferredOrder.includes(group));
+    const finalOrder = [
+      ...preferredOrder.filter((group) => groups.has(group)),
+      ...remaining
+    ];
+    return finalOrder.map((group) => ({
+      group,
+      files: groups.get(group)
+    }));
+  }
+
+  const downloadGroups = buildDownloadGroups(downloadManifest);
+
   function showTooltip(event, content) {
     const el = event.currentTarget || event.target;
     const rect = el.getBoundingClientRect();
@@ -36,9 +112,10 @@
     tooltip = { ...tooltip, show: false };
   }
 
-  function handleDownloadClick(label, href) {
+  function handleDownloadClick(file, href) {
     trackEvent("download_click", {
-      label,
+      file: file?.path,
+      group: file?.group,
       href,
     });
   }
@@ -538,53 +615,44 @@
         Download the complete Missouri Vehicle Stop Report dataset for your own analysis.
       </p>
 
-      <div class="grid gap-6 md:grid-cols-2">
-        <div class="rounded-lg border-2 border-slate-200 bg-slate-50 p-6">
-          <h3 class="mb-3 text-xl font-bold text-slate-900">
-            Agency Index
-          </h3>
-          <p class="mb-4 text-slate-600">
-            Complete list of all law enforcement agencies in Missouri with summary statistics.
-          </p>
-          <a
-            href="/data/dist/agency_index.json"
-            download
-            on:click={() => handleDownloadClick("agency_index_json", "/data/dist/agency_index.json")}
-            class="inline-block rounded-lg bg-[#0f766e] px-6 py-3 font-semibold text-white no-underline transition-colors hover:bg-[#065f46]"
-          >
-            Download JSON
-          </a>
+      {#if downloadGroups.length}
+        <div class="grid gap-6 md:grid-cols-3">
+          {#each downloadGroups as downloadGroup}
+            <div class="flex flex-col rounded-lg border-2 border-slate-200 bg-slate-50 p-6 text-center">
+              <h3 class="mb-2 text-xl font-bold text-slate-900">
+                {downloadGroupMeta[downloadGroup.group]?.title ?? downloadGroup.group.toUpperCase()}
+              </h3>
+              <p class="mb-4 min-h-[72px] text-sm text-slate-600">
+                {downloadGroupMeta[downloadGroup.group]?.description ??
+                  "Download data in this format."}
+              </p>
+              {#each downloadGroup.files as file, index (file.path)}
+                <a
+                  href={`/data/downloads/${file.path}`}
+                  download
+                  on:click={() => handleDownloadClick(file, `/data/downloads/${file.path}`)}
+                  class={`block rounded-lg bg-[#0f766e] px-5 py-2.5 text-sm font-semibold text-white no-underline transition-colors hover:bg-[#065f46] ${
+                    index === downloadGroup.files.length - 1 ? "" : "mb-3"
+                  }`}
+                >
+                  <span class="block">{getDownloadLabel(file)}</span>
+                  <span class="mt-1 block text-[11px] font-medium text-white/85">
+                    {formatBytes(file.size_bytes)}
+                  </span>
+                </a>
+              {/each}
+            </div>
+          {/each}
         </div>
-
-        <div class="rounded-lg border-2 border-slate-200 bg-slate-50 p-6">
-          <h3 class="mb-3 text-xl font-bold text-slate-900">
-            Full Dataset
-          </h3>
-          <p class="mb-4 text-slate-600">
-            Raw vehicle stop records by agency and year, including demographics and outcomes.
-          </p>
-          <a
-            href="/data/dist/agency_index.json"
-            download
-            on:click={() => handleDownloadClick("full_dataset", "/data/dist/agency_index.json")}
-            class="inline-block rounded-lg border-2 border-[#0f766e] bg-white px-6 py-3 font-semibold text-[#0f766e] no-underline transition-colors hover:bg-teal-50"
-          >
-            Coming soon
-          </a>
+      {:else}
+        <div class="flex h-[180px] items-center justify-center rounded-lg border-2 border-slate-200 bg-slate-50">
+          <span class="text-sm text-slate-500">Download links are loading…</span>
         </div>
-      </div>
+      {/if}
 
-      <div class="mt-8 rounded-lg border border-slate-200 bg-white p-6">
-        <h3 class="mb-3 font-semibold text-slate-900">
-          Data format and usage
-        </h3>
-        <ul class="space-y-2 text-sm text-slate-600">
-          <li>• Data is provided in JSON format</li>
-          <li>• Includes agency metadata, stop counts, demographics, and detailed metrics</li>
-          <li>• Free to use for journalism, research, and public interest projects</li>
-          <li>• Attribution appreciated when using this data</li>
-        </ul>
-      </div>
+      <p class="mt-8 text-center text-sm text-slate-600">
+        See the <a href="#about" class="text-[#2c9166] underline hover:text-[#216d4d]">About the Data</a> section for usage details and methodology.
+      </p>
     </div>
   </section>
 
