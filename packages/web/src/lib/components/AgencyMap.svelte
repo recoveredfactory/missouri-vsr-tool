@@ -283,10 +283,22 @@
       cleanupHoverHandlers();
       hoverHandlersBound = false;
       mapInstance = nextMap;
+      disableMapInteractions(mapInstance);
       if (boundaryBounds) {
         fitToBounds();
       }
     }
+  };
+
+  const disableMapInteractions = (map) => {
+    map.dragPan?.disable?.();
+    map.scrollZoom?.disable?.();
+    map.boxZoom?.disable?.();
+    map.doubleClickZoom?.disable?.();
+    map.touchZoomRotate?.disable?.();
+    map.touchPitch?.disable?.();
+    map.keyboard?.disable?.();
+    map.dragRotate?.disable?.();
   };
 
   $: if (boundaryData) {
