@@ -21,6 +21,75 @@
     window.umami?.track?.(event, payload);
   };
 
+  const downloadManifest = data?.downloadManifest;
+
+  const downloadGroupMeta = {
+    csv: {
+      title: "CSV",
+      description:
+        "Spreadsheet-compatible. Works with Excel, Google Sheets, etc. Each dataset must be downloaded independently."
+    },
+    parquet: {
+      title: "Parquet",
+      description: "Efficient columnar format. Best for Python, R, or SQL analysis."
+    },
+    json: {
+      title: "JSON",
+      description: "Structured format. Ideal for web apps and APIs."
+    }
+  };
+
+  const downloadLabelMatchers = [
+    { test: /vsr_statistics/i, label: "Vehicle stops report statistics by agency" },
+    { test: /agency_index/i, label: "Agency list" },
+    { test: /agency_comments/i, label: "Agency comments by year" },
+    { test: /downloads/i, label: "Raw stop-level data" }
+  ];
+
+  function getDownloadLabel(path) {
+    const match = downloadLabelMatchers.find((entry) => entry.test.test(path));
+    return match ? match.label : path;
+  }
+
+  function formatBytes(bytes) {
+    if (!Number.isFinite(bytes)) return "";
+    const units = ["B", "KB", "MB", "GB"];
+    let value = bytes;
+    let idx = 0;
+    while (value >= 1024 && idx < units.length - 1) {
+      value /= 1024;
+      idx += 1;
+    }
+    const decimals = value >= 100 || idx === 0 ? 0 : 1;
+    return `${value.toFixed(decimals)} ${units[idx]}`;
+  }
+
+  function buildDownloadGroups(manifest) {
+    if (!manifest?.files?.length) return [];
+    const groups = new Map();
+    const orderedGroups = [];
+    manifest.files.forEach((file) => {
+      const group = file.group || "other";
+      if (!groups.has(group)) {
+        groups.set(group, []);
+        orderedGroups.push(group);
+      }
+      groups.get(group).push(file);
+    });
+    const preferredOrder = Object.keys(downloadGroupMeta);
+    const remaining = orderedGroups.filter((group) => !preferredOrder.includes(group));
+    const finalOrder = [
+      ...preferredOrder.filter((group) => groups.has(group)),
+      ...remaining
+    ];
+    return finalOrder.map((group) => ({
+      group,
+      files: groups.get(group)
+    }));
+  }
+
+  const downloadGroups = buildDownloadGroups(downloadManifest);
+
   function showTooltip(event, content) {
     const el = event.currentTarget || event.target;
     const rect = el.getBoundingClientRect();
@@ -36,9 +105,10 @@
     tooltip = { ...tooltip, show: false };
   }
 
-  function handleDownloadClick(label, href) {
+  function handleDownloadClick(file, href) {
     trackEvent("download_click", {
-      label,
+      file: file?.path,
+      group: file?.group,
       href,
     });
   }
@@ -532,52 +602,44 @@
         Download the complete Missouri Vehicle Stop Report dataset for your own analysis.
       </p>
 
-      <div class="grid gap-6 md:grid-cols-3">
-        <div class="flex flex-col rounded-lg border-2 border-slate-200 bg-slate-50 p-6 text-center">
-          <h3 class="mb-2 text-xl font-bold text-slate-900">CSV</h3>
-          <p class="mb-4 flex-1 text-sm text-slate-600">
-            Spreadsheet-compatible. Works with Excel, Google Sheets, etc.
-          </p>
-          <a
-            href="/data/rf_vsr_data.csv"
-            download
-            on:click={() => handleDownloadClick("full_dataset_csv", "/data/rf_vsr_data.csv")}
-            class="inline-block rounded-lg bg-[#2c9166] px-5 py-2.5 font-semibold text-white no-underline transition-colors hover:bg-[#216d4d]"
-          >
-            Download CSV
-          </a>
+      {#if downloadGroups.length}
+        <div class="grid gap-6 md:grid-cols-3">
+          {#each downloadGroups as downloadGroup}
+            <div class="flex flex-col rounded-lg border-2 border-slate-200 bg-slate-50 p-6 text-center">
+              <h3 class="mb-2 text-xl font-bold text-slate-900">
+                {downloadGroupMeta[downloadGroup.group]?.title ?? downloadGroup.group.toUpperCase()}
+              </h3>
+              <p class="mb-4 flex-1 text-sm text-slate-600">
+                {downloadGroupMeta[downloadGroup.group]?.description ??
+                  "Download data in this format."}
+              </p>
+              {#each downloadGroup.files as file, index (file.path)}
+                <a
+                  href={`/data/downloads/${file.path}`}
+                  download
+                  on:click={() => handleDownloadClick(file, `/data/downloads/${file.path}`)}
+                  class={`inline-block rounded-lg bg-[#2c9166] px-5 py-2.5 text-sm font-semibold text-white no-underline transition-colors hover:bg-[#216d4d] ${
+                    index === downloadGroup.files.length - 1 ? "" : "mb-2"
+                  }`}
+                >
+                  {getDownloadLabel(file.path)}
+                </a>
+                <span
+                  class={`block text-[11px] text-slate-500 ${
+                    index === downloadGroup.files.length - 1 ? "" : "mb-4"
+                  }`}
+                >
+                  {formatBytes(file.size_bytes)}
+                </span>
+              {/each}
+            </div>
+          {/each}
         </div>
-
-        <div class="flex flex-col rounded-lg border-2 border-slate-200 bg-slate-50 p-6 text-center">
-          <h3 class="mb-2 text-xl font-bold text-slate-900">Parquet</h3>
-          <p class="mb-4 flex-1 text-sm text-slate-600">
-            Efficient columnar format. Best for Python, R, or SQL analysis.
-          </p>
-          <a
-            href="/data/rf_vsr_data.parquet"
-            download
-            on:click={() => handleDownloadClick("full_dataset_parquet", "/data/rf_vsr_data.parquet")}
-            class="inline-block rounded-lg bg-[#2c9166] px-5 py-2.5 font-semibold text-white no-underline transition-colors hover:bg-[#216d4d]"
-          >
-            Download Parquet
-          </a>
+      {:else}
+        <div class="flex h-[180px] items-center justify-center rounded-lg border-2 border-slate-200 bg-slate-50">
+          <span class="text-sm text-slate-500">Download links are loading…</span>
         </div>
-
-        <div class="flex flex-col rounded-lg border-2 border-slate-200 bg-slate-50 p-6 text-center">
-          <h3 class="mb-2 text-xl font-bold text-slate-900">JSON</h3>
-          <p class="mb-4 flex-1 text-sm text-slate-600">
-            Structured format. Ideal for web apps and APIs.
-          </p>
-          <a
-            href="/data/rf_vsr_data.json"
-            download
-            on:click={() => handleDownloadClick("full_dataset_json", "/data/rf_vsr_data.json")}
-            class="inline-block rounded-lg bg-[#2c9166] px-5 py-2.5 font-semibold text-white no-underline transition-colors hover:bg-[#216d4d]"
-          >
-            Download JSON
-          </a>
-        </div>
-      </div>
+      {/if}
 
       <p class="mt-8 text-center text-sm text-slate-600">
         See the <a href="#about" class="text-[#2c9166] underline hover:text-[#216d4d]">About the Data</a> section for usage details and methodology.
