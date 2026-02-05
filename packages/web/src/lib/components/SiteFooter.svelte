@@ -18,7 +18,15 @@
 
         <div class="space-y-2 text-sm text-slate-600">
           <p>
-            A project by
+            A project of <a
+              href="https://recoveredfactory.net/en#signup"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="font-medium text-slate-700 underline decoration-slate-400 underline-offset-2 hover:text-[#216d4d] hover:decoration-[#216d4d]"
+            >Recovered Factory</a>
+          </p>
+          <p>
+            Developed by
             <a
               href="https://davideads.com/en"
               target="_blank"
@@ -33,20 +41,13 @@
               class="font-medium text-slate-700 underline decoration-slate-400 underline-offset-2 hover:text-[#216d4d] hover:decoration-[#216d4d]"
             >Tory Lysik</a>
           </p>
-          <p>
-            Part of
-            <a
-              href="https://recoveredfactory.net/en#signup"
-              target="_blank"
-              rel="noopener noreferrer"
-              class="font-medium text-slate-700 underline decoration-slate-400 underline-offset-2 hover:text-[#216d4d] hover:decoration-[#216d4d]"
-            >Recovered Factory</a>
-          </p>
         </div>
-
         <p class="text-xs text-slate-500">
-          © {new Date().getFullYear()} Missouri Vehicle Stops Report
+          Code, design, and text copyright © {new Date().getFullYear() === 2026 ? 2026 : `2026 - ${new Date().getFullYear()}` } Recovered Factory.
         </p>
+        <p class="text-xs text-slate-500">
+          Data is compiled from public records and may contain errors or omissions.
+        <p>
       </div>
 
       <div class="flex flex-col items-center gap-3 md:items-end">
