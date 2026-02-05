@@ -23,6 +23,7 @@
     race_white,
   } from "$lib/paraglide/messages";
   import * as m from "$lib/paraglide/messages";
+  import { raceColors as importedRaceColors } from "$lib/colors.js";
 
   export let open = false;
   export let metricKey = "";
@@ -142,16 +143,7 @@
     return toNumber(row[race] ?? row[lower] ?? 0);
   };
 
-  const raceColors = {
-    White: "#5fad56",
-    Black: "#f2c14e",
-    Hispanic: "#f78154",
-    "Native American": "#4d9078",
-    Asian: "#b4436c",
-    Other: "#4d9078",
-  };
-
-  const raceColor = (race) => raceColors[race] || "#4d9078";
+  const raceColor = (race) => importedRaceColors[race] || "#0f766e";
 
   $: stackedRaceKeys = stackRaceKeys(resolvedRaceKeys);
   $: lineRaceKeys = stackedRaceKeys.length ? stackedRaceKeys : ["Total"];
