@@ -1,5 +1,6 @@
 <script>
   import "../app.css";
+  import SiteFooter from "$lib/components/SiteFooter.svelte";
 
   export let data;
 
@@ -18,3 +19,4 @@
 </svelte:head>
 
 <slot />
+<SiteFooter />
