@@ -36,7 +36,7 @@
     if (!Number.isFinite(numeric)) return null;
     return new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 }).format(numeric);
   };
-  const toSubLabel = (item) => [item?.city].filter(Boolean).join(" • ");
+  const toSubLabel = (item) => item?.county || "";
   const toSlug = (item) => item?.agency_slug || item?.slug || item?.id;
 
   $: searchableAgencies = (agencies || []).map((item) => ({
