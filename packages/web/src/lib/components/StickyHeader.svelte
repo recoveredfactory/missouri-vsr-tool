@@ -32,7 +32,18 @@
     if (!Number.isFinite(numeric)) return null;
     return new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 }).format(numeric);
   };
-  const toSubLabel = (item) => [item?.city].filter(Boolean).join(" • ");
+  const toSubLabel = (item) => {
+    const city = item?.city;
+    const county = item?.county;
+    const name = (item?.canonical_name || item?.names?.[0] || item?.agency_slug || "")
+      .toLowerCase();
+    const slug = (item?.agency_slug || "").toLowerCase();
+    const isCountyAgency = name.includes("county") || slug.includes("-county-");
+    if (isCountyAgency && county) return county;
+    if (city) return city;
+    if (county) return county;
+    return "";
+  };
   const toSlug = (item) => item?.agency_slug || item?.slug || item?.id;
 
   $: searchableAgencies = (agencies || []).map((item) => ({
