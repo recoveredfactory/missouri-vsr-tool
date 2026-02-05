@@ -40,15 +40,19 @@
   };
 
   const downloadLabelMatchers = [
-    { test: /vsr_statistics/i, label: "All datasets combined" },
     { test: /agency_index/i, label: "Agency list" },
     { test: /agency_comments/i, label: "Agency comments by year" },
     { test: /downloads/i, label: "Raw stop-level data" }
   ];
 
-  function getDownloadLabel(path) {
-    const match = downloadLabelMatchers.find((entry) => entry.test.test(path));
-    return match ? match.label : path;
+  function getDownloadLabel(file) {
+    if (/vsr_statistics/i.test(file.path)) {
+      return file.group === "json"
+        ? "All datasets combined"
+        : "Vehicle stops report statistics by agency";
+    }
+    const match = downloadLabelMatchers.find((entry) => entry.test.test(file.path));
+    return match ? match.label : file.path;
   }
 
   function formatBytes(bytes) {
@@ -625,7 +629,7 @@
                     index === downloadGroup.files.length - 1 ? "" : "mb-3"
                   }`}
                 >
-                  <span class="block">{getDownloadLabel(file.path)}</span>
+                  <span class="block">{getDownloadLabel(file)}</span>
                   <span class="mt-1 block text-[11px] font-medium text-white/85">
                     {formatBytes(file.size_bytes)}
                   </span>
