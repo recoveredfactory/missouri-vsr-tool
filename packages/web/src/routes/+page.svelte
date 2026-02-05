@@ -188,6 +188,10 @@
             {@const stopsColor = "#0f766e"}
             {@const consentColor = "#334155"}
 
+            <!-- Screen reader data summary -->
+            <div class="sr-only">
+              Data summary: From {years[0]} to {years[years.length - 1]}, total stops ranged from {formatStops(Math.min(...stops))} to {formatStops(Math.max(...stops))}. Consent searches dropped from {formatStops(consent[0])} to {formatStops(consent[consent.length - 1])}, a {Math.round((1 - consent[consent.length - 1] / consent[0]) * 100)}% decline.
+            </div>
             <div class="flex flex-col" role="img" aria-label="Line chart showing total stops stable while consent searches decline from 2020 to 2024">
               <svg viewBox="0 0 {width + padding.left + padding.right} {height + padding.top + padding.bottom}" class="w-full max-w-lg mx-auto" style="height: 260px;">
                 <!-- Grid lines -->
@@ -223,8 +227,13 @@
                 {#each stops as v, i}
                   <g
                     class="cursor-pointer"
+                    tabindex="0"
+                    role="button"
+                    aria-label="{years[i]}: {formatStops(v)} total stops"
                     on:mouseenter={(e) => showTooltip(e, `${years[i]}: ${formatStops(v)} total stops`)}
                     on:mouseleave={hideTooltip}
+                    on:focus={(e) => showTooltip(e, `${years[i]}: ${formatStops(v)} total stops`)}
+                    on:blur={hideTooltip}
                   >
                     <circle cx={padding.left + (i / (years.length - 1)) * width} cy={padding.top + (1 - v / stopsMax) * height} r="8" fill="transparent" />
                     <circle cx={padding.left + (i / (years.length - 1)) * width} cy={padding.top + (1 - v / stopsMax) * height} r="3.5" fill={stopsColor} class="pointer-events-none" />
@@ -242,8 +251,13 @@
                 {#each consent as v, i}
                   <g
                     class="cursor-pointer"
+                    tabindex="0"
+                    role="button"
+                    aria-label="{years[i]}: {formatStops(v)} consent searches"
                     on:mouseenter={(e) => showTooltip(e, `${years[i]}: ${formatStops(v)} consent searches`)}
                     on:mouseleave={hideTooltip}
+                    on:focus={(e) => showTooltip(e, `${years[i]}: ${formatStops(v)} consent searches`)}
+                    on:blur={hideTooltip}
                   >
                     <circle cx={padding.left + (i / (years.length - 1)) * width} cy={padding.top + (1 - v / consentMax) * height} r="8" fill="transparent" />
                     <circle cx={padding.left + (i / (years.length - 1)) * width} cy={padding.top + (1 - v / consentMax) * height} r="3.5" fill={consentColor} class="pointer-events-none" />
@@ -302,6 +316,10 @@
             {@const barGap = 3}
             {@const niceMax = Math.ceil(maxVal / 10) * 10}
 
+            <!-- Screen reader data summary -->
+            <div class="sr-only">
+              Data summary: Population vs traffic stops by race. White: {population.White}% population, {stopsData.White.toFixed(1)}% stops. Black: {population.Black}% population, {stopsData.Black.toFixed(1)}% stops. Hispanic: {population.Hispanic}% population, {stopsData.Hispanic.toFixed(1)}% stops. Other: {population.Other}% population, {stopsData.Other.toFixed(1)}% stops.
+            </div>
             <div class="flex flex-col" role="img" aria-label="Grouped bar chart comparing population percentage to traffic stops percentage by race">
               <svg viewBox="0 0 {width + padding.left + padding.right} {height + padding.top + padding.bottom}" class="w-full max-w-lg mx-auto" style="height: 260px;">
                 <!-- Grid lines -->
@@ -331,9 +349,14 @@
                     height={popH}
                     fill={popColor}
                     rx="2"
-                    class="cursor-pointer hover:opacity-80 transition-opacity"
+                    tabindex="0"
+                    role="button"
+                    aria-label="{race} population: {popVal.toFixed(1)}%"
+                    class="cursor-pointer hover:opacity-80 transition-opacity focus:outline-none focus:ring-2 focus:ring-teal-400"
                     on:mouseenter={(e) => showTooltip(e, `${race} population: ${popVal.toFixed(1)}%`)}
                     on:mouseleave={hideTooltip}
+                    on:focus={(e) => showTooltip(e, `${race} population: ${popVal.toFixed(1)}%`)}
+                    on:blur={hideTooltip}
                   />
                   <!-- Population value label -->
                   <text
@@ -353,9 +376,14 @@
                     height={stopH}
                     fill={stopsColor}
                     rx="2"
-                    class="cursor-pointer hover:opacity-80 transition-opacity"
+                    tabindex="0"
+                    role="button"
+                    aria-label="{race} traffic stops: {stopVal.toFixed(1)}%"
+                    class="cursor-pointer hover:opacity-80 transition-opacity focus:outline-none focus:ring-2 focus:ring-slate-400"
                     on:mouseenter={(e) => showTooltip(e, `${race} stops: ${stopVal.toFixed(1)}%`)}
                     on:mouseleave={hideTooltip}
+                    on:focus={(e) => showTooltip(e, `${race} stops: ${stopVal.toFixed(1)}%`)}
+                    on:blur={hideTooltip}
                   />
                   <!-- Stops value label -->
                   <text
@@ -419,6 +447,10 @@
             {@const barWidth = width / years.length * 0.6}
             {@const barGap = width / years.length}
 
+            <!-- Screen reader data summary -->
+            <div class="sr-only">
+              Data summary: Stop outcomes by year. {#each historicalOutcomes.data as d}{d.year}: {d.noAction.toFixed(0)}% no action, {d.citations.toFixed(0)}% citations, {d.searches.toFixed(0)}% searches, {d.arrests.toFixed(0)}% arrests. {/each}
+            </div>
             <div class="flex flex-col" role="img" aria-label="Stacked bar chart showing stop outcomes by year">
               <svg viewBox="0 0 {width + padding.left + padding.right} {height + padding.top + padding.bottom}" class="w-full max-w-lg mx-auto" style="height: 280px;">
                 <!-- Grid lines -->
@@ -451,9 +483,14 @@
                       width={barWidth}
                       height={segHeight}
                       fill={outcomeColors[segment.key]}
-                      class="cursor-pointer hover:opacity-80 transition-opacity"
+                      tabindex="0"
+                      role="button"
+                      aria-label="{outcomeLabels[segment.key]}: {segment.value.toFixed(1)}% of stops in {year}"
+                      class="cursor-pointer hover:opacity-80 transition-opacity focus:outline-none focus:ring-2 focus:ring-slate-400"
                       on:mouseenter={(e) => showTooltip(e, `${outcomeLabels[segment.key]}: ${segment.value.toFixed(1)}% (${year})`)}
                       on:mouseleave={hideTooltip}
+                      on:focus={(e) => showTooltip(e, `${outcomeLabels[segment.key]}: ${segment.value.toFixed(1)}% (${year})`)}
+                      on:blur={hideTooltip}
                     />
                     <!-- Inline label if segment is tall enough -->
                     {#if segHeight > 18}
