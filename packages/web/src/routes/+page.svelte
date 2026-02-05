@@ -618,19 +618,15 @@
                   href={`/data/downloads/${file.path}`}
                   download
                   on:click={() => handleDownloadClick(file, `/data/downloads/${file.path}`)}
-                  class={`inline-block rounded-lg bg-[#2c9166] px-5 py-2.5 text-sm font-semibold text-white no-underline transition-colors hover:bg-[#216d4d] ${
-                    index === downloadGroup.files.length - 1 ? "" : "mb-2"
+                  class={`block rounded-lg bg-[#2c9166] px-5 py-2.5 text-sm font-semibold text-white no-underline transition-colors hover:bg-[#216d4d] ${
+                    index === downloadGroup.files.length - 1 ? "" : "mb-3"
                   }`}
                 >
-                  {getDownloadLabel(file.path)}
+                  <span class="block">{getDownloadLabel(file.path)}</span>
+                  <span class="mt-1 block text-[11px] font-medium text-white/85">
+                    {formatBytes(file.size_bytes)}
+                  </span>
                 </a>
-                <span
-                  class={`block text-[11px] text-slate-500 ${
-                    index === downloadGroup.files.length - 1 ? "" : "mb-4"
-                  }`}
-                >
-                  {formatBytes(file.size_bytes)}
-                </span>
               {/each}
             </div>
           {/each}
