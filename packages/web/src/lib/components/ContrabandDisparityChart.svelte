@@ -38,7 +38,7 @@
 </script>
 
 <!-- Horizontal lollipop chart - pure CSS/SVG implementation -->
-<div class="h-[200px] sm:h-[220px] flex flex-col justify-center px-2">
+<div class="h-[200px] sm:h-[220px] flex flex-col justify-center px-2" role="img" aria-label="Chart showing contraband hit rates by race">
   <div class="space-y-4">
     {#each chartData as item}
       <div class="flex items-center gap-3">

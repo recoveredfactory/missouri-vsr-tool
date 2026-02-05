@@ -183,7 +183,7 @@
 
 <StickyHeader agencies={data.agencies} />
 
-<main class="min-h-screen bg-white">
+<main id="main-content" class="min-h-screen bg-white">
   <!-- Hero Section -->
   <section class="bg-white px-6 py-12">
     <div class="mx-auto max-w-3xl text-center">

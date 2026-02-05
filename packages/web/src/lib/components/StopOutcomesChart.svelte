@@ -80,7 +80,7 @@
 </script>
 
 {#if browser && Chart && allPoints.length > 0}
-  <div class="h-[200px] sm:h-[220px]">
+  <div class="h-[200px] sm:h-[220px]" role="img" aria-label="Line chart showing stop outcomes over time">
     <Chart
       data={allPoints}
       x="year"

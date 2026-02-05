@@ -52,7 +52,7 @@
 </script>
 
 {#if browser && Chart}
-  <div class="h-[200px] sm:h-[220px]">
+  <div class="h-[200px] sm:h-[220px]" role="img" aria-label="Line chart showing vehicle stops by race over time">
     <Chart
       data={allPoints}
       x="year"

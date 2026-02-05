@@ -34,7 +34,8 @@
   export let agencyName = "";
 
   const dispatch = createEventDispatcher();
-  let backdropEl;
+  /** @type {HTMLDivElement | undefined} */
+  let dialogEl;
   let ChartComponent;
   let LineComponent;
   let chartLoadError = null;
@@ -272,7 +273,7 @@
       document.body.style.overflow = "hidden";
     }
     if (typeof requestAnimationFrame !== "undefined") {
-      requestAnimationFrame(() => backdropEl?.focus());
+      requestAnimationFrame(() => dialogEl?.focus());
     }
   } else {
     if (typeof document !== "undefined") {
@@ -301,18 +302,20 @@
 </script>
 
 {#if open}
+  <!-- svelte-ignore a11y_click_events_have_key_events -->
   <div
-    bind:this={backdropEl}
     class="fixed inset-0 z-[60] flex items-stretch justify-center bg-slate-950/60 sm:items-center sm:px-4 sm:py-8"
     on:click={handleBackdrop}
-    on:keydown={handleKeydown}
     role="presentation"
-    tabindex="0"
   >
     <div
+      bind:this={dialogEl}
       class="w-full max-w-full rounded-none bg-white p-4 shadow-2xl sm:max-w-4xl sm:rounded-2xl sm:p-6 max-h-[100svh] overflow-y-auto overflow-x-hidden sm:max-h-[90vh]"
       role="dialog"
       aria-modal="true"
+      aria-labelledby="modal-title"
+      tabindex="-1"
+      on:keydown={handleKeydown}
     >
       <div class="flex items-start justify-between gap-4">
         <div>
@@ -326,7 +329,7 @@
               {modal_metric_label()}
             </p>
           {/if}
-          <h2 class="mt-2 text-xl font-semibold text-slate-900">
+          <h2 id="modal-title" class="mt-2 text-xl font-semibold text-slate-900">
             {metricLabel || metricKey}
           </h2>
           {#if metricKey}
