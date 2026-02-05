@@ -1,16 +1,10 @@
 <script>
   import { browser } from "$app/environment";
   import { scaleBand } from "d3-scale";
+  import { outcomeColors } from "$lib/colors.js";
 
   export let dataByYear = {};
   export let years = [];
-
-  const outcomeColors = {
-    citations: "#5fad56",
-    arrests: "#f2c14e",
-    searches: "#f78154",
-    noAction: "#4d9078"
-  };
 
   const outcomeLabels = {
     citations: "Citations",

@@ -57,9 +57,9 @@
   const topLabelStyle = "fill: #334155; font-size: 10px; font-weight: 600;";
   const gridLineMajorClass = "stroke-slate-300/60";
   const gridLineMinorClass = "stroke-slate-200/30";
-  const meanLineClass = "stroke-[#5fad56]/70";
+  const meanLineClass = "stroke-[#64748b]/70";
   const meanLineWidth = 2;
-  const meanLabelStyle = "fill: #5fad56; font-size: 10px; font-weight: 600;";
+  const meanLabelStyle = "fill: #64748b; font-size: 10px; font-weight: 600;";
   const getLinearTickStep = (maxValue: number) => {
     if (!Number.isFinite(maxValue) || maxValue <= 0) return 1;
     if (maxValue <= 12) return 5;
@@ -86,8 +86,8 @@
   const baseRadius = 2.2;
   const minRadius = 3.1;
   const maxRadius = 14.5;
-  const dotFill = "rgba(95, 173, 86, 0.35)";
-  const dotStroke = "rgba(77, 144, 120, 0.7)";
+  const dotFill = "rgba(15, 118, 110, 0.30)";
+  const dotStroke = "rgba(13, 148, 136, 0.70)";
   const dotStrokeWidth = 0.7;
   const scaledBaseRadius = baseRadius * dotRadiusScale;
   const activePointRadius = 5.5 * dotRadiusScale;
@@ -310,8 +310,8 @@
         y="y"
         r={sizeByStops ? undefined : activePointRadius}
         class="pointer-events-none"
-        fill="#f2c14e"
-        stroke="#0f172a"
+        fill="#0f766e"
+        stroke="#134e4a"
         strokeWidth={1}
       />
     {/if}

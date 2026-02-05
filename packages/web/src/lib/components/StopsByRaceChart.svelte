@@ -1,16 +1,11 @@
 <script>
   import { browser } from "$app/environment";
   import { scaleBand } from "d3-scale";
+  import { raceColors } from "$lib/colors.js";
 
   export let dataByYear = {};
   export let years = [];
   export let raceKeys = ["White", "Black", "Hispanic"];
-
-  const raceColors = {
-    White: "#5fad56",
-    Black: "#f2c14e",
-    Hispanic: "#f78154"
-  };
 
   const formatNumber = (value) => {
     if (value === null || value === undefined) return "—";
@@ -23,7 +18,7 @@
 
   $: lineSeries = raceKeys.map(race => ({
     race,
-    color: raceColors[race] || "#4d9078",
+    color: raceColors[race] || "#0f766e",
     data: years.map(year => ({
       year,
       value: Number(dataByYear[year]?.[race]) || 0,
