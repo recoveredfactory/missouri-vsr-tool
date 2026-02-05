@@ -173,6 +173,7 @@
   $: maxYTick = yTicks.length ? yTicks[yTicks.length - 1] : null;
 </script>
 
+<div role="img" aria-label="Scatter chart comparing agency rates">
 <Chart
   data={points}
   x="x"
@@ -358,6 +359,7 @@
     {/snippet}
   </Tooltip.Root>
 </Chart>
+</div>
 
 <style>
   :global(.agency-scatter-tooltip) {

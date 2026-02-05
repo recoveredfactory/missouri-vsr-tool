@@ -368,8 +368,13 @@
             autocomplete="off"
             class="w-full rounded-lg border border-[#0f766e]/70 bg-white px-4 py-2.5 text-[1.05rem] shadow-[0_8px_24px_-14px_rgba(15,23,42,0.55)] focus:border-[#0f766e] focus:outline-none focus:ring-2 focus:ring-[#0f766e] focus:ring-offset-1"
           />
+          <div class="sr-only" aria-live="polite" aria-atomic="true">
+            {#if results.length}
+              {results.length} {results.length === 1 ? 'result' : 'results'} found
+            {/if}
+          </div>
           {#if results.length}
-            <ul class="absolute left-0 right-0 top-full z-50 mt-1 max-h-80 overflow-y-auto rounded-lg border border-slate-200 bg-white py-1 shadow-lg">
+            <ul role="listbox" aria-label="Search results" class="absolute left-0 right-0 top-full z-50 mt-1 max-h-80 overflow-y-auto rounded-lg border border-slate-200 bg-white py-1 shadow-lg">
               {#each results as result, index}
                 {@const slug = toSlug(result.item)}
                 {@const href = slug ? `/agency/${slug}` : "#"}
