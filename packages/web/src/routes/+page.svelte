@@ -442,8 +442,8 @@
             </div>
 
             {#if historicalOutcomes}
-              {@const outcomeLabels = { noAction: "No Action", citations: "Citations", searches: "Searches", arrests: "Arrests" }}
-          {@const stackOrder = ["noAction", "citations", "searches", "arrests"]}
+              {@const outcomeLabels = { noAction: "No Action", citations: "Citations", warnings: "Warnings", arrests: "Arrests" }}
+          {@const stackOrder = ["noAction", "citations", "warnings", "arrests"]}
           {@const years3 = historicalOutcomes.years}
           {@const padding3 = { top: 12, right: 12, bottom: 35, left: 35 }}
           {@const width3 = 280}
