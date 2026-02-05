@@ -27,7 +27,7 @@
     csv: {
       title: "CSV",
       description:
-        "Spreadsheet-compatible. Works with Excel, Google Sheets, etc. Each dataset must be downloaded independently."
+        "Spreadsheet-compatible. Works with Excel, Google Sheets, etc."
     },
     parquet: {
       title: "Parquet",
