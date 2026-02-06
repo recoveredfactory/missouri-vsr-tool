@@ -4,6 +4,7 @@
   import { page } from "$app/stores";
   import { QuickScore } from "quick-score";
   import { getLocale, locales, setLocale } from "$lib/paraglide/runtime";
+  import { onMount } from "svelte";
 
   export let agencies = [];
   export let selectedAgencyLabel = "";
@@ -19,6 +20,7 @@
   let prefillActive = false;
   let lastPrefillLabel = "";
   let localeBase = "/en";
+  let searchContainer;
   const showLanguageSwitcher = false;
 
   let currentLocale;
@@ -195,6 +197,19 @@
     resetSearch();
   };
 
+  onMount(() => {
+    const handlePointerDown = (event) => {
+      if (!searchContainer || !results.length) return;
+      if (searchContainer.contains(event.target)) return;
+      results = [];
+      selectedIndex = -1;
+    };
+    document.addEventListener("pointerdown", handlePointerDown);
+    return () => {
+      document.removeEventListener("pointerdown", handlePointerDown);
+    };
+  });
+
   const closeMenu = (source = "unknown") => {
     if (!mobileMenuOpen) return;
     trackEvent("mobile_menu_toggle", {
@@ -358,7 +373,7 @@
       </div>
 
       <div class="mt-2.5 grid grid-cols-1 gap-3 md:mt-2.5 md:grid-cols-[minmax(0,38rem)_auto] md:items-center md:gap-5">
-        <div class="relative w-full">
+        <div class="relative w-full" bind:this={searchContainer}>
           <input
             type="search"
             placeholder={m.search_placeholder()}

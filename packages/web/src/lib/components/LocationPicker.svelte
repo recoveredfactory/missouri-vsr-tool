@@ -1,6 +1,7 @@
 <script>
   import { QuickScore } from "quick-score";
   import * as m from "$lib/paraglide/messages";
+  import { onMount } from "svelte";
 
   export let agencies = [];
   export let onSelect = (item) => {};
@@ -9,6 +10,7 @@
   let results = [];
   let selectedIndex = -1;
   let previousQuery = "";
+  let searchContainer;
 
   const toLabel = (item) => item?.canonical_name || item?.names?.[0] || item?.agency_slug;
   const toStops = (item) => item?.all_stops_total;
@@ -146,9 +148,22 @@
       resetSearch();
     }
   };
+
+  onMount(() => {
+    const handlePointerDown = (event) => {
+      if (!searchContainer || !results.length) return;
+      if (searchContainer.contains(event.target)) return;
+      results = [];
+      selectedIndex = -1;
+    };
+    document.addEventListener("pointerdown", handlePointerDown);
+    return () => {
+      document.removeEventListener("pointerdown", handlePointerDown);
+    };
+  });
 </script>
 
-<div class="relative w-full">
+<div class="relative w-full" bind:this={searchContainer}>
   <input
     type="search"
     placeholder={m.home_location_picker_placeholder()}
