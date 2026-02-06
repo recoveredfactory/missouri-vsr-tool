@@ -1,7 +1,3 @@
-<svelte:head>
-  <title>{data.data?.agency ?? data.slug} | {agency_title_suffix()}</title>
-</svelte:head>
-
 <script>
   import { Grid, PagingData, PlainTableCssTheme } from "@mediakular/gridcraft";
   import AgencyMap from "$lib/components/AgencyMap.svelte";
@@ -427,6 +423,9 @@
   let stopVolumeSegmentPrefix = "";
   let stopVolumeSegmentSuffix = "";
   let stopVolumeRankClause = "";
+  let stopVolumeStopsDisplay = "";
+  let metaTitle = "";
+  let metaDescription = "";
   const formatPhone = (value) => {
     const digits = value.replace(/\D+/g, "");
     if (digits.length === 10) {
@@ -540,6 +539,7 @@
     stopVolumeSegmentPrefix = "";
     stopVolumeSegmentSuffix = "";
     stopVolumeRankClause = "";
+    stopVolumeStopsDisplay = "";
     if (!latestYear) {
       stopVolumeLead = "";
     } else {
@@ -578,6 +578,7 @@
       } else {
         const agencyName = agencyData?.agency ?? data.slug;
         const totalStops = stopCountFormatter.format(totalNumeric);
+        stopVolumeStopsDisplay = totalStops;
         const leadFn = m?.agency_stop_volume_lead;
         const leadRaw =
           typeof leadFn === "function"
@@ -661,6 +662,16 @@
         }
         stopVolumeRankClause = rankClause;
       }
+    }
+  }
+
+  $: {
+    const agencyName = agencyData?.agency ?? data.slug;
+    metaTitle = `Missouri Vehicle Stops - ${agencyName}`;
+    if (agencyName && stopVolumeStopsDisplay && stopVolumeSegmentLabel) {
+      metaDescription = `${agencyName} had ${stopVolumeStopsDisplay} stops, putting it in the ${stopVolumeSegmentLabel} of agencies in Missouri. Learn more about who got stopped and why.`;
+    } else {
+      metaDescription = `${agencyName} traffic stops data. Learn more about who got stopped and why.`;
     }
   }
 
@@ -1032,6 +1043,16 @@
     }
   }
 </script>
+
+<svelte:head>
+  <title>{metaTitle}</title>
+  <meta name="description" content={metaDescription} />
+  <meta property="og:title" content={metaTitle} />
+  <meta property="og:description" content={metaDescription} />
+  <meta property="twitter:card" content="summary" />
+  <meta property="twitter:title" content={metaTitle} />
+  <meta property="twitter:description" content={metaDescription} />
+</svelte:head>
 
 <StickyHeader
   agencies={data.agencies}

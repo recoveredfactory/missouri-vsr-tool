@@ -147,7 +147,22 @@
 </script>
 
 <svelte:head>
-  <title>{m.home_hero_headline()}</title>
+  <title>Missouri Vehicle Stops</title>
+  <meta
+    name="description"
+    content="Who gets stopped? why? What happens next? This tool reveals how traffic enforcement varies across Missouri's agencies."
+  />
+  <meta property="og:title" content="Missouri Vehicle Stops" />
+  <meta
+    property="og:description"
+    content="Who gets stopped? why? What happens next? This tool reveals how traffic enforcement varies across Missouri's agencies."
+  />
+  <meta property="twitter:card" content="summary" />
+  <meta property="twitter:title" content="Missouri Vehicle Stops" />
+  <meta
+    property="twitter:description"
+    content="Who gets stopped? why? What happens next? This tool reveals how traffic enforcement varies across Missouri's agencies."
+  />
 </svelte:head>
 
 <StickyHeader agencies={data.agencies} />
