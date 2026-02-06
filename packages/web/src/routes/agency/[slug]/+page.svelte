@@ -78,6 +78,7 @@
   let gridTableEl;
   let agencyCount = 0;
   let locale = "en";
+  let localeBase = "/en";
   let basemapStyleUrl = "/map/style.en.json";
   let metricSearchTimeout;
   let lastTrackedMetricSearch = "";
@@ -128,6 +129,7 @@
     } catch {
       locale = "en";
     }
+    localeBase = `/${locale || "en"}`;
     basemapStyleUrl = `/map/style.${locale}.json`;
   }
 
@@ -1139,7 +1141,7 @@
           </a>
           <a
             class="inline-flex items-center gap-1 underline"
-            href="/data/downloads/all_combined_output.parquet"
+            href={`${localeBase}/#download`}
           >
             <span aria-hidden="true">↓</span>
             {m?.agency_download_all_data?.() ?? "Download all data"}
