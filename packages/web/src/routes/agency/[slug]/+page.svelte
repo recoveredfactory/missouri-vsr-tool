@@ -209,7 +209,12 @@
     };
 
     columnKeys.forEach((label) => {
-      const rankValue = getMetricValue(metric.rank, label);
+      const rankValue = metric.rank
+        ? getMetricValue(metric.rank, label)
+        : metric.base?.rank_dense;
+      const rankCountRaw = metric.base?.rank_count;
+      const rankCount =
+        typeof rankCountRaw === "string" ? Number(rankCountRaw) : rankCountRaw;
       let rankDisplay = "";
       if (hasSupplementValue(rankValue)) {
         const numeric = typeof rankValue === "string" ? Number(rankValue) : rankValue;
@@ -217,7 +222,9 @@
           ? stopCountFormatter.format(Math.round(numeric))
           : formatValue(rankValue);
         if (rankFormatted && rankFormatted !== "—") {
-          if (agencyCount > 0) {
+          if (Number.isFinite(rankCount) && rankCount > 0) {
+            rankDisplay = `#${rankFormatted}/${stopCountFormatter.format(rankCount)}`;
+          } else if (agencyCount > 0) {
             rankDisplay = `#${rankFormatted}/${stopCountFormatter.format(agencyCount)}`;
           } else {
             rankDisplay = `#${rankFormatted}`;
@@ -596,7 +603,8 @@
               : `putting it in the ${segmentLabel} of departments by stop volume`;
         }
         segmentSentence = segmentSentence.replace(/[.!?]+$/, "").trim();
-        const rankValue = getMetricValue(rankEntry, "Total");
+        const rankValue =
+          totalEntry?.rank_dense ?? getMetricValue(rankEntry, "Total");
         const rankNumeric = typeof rankValue === "string" ? Number(rankValue) : rankValue;
         let rankClause = "";
         if (Number.isFinite(rankNumeric)) {
@@ -609,9 +617,14 @@
                 : "the highest volume agency in the state";
           } else {
             const rankDisplay = stopCountFormatter.format(rankRounded);
+            const rankCountRaw = totalEntry?.rank_count;
+            const rankCount =
+              typeof rankCountRaw === "string" ? Number(rankCountRaw) : rankCountRaw;
             const agencyCount = Number(data?.agencyCount);
             const totalDisplay =
-              Number.isFinite(agencyCount) && agencyCount > 0
+              Number.isFinite(rankCount) && rankCount > 0
+                ? stopCountFormatter.format(rankCount)
+                : Number.isFinite(agencyCount) && agencyCount > 0
                 ? stopCountFormatter.format(agencyCount)
                 : "";
             const rankFn = m?.agency_stop_volume_rank_clause;
