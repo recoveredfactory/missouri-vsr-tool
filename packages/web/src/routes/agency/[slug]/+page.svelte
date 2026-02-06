@@ -7,8 +7,6 @@
   import GridValueCell from "$lib/components/grid/GridValueCell.svelte";
   import MetricChartModal from "$lib/components/MetricChartModal.svelte";
   import StickyHeader from "$lib/components/StickyHeader.svelte";
-  import { goto } from "$app/navigation";
-  import { page } from "$app/stores";
   import { onMount, tick } from "svelte";
   import * as m from "$lib/paraglide/messages";
   import { getLocale } from "$lib/paraglide/runtime";
@@ -892,43 +890,34 @@
 
   const hasMetricKey = (metricKey) => rows.some((row) => row?.row_key === metricKey);
 
-  const setMetricParam = (metricKey) => {
+  const setHash = (metricKey) => {
+    if (typeof window === "undefined") return;
     if (!metricKey) return;
-    const url = new URL($page.url);
-    url.searchParams.set("metric", metricKey);
-    goto(`${url.pathname}?${url.searchParams.toString()}`, {
-      replaceState: false,
-      keepfocus: true,
-      noScroll: true,
-    });
+    const encoded = encodeURIComponent(metricKey);
+    if (window.location.hash === `#${encoded}`) return;
+    window.location.hash = encoded;
   };
 
-  const clearMetricParam = () => {
-    const url = new URL($page.url);
-    if (!url.searchParams.has("metric")) return;
-    url.searchParams.delete("metric");
-    const query = url.searchParams.toString();
-    goto(`${url.pathname}${query ? `?${query}` : ""}`, {
-      replaceState: false,
-      keepfocus: true,
-      noScroll: true,
-    });
+  const clearHash = () => {
+    if (typeof window === "undefined") return;
+    const { pathname, search } = window.location;
+    window.history.replaceState(null, "", `${pathname}${search}`);
   };
 
-  const openMetric = (metricKey, { updateRoute = true } = {}) => {
+  const openMetric = (metricKey, { updateHash = true } = {}) => {
     if (!metricKey) return;
     activeMetricKey = metricKey;
     activeMetricLabel = metricLabelForKey(metricKey);
-    if (updateRoute) {
-      setMetricParam(metricKey);
+    if (updateHash) {
+      setHash(metricKey);
     }
   };
 
-  const closeMetric = ({ updateRoute = true } = {}) => {
+  const closeMetric = ({ updateHash = true } = {}) => {
     activeMetricKey = "";
     activeMetricLabel = "";
-    if (updateRoute) {
-      clearMetricParam();
+    if (updateHash) {
+      clearHash();
     }
   };
 
@@ -986,17 +975,25 @@
   };
 
 
-  const syncFromRoute = () => {
-    const metricKey = $page.url.searchParams.get("metric") ?? "";
+  const getHashMetric = () => {
+    if (typeof window === "undefined") return "";
+    const raw = window.location.hash.replace(/^#/, "");
+    return raw ? decodeURIComponent(raw) : "";
+  };
+
+  const syncFromHash = () => {
+    const metricKey = getHashMetric();
     if (metricKey && hasMetricKey(metricKey)) {
-      openMetric(metricKey, { updateRoute: false });
+      openMetric(metricKey, { updateHash: false });
     } else if (!metricKey && activeMetricKey) {
-      closeMetric({ updateRoute: false });
+      closeMetric({ updateHash: false });
     }
   };
 
   onMount(() => {
-    syncFromRoute();
+    syncFromHash();
+    const handleHashChange = () => syncFromHash();
+    window.addEventListener("hashchange", handleHashChange);
     expandDefaultGroups();
     const handleGroupRowClick = (event) => {
       if (!gridTableEl) return;
@@ -1015,6 +1012,7 @@
       gridTableEl.addEventListener("click", handleGroupRowClick);
     }
     return () => {
+      window.removeEventListener("hashchange", handleHashChange);
       if (gridTableEl) {
         gridTableEl.removeEventListener("click", handleGroupRowClick);
       }
@@ -1022,7 +1020,7 @@
   });
 
   $: if (typeof window !== "undefined" && rows.length) {
-    syncFromRoute();
+    syncFromHash();
   }
 
   $: if (gridRows.length) {
