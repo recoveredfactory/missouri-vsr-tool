@@ -370,9 +370,7 @@
     width: 100%;
     height: 100%;
   }
-</style>
 
-<style>
   :global(.agency-scatter-tooltip) {
     background-color: #fff !important;
     color: #0f172a !important;
