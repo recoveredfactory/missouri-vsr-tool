@@ -894,6 +894,7 @@
   const setMetricParam = (metricKey) => {
     if (!metricKey) return;
     const url = new URL($page.url);
+    url.hash = "";
     url.searchParams.set("metric", metricKey);
     goto(`${url.pathname}?${url.searchParams.toString()}`, {
       replaceState: false,
@@ -904,6 +905,7 @@
 
   const clearMetricParam = () => {
     const url = new URL($page.url);
+    url.hash = "";
     if (!url.searchParams.has("metric")) return;
     url.searchParams.delete("metric");
     const query = url.searchParams.toString();
@@ -987,9 +989,15 @@
 
   const syncFromRoute = () => {
     const metricKey = $page.url.searchParams.get("metric") ?? "";
+    const hashKey =
+      typeof window !== "undefined" && window.location.hash
+        ? decodeURIComponent(window.location.hash.replace(/^#/, ""))
+        : "";
     if (metricKey && hasMetricKey(metricKey)) {
       openMetric(metricKey, { updateRoute: false });
-    } else if (!metricKey && activeMetricKey) {
+    } else if (!metricKey && hashKey && hasMetricKey(hashKey)) {
+      openMetric(hashKey, { updateRoute: true });
+    } else if (!metricKey && !hashKey && activeMetricKey) {
       closeMetric({ updateRoute: false });
     }
   };
