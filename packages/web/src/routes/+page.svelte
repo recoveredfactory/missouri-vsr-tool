@@ -453,7 +453,7 @@
 
           <!-- Screen reader data summary -->
           <div class="sr-only">
-            Data summary: Stop outcomes by year. {#each historicalOutcomes.data as d}{d.year}: {d.noAction.toFixed(0)}% no action, {d.citations.toFixed(0)}% citations, {d.searches.toFixed(0)}% searches, {d.arrests.toFixed(0)}% arrests. {/each}
+            Data summary: Stop outcomes by year. {#each historicalOutcomes.data as d}{d.year}: {(d.noAction ?? 0).toFixed(0)}% no action, {(d.citations ?? 0).toFixed(0)}% citations, {(d.warnings ?? 0).toFixed(0)}% warnings, {(d.arrests ?? 0).toFixed(0)}% arrests. {/each}
           </div>
           <div class="flex flex-col" role="img" aria-label="Stacked bar chart showing stop outcomes by year">
             <svg viewBox="0 0 {width3 + padding3.left + padding3.right} {height3 + padding3.top + padding3.bottom}" class="w-full h-[220px] sm:h-[260px] md:h-[280px]">
