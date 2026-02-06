@@ -21,10 +21,10 @@
     window.umami?.track?.(event, payload);
   };
 
+  const siteUrl = import.meta.env.PUBLIC_SITE_URL ?? "https://missourivsr.com";
   const metaTitle = "Missouri Vehicle Stops";
   const metaDescription =
     "Who gets stopped? why? What happens next? This tool reveals how traffic enforcement varies across Missouri's agencies.";
-  // TODO(#123): add og:image once the share image is ready.
 
   const downloadManifest = data?.downloadManifest;
 
@@ -154,8 +154,12 @@
 <svelte:head>
   <title>{metaTitle}</title>
   <meta name="description" content={metaDescription} />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="{siteUrl}/" />
+  <meta property="og:site_name" content="Missouri Vehicle Stops Report" />
   <meta property="og:title" content={metaTitle} />
   <meta property="og:description" content={metaDescription} />
+  <!-- TODO(#123): add og:image + twitter:image, then switch twitter:card to summary_large_image -->
   <meta property="twitter:card" content="summary" />
   <meta property="twitter:title" content={metaTitle} />
   <meta property="twitter:description" content={metaDescription} />

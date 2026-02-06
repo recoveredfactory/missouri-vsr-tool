@@ -424,9 +424,9 @@
   let stopVolumeSegmentSuffix = "";
   let stopVolumeRankClause = "";
   let stopVolumeStopsDisplay = "";
+  const siteUrl = import.meta.env.PUBLIC_SITE_URL ?? "https://missourivsr.com";
   let metaTitle = "";
   let metaDescription = "";
-  // TODO(#123): add og:image once the share image is ready.
   const formatPhone = (value) => {
     const digits = value.replace(/\D+/g, "");
     if (digits.length === 10) {
@@ -1048,8 +1048,12 @@
 <svelte:head>
   <title>{metaTitle}</title>
   <meta name="description" content={metaDescription} />
+  <meta property="og:type" content="article" />
+  <meta property="og:url" content="{siteUrl}/agency/{data.slug}" />
+  <meta property="og:site_name" content="Missouri Vehicle Stops Report" />
   <meta property="og:title" content={metaTitle} />
   <meta property="og:description" content={metaDescription} />
+  <!-- TODO(#123): add og:image + twitter:image, then switch twitter:card to summary_large_image -->
   <meta property="twitter:card" content="summary" />
   <meta property="twitter:title" content={metaTitle} />
   <meta property="twitter:description" content={metaDescription} />
