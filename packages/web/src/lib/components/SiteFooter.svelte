@@ -47,7 +47,7 @@
         </p>
         <p class="text-xs text-slate-500">
           Data is compiled from public records and may contain errors or omissions.
-        <p>
+        </p>
       </div>
 
       <div class="flex flex-col items-center gap-3 md:items-end">
