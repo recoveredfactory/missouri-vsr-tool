@@ -892,8 +892,8 @@
   const hasMetricKey = (metricKey) => rows.some((row) => row?.row_key === metricKey);
 
   const buildMetricPath = (metricKey) =>
-    `/agency/${data.slug}/metric/${encodeURIComponent(metricKey)}`;
-  const baseAgencyPath = () => `/agency/${data.slug}`;
+    `${localeBase}/agency/${data.slug}/metric/${encodeURIComponent(metricKey)}`;
+  const baseAgencyPath = () => `${localeBase}/agency/${data.slug}`;
   const getRouteMetricKey = (metricKey) =>
     typeof metricKey === "string" ? metricKey : "";
 
@@ -1257,7 +1257,7 @@
                 </h3>
                 <div class="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-sm text-slate-700">
                   {#each touchingAgencies as neighbor}
-                    <a class="underline" href={`/agency/${neighbor.slug}`}>
+                    <a class="underline" href={`${localeBase}/agency/${neighbor.slug}`}>
                       {neighbor.label}
                     </a>
                   {/each}
@@ -1271,7 +1271,7 @@
                 </h3>
                 <div class="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-sm text-slate-700">
                   {#each containedAgencies as neighbor}
-                    <a class="underline" href={`/agency/${neighbor.slug}`}>
+                    <a class="underline" href={`${localeBase}/agency/${neighbor.slug}`}>
                       {neighbor.label}
                     </a>
                   {/each}
