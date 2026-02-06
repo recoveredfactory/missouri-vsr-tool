@@ -1,0 +1,62 @@
+{
+  "year": 2024,
+  "total_stops": 1282528.0,
+  "agency_count": 441,
+  "by_race": {
+    "all_stops": {
+      "Total": 1282528.0,
+      "White": 984190.0,
+      "Black": 217871.0,
+      "Hispanic": 46655.0,
+      "Native American": 2171.0,
+      "Asian": 14372.0,
+      "Other": 17269.0
+    },
+    "searches": {
+      "Total": 61389.0,
+      "White": 46038.0,
+      "Black": 11651.0,
+      "Hispanic": 2988.0,
+      "Native American": 88.0,
+      "Asian": 358.0,
+      "Other": 266.0
+    },
+    "contraband": {
+      "Total": 13355.0,
+      "White": 10368.0,
+      "Black": 2278.0,
+      "Hispanic": 574.0,
+      "Native American": 17.0,
+      "Asian": 64.0,
+      "Other": 54.0
+    },
+    "citations": {
+      "Total": 532132.0,
+      "White": 377384.0,
+      "Black": 117743.0,
+      "Hispanic": 24313.0,
+      "Native American": 755.0,
+      "Asian": 6283.0,
+      "Other": 5654.0
+    },
+    "arrests": {
+      "Total": 49421.0,
+      "White": 33228.0,
+      "Black": 12680.0,
+      "Hispanic": 2877.0,
+      "Native American": 70.0,
+      "Asian": 303.0,
+      "Other": 263.0
+    },
+    "warnings": {
+      "Total": 0.0
+    }
+  },
+  "summary": {
+    "search_rate": 4.786562164724669,
+    "hit_rate": 21.754711756177816,
+    "citation_rate": 41.49086803562963,
+    "arrest_rate": 3.8534051498290873,
+    "warning_rate": 0.0
+  }
+}
