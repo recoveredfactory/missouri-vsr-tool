@@ -18,11 +18,13 @@
   let headerHeight = 0;
   let prefillActive = false;
   let lastPrefillLabel = "";
+  let localeBase = "/en";
   const showLanguageSwitcher = false;
 
   let currentLocale;
   // Re-evaluate locale when page changes (fixes language switcher not updating)
   $: $page, (currentLocale = getLocale());
+  $: localeBase = locales.includes(currentLocale) ? `/${currentLocale}` : "/en";
 
   const donateUrl =
     import.meta.env.PUBLIC_DONATE_URL ??
@@ -405,11 +407,11 @@
           {/if}
         </div>
         <nav class="hidden items-center justify-end gap-2.5 text-sm md:flex">
-          <a href="/#download" class="text-slate-700 no-underline hover:text-[#065f46]">
+          <a href={`${localeBase}/#download`} class="text-slate-700 no-underline hover:text-[#065f46]">
             {m.home_toc_download()}
           </a>
           <span class="text-slate-300">•</span>
-          <a href="/#about" class="text-slate-700 no-underline hover:text-[#065f46]">
+          <a href={`${localeBase}/#about`} class="text-slate-700 no-underline hover:text-[#065f46]">
             {m.home_toc_learn()}
           </a>
         </nav>
@@ -438,14 +440,14 @@
         <p class="mt-8 text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">Explore</p>
         <nav class="mt-3 space-y-3">
           <a
-            href="/#download"
+            href={`${localeBase}/#download`}
             class="block text-3xl font-semibold leading-tight text-slate-900 no-underline"
             on:click={() => closeMenu("nav")}
           >
             {m.home_toc_download()}
           </a>
           <a
-            href="/#about"
+            href={`${localeBase}/#about`}
             class="block text-3xl font-semibold leading-tight text-slate-900 no-underline"
             on:click={() => closeMenu("nav")}
           >
