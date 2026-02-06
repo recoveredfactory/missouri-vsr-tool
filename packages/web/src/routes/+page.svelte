@@ -193,7 +193,7 @@
               {@const width = 260}
               {@const height = 180}
               {@const stopsMax = Math.ceil(Math.max(...stops) / 200000) * 200000}
-              {@const stopsColor = "#0f766e"}
+              {@const stopsColor = "#25784c"}
 
               <div class="sr-only">
                 Data summary: From {years[0]} to {years[years.length - 1]}, total stops ranged from {formatStops(Math.min(...stops))} to {formatStops(Math.max(...stops))}.
@@ -263,7 +263,7 @@
               {@const width = 260}
               {@const height = 180}
               {@const consentMax = Math.ceil(Math.max(...consent) / 10000) * 10000}
-              {@const consentColor = "#334155"}
+              {@const consentColor = "#1c4f74"}
 
               <div class="sr-only">
                 Data summary: Consent searches dropped from {formatStops(consent[0])} in {years[0]} to {formatStops(consent[consent.length - 1])} in {years[years.length - 1]}, a {Math.round((1 - consent[consent.length - 1] / consent[0]) * 100)}% decline.
@@ -340,8 +340,8 @@
           }}
           {@const raceOrder = ["White", "Black", "Hispanic", "Other"]}
           {@const maxVal = Math.max(...raceOrder.map(r => Math.max(population[r], stopsData2[r])))}
-          {@const popColor = "#0f766e"}
-          {@const stopsColor2 = "#334155"}
+          {@const popColor = "#25784c"}
+          {@const stopsColor2 = "#1c4f74"}
           {@const padding2 = { top: 12, right: 12, bottom: 40, left: 35 }}
           {@const width2 = 300}
           {@const height2 = 180}
@@ -430,7 +430,7 @@
                 >{stopVal.toFixed(1)}%</text>
 
                 <!-- Race label -->
-                <text x={groupX} y={padding2.top + height2 + 14} text-anchor="middle" font-size="9" fill="#334155" font-weight="600">{race}</text>
+                <text x={groupX} y={padding2.top + height2 + 14} text-anchor="middle" font-size="9" fill="#0f293c" font-weight="600">{race}</text>
               {/each}
             </svg>
 
@@ -523,7 +523,7 @@
                       y={segY + segHeight/2 + 3}
                       text-anchor="middle"
                       font-size="7"
-                      fill={segment.key === "noAction" ? "#334155" : "#ffffff"}
+                      fill={segment.key === "noAction" ? "#022613" : "#ffffff"}
                       font-weight="600"
                       class="pointer-events-none"
                     >{Math.round(segment.value)}%</text>
@@ -575,7 +575,7 @@
                   href={`/data/downloads/${file.path}`}
                   download
                   on:click={() => handleDownloadClick(file, `/data/downloads/${file.path}`)}
-                  class={`block rounded-lg bg-[#0f766e] px-5 py-2.5 text-sm font-semibold text-white no-underline transition-colors hover:bg-[#065f46] ${
+                  class={`block rounded-lg bg-[#25784c] px-5 py-2.5 text-sm font-semibold text-white no-underline transition-colors hover:bg-[#1b613c] ${
                     index === downloadGroup.files.length - 1 ? "" : "mb-3"
                   }`}
                 >
@@ -595,7 +595,7 @@
       {/if}
 
       <p class="mt-8 text-center text-sm text-slate-600">
-        See the <a href="#about" class="text-[#2c9166] underline hover:text-[#216d4d]">About the Data</a> section for usage details and methodology.
+        See the <a href="#about" class="text-[#318c5d] underline hover:text-[#1b613c]">About the Data</a> section for usage details and methodology.
       </p>
     </div>
   </section>
@@ -608,7 +608,7 @@
       </p>
       <a
         href="mailto:davideads@recoveredfactory.net"
-        class="inline-block rounded-lg bg-[#0f766e] px-6 py-3 font-semibold text-white no-underline transition-colors hover:bg-[#065f46] focus:outline-none focus:ring-2 focus:ring-[#0f766e] focus:ring-offset-2"
+        class="inline-block rounded-lg bg-[#25784c] px-6 py-3 font-semibold text-white no-underline transition-colors hover:bg-[#1b613c] focus:outline-none focus:ring-2 focus:ring-[#25784c] focus:ring-offset-2"
         aria-label="Send email to get in touch about hiring us"
       >
         {m.home_footer_contact()}

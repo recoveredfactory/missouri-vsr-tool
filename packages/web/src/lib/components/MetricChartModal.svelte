@@ -144,7 +144,7 @@
     return toNumber(row[race] ?? row[lower] ?? 0);
   };
 
-  const raceColor = (race) => importedRaceColors[race] || "#0f766e";
+  const raceColor = (race) => importedRaceColors[race] || "#25784c";
 
   $: stackedRaceKeys = stackRaceKeys(resolvedRaceKeys);
   $: lineRaceKeys = stackedRaceKeys.length ? stackedRaceKeys : ["Total"];

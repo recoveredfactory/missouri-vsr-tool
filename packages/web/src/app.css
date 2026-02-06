@@ -15,9 +15,9 @@
     --color-surface-100: #f8fafc; /* slate-50 - lightest surface */
     --color-surface-200: #f1f5f9; /* slate-100 */
     --color-surface-300: #e2e8f0; /* slate-200 */
-    --color-primary: #059669; /* emerald-600 - primary accent */
+    --color-primary: #25784c; /* brand green */
     --color-secondary: #64748b; /* slate-500 */
-    --color-success: #10b981; /* emerald-500 */
+    --color-success: #3e9e6c; /* light brand green */
     --color-warning: #f59e0b; /* amber-500 */
     --color-danger: #ef4444; /* red-500 */
     --color-info: #3b82f6; /* blue-500 */
@@ -28,15 +28,15 @@
   }
 
   a {
-    @apply text-emerald-900 underline decoration-emerald-900 underline-offset-2;
+    @apply text-[#1b613c] underline decoration-[#1b613c] underline-offset-2;
   }
 
   a:hover {
-    @apply text-emerald-600 decoration-emerald-600;
+    @apply text-[#318c5d] decoration-[#318c5d];
   }
 
   a:focus-visible {
-    @apply outline-none ring-2 ring-emerald-300 ring-offset-2 ring-offset-slate-50;
+    @apply outline-none ring-2 ring-[#3e9e6c] ring-offset-2 ring-offset-slate-50;
   }
 }
 
