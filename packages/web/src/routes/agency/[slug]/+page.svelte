@@ -426,6 +426,7 @@
   let stopVolumeStopsDisplay = "";
   let metaTitle = "";
   let metaDescription = "";
+  // TODO(#123): add og:image once the share image is ready.
   const formatPhone = (value) => {
     const digits = value.replace(/\D+/g, "");
     if (digits.length === 10) {

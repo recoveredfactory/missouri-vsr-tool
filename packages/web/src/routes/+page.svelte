@@ -21,6 +21,11 @@
     window.umami?.track?.(event, payload);
   };
 
+  const metaTitle = "Missouri Vehicle Stops";
+  const metaDescription =
+    "Who gets stopped? why? What happens next? This tool reveals how traffic enforcement varies across Missouri's agencies.";
+  // TODO(#123): add og:image once the share image is ready.
+
   const downloadManifest = data?.downloadManifest;
 
   const downloadGroupMeta = {
@@ -147,22 +152,13 @@
 </script>
 
 <svelte:head>
-  <title>Missouri Vehicle Stops</title>
-  <meta
-    name="description"
-    content="Who gets stopped? why? What happens next? This tool reveals how traffic enforcement varies across Missouri's agencies."
-  />
-  <meta property="og:title" content="Missouri Vehicle Stops" />
-  <meta
-    property="og:description"
-    content="Who gets stopped? why? What happens next? This tool reveals how traffic enforcement varies across Missouri's agencies."
-  />
+  <title>{metaTitle}</title>
+  <meta name="description" content={metaDescription} />
+  <meta property="og:title" content={metaTitle} />
+  <meta property="og:description" content={metaDescription} />
   <meta property="twitter:card" content="summary" />
-  <meta property="twitter:title" content="Missouri Vehicle Stops" />
-  <meta
-    property="twitter:description"
-    content="Who gets stopped? why? What happens next? This tool reveals how traffic enforcement varies across Missouri's agencies."
-  />
+  <meta property="twitter:title" content={metaTitle} />
+  <meta property="twitter:description" content={metaDescription} />
 </svelte:head>
 
 <StickyHeader agencies={data.agencies} />
