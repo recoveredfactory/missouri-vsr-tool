@@ -756,7 +756,7 @@
         {m?.agency_scatter_chart_unavailable?.() ?? "Chart unavailable."}
       </div>
       {:else if ChartComponent}
-        <div class="aspect-[1.15/1] w-full 2xl:mx-auto 2xl:max-w-[520px]">
+        <div class="aspect-[1.15/1] w-full min-h-[240px] 2xl:mx-auto 2xl:max-w-[520px]">
           <svelte:component
             this={ChartComponent}
             points={yearPoints}
