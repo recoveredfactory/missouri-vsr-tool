@@ -14,14 +14,32 @@ export async function load({ fetch, params }) {
   const data = await response.json();
   const baselineResponse = await fetch("/data/dist/statewide_slug_baselines.json");
   const indexResponse = await fetch("/data/dist/agency_index.json");
+  const boundaryIndexResponse = await fetch("/data/dist/agency_boundaries_index.json");
   const agencyId =
     data?.agency_metadata?.agency_id || data?.agency_metadata?.agency_slug || slug;
-  const boundaryResponse = await fetch(
-    `/data/dist/agency_boundaries/${agencyId}.geojson`
-  );
+  let boundary = null;
+
+  if (boundaryIndexResponse.ok) {
+    try {
+      const boundaryIndex = await boundaryIndexResponse.json();
+      const slugs = Array.isArray(boundaryIndex?.slugs) ? boundaryIndex.slugs : [];
+      if (slugs.includes(agencyId)) {
+        const boundaryResponse = await fetch(
+          `/data/dist/agency_boundaries/${agencyId}.geojson`
+        );
+        boundary = boundaryResponse.ok ? await boundaryResponse.json() : null;
+      }
+    } catch {
+      boundary = null;
+    }
+  } else {
+    const boundaryResponse = await fetch(
+      `/data/dist/agency_boundaries/${agencyId}.geojson`
+    );
+    boundary = boundaryResponse.ok ? await boundaryResponse.json() : null;
+  }
   const baselines = baselineResponse.ok ? await baselineResponse.json() : [];
   const agencies = indexResponse.ok ? await indexResponse.json() : [];
-  const boundary = boundaryResponse.ok ? await boundaryResponse.json() : null;
 
   return {
     slug,
