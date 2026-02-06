@@ -1,7 +1,7 @@
 const BASE_URL = import.meta.env.PUBLIC_SITE_URL || "https://missourivsr.com";
 
 function urlEntry(path) {
-  const en = `${BASE_URL}${path}`;
+  const en = `${BASE_URL}/en${path}`;
   const es = `${BASE_URL}/es${path}`;
   return `  <url>
     <loc>${en}</loc>
