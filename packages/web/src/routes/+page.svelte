@@ -175,119 +175,147 @@
       </h2>
 
       <div class="flex flex-col gap-6">
-        <!-- Chart 1: Historical Trend — Full width lead story -->
-        <div class="rounded-lg border border-slate-200 bg-white p-4 sm:p-6 flex flex-col">
-          <div class="mb-3 sm:mb-4">
-            <h3 class="text-lg sm:text-xl font-bold text-slate-900">
-              Traffic stops are steady, but consent searches are dropping
-            </h3>
-            <p class="mt-1 sm:mt-2 text-xs sm:text-sm leading-relaxed text-slate-600">
-              Statewide consent searches fell 36% since 2020 — even as total stops stayed flat. What's driving the shift?
-            </p>
-          </div>
-
-          {#if historicalData}
-            {@const years = historicalData.years}
-            {@const stops = historicalData.totalStops}
-            {@const consent = historicalData.consentSearches}
-            {@const padding = { top: 24, right: 50, bottom: 35, left: 50 }}
-            {@const width = 280}
-            {@const height = 180}
-            {@const stopsMax = Math.ceil(Math.max(...stops) / 200000) * 200000}
-            {@const consentMax = Math.ceil(Math.max(...consent) / 10000) * 10000}
-            {@const stopsColor = "#0f766e"}
-            {@const consentColor = "#334155"}
-
-            <!-- Screen reader data summary -->
-          <div class="sr-only">
-            Data summary: From {years[0]} to {years[years.length - 1]}, total stops ranged from {formatStops(Math.min(...stops))} to {formatStops(Math.max(...stops))}. Consent searches dropped from {formatStops(consent[0])} to {formatStops(consent[consent.length - 1])}, a {Math.round((1 - consent[consent.length - 1] / consent[0]) * 100)}% decline.
-          </div>
-          <div class="flex flex-col" role="img" aria-label="Line chart showing total stops stable while consent searches decline from 2020 to 2024">
-            <svg viewBox="0 0 {width + padding.left + padding.right} {height + padding.top + padding.bottom}" class="w-full h-[220px] sm:h-[260px] md:h-[280px]">
-                <!-- Grid lines -->
-                {#each [0, 0.25, 0.5, 0.75, 1] as tick}
-                  <line x1={padding.left} y1={padding.top + (1-tick) * height} x2={padding.left + width} y2={padding.top + (1-tick) * height} stroke="#e2e8f0" stroke-width="0.5" />
-                {/each}
-
-                <!-- Axes -->
-                <line x1={padding.left} y1={padding.top + height} x2={padding.left + width} y2={padding.top + height} stroke="#94a3b8" stroke-width="1" />
-
-                <!-- Left Y-axis labels (Total Stops) -->
-                <text x={padding.left - 8} y={padding.top + 4} text-anchor="end" font-size="8" fill={stopsColor} font-weight="600">{formatStopsAxis(stopsMax)}</text>
-                <text x={padding.left - 8} y={padding.top + height + 3} text-anchor="end" font-size="8" fill={stopsColor} font-weight="600">0</text>
-                <text x={padding.left - 8} y={padding.top - 10} text-anchor="end" font-size="7" fill={stopsColor} font-weight="600">Total Stops</text>
-
-                <!-- Right Y-axis labels (Consent Searches) -->
-                <text x={padding.left + width + 8} y={padding.top + 4} text-anchor="start" font-size="8" fill={consentColor} font-weight="600">{formatStopsAxis(consentMax)}</text>
-                <text x={padding.left + width + 8} y={padding.top + height + 3} text-anchor="start" font-size="8" fill={consentColor} font-weight="600">0</text>
-                <text x={padding.left + width + 8} y={padding.top - 10} text-anchor="start" font-size="7" fill={consentColor} font-weight="600">Consent Searches</text>
-
-                <!-- X-axis year labels -->
-                {#each years as year, i}
-                  <text x={padding.left + (i / (years.length - 1)) * width} y={padding.top + height + 16} text-anchor="middle" font-size="9" fill="#64748b">{year}</text>
-                {/each}
-
-                <!-- Total Stops line -->
-                <polyline
-                  fill="none"
-                  stroke={stopsColor}
-                  stroke-width="2.5"
-                  points={stops.map((v, i) => `${padding.left + (i / (years.length - 1)) * width},${padding.top + (1 - v / stopsMax) * height}`).join(" ")}
-                />
-                {#each stops as v, i}
-                  <g
-                    class="cursor-pointer"
-                    tabindex="0"
-                    role="button"
-                    aria-label="{years[i]}: {formatStops(v)} total stops"
-                    on:mouseenter={(e) => showTooltip(e, `${years[i]}: ${formatStops(v)} total stops`)}
-                    on:mouseleave={hideTooltip}
-                    on:focus={(e) => showTooltip(e, `${years[i]}: ${formatStops(v)} total stops`)}
-                    on:blur={hideTooltip}
-                  >
-                    <circle cx={padding.left + (i / (years.length - 1)) * width} cy={padding.top + (1 - v / stopsMax) * height} r="8" fill="transparent" />
-                    <circle cx={padding.left + (i / (years.length - 1)) * width} cy={padding.top + (1 - v / stopsMax) * height} r="3.5" fill={stopsColor} class="pointer-events-none" />
-                  </g>
-                {/each}
-
-                <!-- Consent Searches line -->
-                <polyline
-                  fill="none"
-                  stroke={consentColor}
-                  stroke-width="2.5"
-                  stroke-dasharray="6 3"
-                  points={consent.map((v, i) => `${padding.left + (i / (years.length - 1)) * width},${padding.top + (1 - v / consentMax) * height}`).join(" ")}
-                />
-                {#each consent as v, i}
-                  <g
-                    class="cursor-pointer"
-                    tabindex="0"
-                    role="button"
-                    aria-label="{years[i]}: {formatStops(v)} consent searches"
-                    on:mouseenter={(e) => showTooltip(e, `${years[i]}: ${formatStops(v)} consent searches`)}
-                    on:mouseleave={hideTooltip}
-                    on:focus={(e) => showTooltip(e, `${years[i]}: ${formatStops(v)} consent searches`)}
-                    on:blur={hideTooltip}
-                  >
-                    <circle cx={padding.left + (i / (years.length - 1)) * width} cy={padding.top + (1 - v / consentMax) * height} r="8" fill="transparent" />
-                    <circle cx={padding.left + (i / (years.length - 1)) * width} cy={padding.top + (1 - v / consentMax) * height} r="3.5" fill={consentColor} class="pointer-events-none" />
-                  </g>
-                {/each}
-              </svg>
-
-              <!-- Inline legend -->
-              <div class="flex justify-center gap-5 mt-1">
-                <span class="flex items-center gap-1.5">
-                  <span class="w-4 h-0.5" style="background-color: {stopsColor}"></span>
-                  <span class="text-xs font-medium" style="color: {stopsColor}">Total Stops</span>
-                </span>
-                <span class="flex items-center gap-1.5">
-                  <span class="w-4 h-0.5 border-t-2 border-dashed" style="border-color: {consentColor}"></span>
-                  <span class="text-xs font-medium" style="color: {consentColor}">Consent Searches</span>
-                </span>
-              </div>
+        <!-- Charts 1a & 1b: Total Stops and Consent Searches side-by-side -->
+        <div class="grid gap-6 md:grid-cols-2">
+          <!-- Chart 1a: Total Stops -->
+          <div class="rounded-lg border border-slate-200 bg-white p-4 sm:p-6 flex flex-col">
+            <div class="mb-3 sm:mb-4">
+              <h3 class="text-lg sm:text-xl font-bold text-slate-900">
+                Traffic stops remain steady statewide
+              </h3>
+              <p class="mt-1 sm:mt-2 text-xs sm:text-sm leading-relaxed text-slate-600">
+                Missouri police made over 1.2 million traffic stops in 2024.
+              </p>
             </div>
-          {/if}
+
+            {#if historicalData}
+              {@const years = historicalData.years}
+              {@const stops = historicalData.totalStops}
+              {@const padding = { top: 24, right: 12, bottom: 35, left: 45 }}
+              {@const width = 260}
+              {@const height = 180}
+              {@const stopsMax = Math.ceil(Math.max(...stops) / 200000) * 200000}
+              {@const stopsColor = "#0f766e"}
+
+              <div class="sr-only">
+                Data summary: From {years[0]} to {years[years.length - 1]}, total stops ranged from {formatStops(Math.min(...stops))} to {formatStops(Math.max(...stops))}.
+              </div>
+              <div class="flex flex-col" role="img" aria-label="Line chart showing total stops from 2020 to 2024">
+                <svg viewBox="0 0 {width + padding.left + padding.right} {height + padding.top + padding.bottom}" class="w-full h-[220px] sm:h-[260px] md:h-[280px]">
+                  <!-- Grid lines -->
+                  {#each [0, 0.25, 0.5, 0.75, 1] as tick}
+                    <line x1={padding.left} y1={padding.top + (1-tick) * height} x2={padding.left + width} y2={padding.top + (1-tick) * height} stroke="#e2e8f0" stroke-width="0.5" />
+                  {/each}
+
+                  <!-- X-axis -->
+                  <line x1={padding.left} y1={padding.top + height} x2={padding.left + width} y2={padding.top + height} stroke="#94a3b8" stroke-width="1" />
+
+                  <!-- Y-axis labels -->
+                  <text x={padding.left - 8} y={padding.top + 4} text-anchor="end" font-size="8" fill="#64748b" font-weight="600">{formatStopsAxis(stopsMax)}</text>
+                  <text x={padding.left - 8} y={padding.top + height/2 + 3} text-anchor="end" font-size="8" fill="#64748b" font-weight="600">{formatStopsAxis(stopsMax/2)}</text>
+                  <text x={padding.left - 8} y={padding.top + height + 3} text-anchor="end" font-size="8" fill="#64748b" font-weight="600">0</text>
+
+                  <!-- X-axis year labels -->
+                  {#each years as year, i}
+                    <text x={padding.left + (i / (years.length - 1)) * width} y={padding.top + height + 16} text-anchor="middle" font-size="9" fill="#64748b">{year}</text>
+                  {/each}
+
+                  <!-- Total Stops line -->
+                  <polyline
+                    fill="none"
+                    stroke={stopsColor}
+                    stroke-width="2.5"
+                    points={stops.map((v, i) => `${padding.left + (i / (years.length - 1)) * width},${padding.top + (1 - v / stopsMax) * height}`).join(" ")}
+                  />
+                  {#each stops as v, i}
+                    <g
+                      class="cursor-pointer"
+                      tabindex="0"
+                      role="button"
+                      aria-label="{years[i]}: {formatStops(v)} total stops"
+                      on:mouseenter={(e) => showTooltip(e, `${years[i]}: ${formatStops(v)} stops`)}
+                      on:mouseleave={hideTooltip}
+                      on:focus={(e) => showTooltip(e, `${years[i]}: ${formatStops(v)} stops`)}
+                      on:blur={hideTooltip}
+                    >
+                      <circle cx={padding.left + (i / (years.length - 1)) * width} cy={padding.top + (1 - v / stopsMax) * height} r="8" fill="transparent" />
+                      <circle cx={padding.left + (i / (years.length - 1)) * width} cy={padding.top + (1 - v / stopsMax) * height} r="3.5" fill={stopsColor} class="pointer-events-none" />
+                    </g>
+                  {/each}
+                </svg>
+              </div>
+            {/if}
+          </div>
+
+          <!-- Chart 1b: Consent Searches -->
+          <div class="rounded-lg border border-slate-200 bg-white p-4 sm:p-6 flex flex-col">
+            <div class="mb-3 sm:mb-4">
+              <h3 class="text-lg sm:text-xl font-bold text-slate-900">
+                Consent searches dropped 32% since 2020
+              </h3>
+              <p class="mt-1 sm:mt-2 text-xs sm:text-sm leading-relaxed text-slate-600">
+                Fewer drivers are agreeing to voluntary vehicle searches.
+              </p>
+            </div>
+
+            {#if historicalData}
+              {@const years = historicalData.years}
+              {@const consent = historicalData.consentSearches}
+              {@const padding = { top: 24, right: 12, bottom: 35, left: 45 }}
+              {@const width = 260}
+              {@const height = 180}
+              {@const consentMax = Math.ceil(Math.max(...consent) / 10000) * 10000}
+              {@const consentColor = "#334155"}
+
+              <div class="sr-only">
+                Data summary: Consent searches dropped from {formatStops(consent[0])} in {years[0]} to {formatStops(consent[consent.length - 1])} in {years[years.length - 1]}, a {Math.round((1 - consent[consent.length - 1] / consent[0]) * 100)}% decline.
+              </div>
+              <div class="flex flex-col" role="img" aria-label="Line chart showing consent searches declining from 2020 to 2024">
+                <svg viewBox="0 0 {width + padding.left + padding.right} {height + padding.top + padding.bottom}" class="w-full h-[220px] sm:h-[260px] md:h-[280px]">
+                  <!-- Grid lines -->
+                  {#each [0, 0.25, 0.5, 0.75, 1] as tick}
+                    <line x1={padding.left} y1={padding.top + (1-tick) * height} x2={padding.left + width} y2={padding.top + (1-tick) * height} stroke="#e2e8f0" stroke-width="0.5" />
+                  {/each}
+
+                  <!-- X-axis -->
+                  <line x1={padding.left} y1={padding.top + height} x2={padding.left + width} y2={padding.top + height} stroke="#94a3b8" stroke-width="1" />
+
+                  <!-- Y-axis labels -->
+                  <text x={padding.left - 8} y={padding.top + 4} text-anchor="end" font-size="8" fill="#64748b" font-weight="600">{formatStopsAxis(consentMax)}</text>
+                  <text x={padding.left - 8} y={padding.top + height/2 + 3} text-anchor="end" font-size="8" fill="#64748b" font-weight="600">{formatStopsAxis(consentMax/2)}</text>
+                  <text x={padding.left - 8} y={padding.top + height + 3} text-anchor="end" font-size="8" fill="#64748b" font-weight="600">0</text>
+
+                  <!-- X-axis year labels -->
+                  {#each years as year, i}
+                    <text x={padding.left + (i / (years.length - 1)) * width} y={padding.top + height + 16} text-anchor="middle" font-size="9" fill="#64748b">{year}</text>
+                  {/each}
+
+                  <!-- Consent Searches line -->
+                  <polyline
+                    fill="none"
+                    stroke={consentColor}
+                    stroke-width="2.5"
+                    points={consent.map((v, i) => `${padding.left + (i / (years.length - 1)) * width},${padding.top + (1 - v / consentMax) * height}`).join(" ")}
+                  />
+                  {#each consent as v, i}
+                    <g
+                      class="cursor-pointer"
+                      tabindex="0"
+                      role="button"
+                      aria-label="{years[i]}: {formatStops(v)} consent searches"
+                      on:mouseenter={(e) => showTooltip(e, `${years[i]}: ${formatStops(v)} consent searches`)}
+                      on:mouseleave={hideTooltip}
+                      on:focus={(e) => showTooltip(e, `${years[i]}: ${formatStops(v)} consent searches`)}
+                      on:blur={hideTooltip}
+                    >
+                      <circle cx={padding.left + (i / (years.length - 1)) * width} cy={padding.top + (1 - v / consentMax) * height} r="8" fill="transparent" />
+                      <circle cx={padding.left + (i / (years.length - 1)) * width} cy={padding.top + (1 - v / consentMax) * height} r="3.5" fill={consentColor} class="pointer-events-none" />
+                    </g>
+                  {/each}
+                </svg>
+              </div>
+            {/if}
+          </div>
         </div>
 
         <!-- Charts 2 & 3: Side-by-side on desktop -->
