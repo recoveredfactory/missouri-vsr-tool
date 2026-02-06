@@ -138,10 +138,10 @@
     const numeric = typeof value === "string" ? Number(value) : value;
     if (!Number.isFinite(numeric)) return "0";
     if (numeric >= 1000000) {
-      return `${(numeric / 1000000).toFixed(1)}M`;
+      return `${(numeric / 1000000).toFixed(2)}M`;
     }
     if (numeric >= 1000) {
-      return `${(numeric / 1000).toFixed(1)}K`;
+      return `${(numeric / 1000).toFixed(0)}K`;
     }
     return new Intl.NumberFormat(undefined, { maximumFractionDigits: 0 }).format(numeric);
   };
@@ -181,10 +181,10 @@
           <div class="rounded-lg border border-slate-200 bg-white p-4 sm:p-6 flex flex-col">
             <div class="mb-3 sm:mb-4">
               <h3 class="text-lg sm:text-xl font-bold text-slate-900">
-                Traffic stops remain steady statewide
+                Traffic stops remain relatively steady statewide
               </h3>
               <p class="mt-1 sm:mt-2 text-xs sm:text-sm leading-relaxed text-slate-600">
-                Missouri police made over 1.2 million traffic stops in 2024.
+                Missouri police made almost 1.3 million traffic stops in 2024.
               </p>
             </div>
 
@@ -254,7 +254,7 @@
                 Consent searches dropped 32% since 2020
               </h3>
               <p class="mt-1 sm:mt-2 text-xs sm:text-sm leading-relaxed text-slate-600">
-                Fewer drivers are agreeing to voluntary vehicle searches.
+                Law enforcement officers are carrying out discretionary searches less often.
               </p>
             </div>
 
@@ -324,10 +324,10 @@
           <div class="rounded-lg border border-slate-200 bg-white p-4 sm:p-6 flex flex-col">
             <div class="mb-3 sm:mb-4">
               <h3 class="text-lg sm:text-xl font-bold text-slate-900">
-                Black drivers were 17% of stops, but only 11% of Missouri's population
+                Black drivers were involved in 17% of stops, but represent 11% of Missouri's population
               </h3>
               <p class="mt-1 sm:mt-2 text-xs sm:text-sm leading-relaxed text-slate-600">
-                Compare who lives in Missouri vs. who gets stopped by police.
+                Black drivers have the largest disparity in stops vs. percentage of the state population. 
               </p>
             </div>
 
@@ -448,12 +448,6 @@
               </span>
             </div>
 
-              <!-- Disparity callout -->
-              <div class="bg-slate-50 rounded p-2 border border-slate-200 text-xs mt-3">
-                <span class="inline-flex items-center gap-1.5">
-                  <span class="text-slate-600">Black drivers: <strong class="text-slate-900">{stopsData2.Black.toFixed(1)}%</strong> of stops vs <strong class="text-slate-900">{population.Black}%</strong> of population</span>
-                </span>
-              </div>
             </div>
             {/if}
           </div>
