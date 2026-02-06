@@ -580,24 +580,27 @@
     </div>
   </section>
 
+  <!-- Hire Us CTA -->
+  <section class="border-t border-slate-200 bg-white py-8 sm:py-10">
+    <div class="mx-auto max-w-4xl px-6 text-center">
+      <p class="mb-4 text-lg font-semibold text-slate-900">
+        {m.home_footer_cta()}
+      </p>
+      <a
+        href="mailto:davideads@recoveredfactory.net"
+        class="inline-block rounded-lg bg-[#0f766e] px-6 py-3 font-semibold text-white no-underline transition-colors hover:bg-[#065f46] focus:outline-none focus:ring-2 focus:ring-[#0f766e] focus:ring-offset-2"
+        aria-label="Send email to get in touch about hiring us"
+      >
+        {m.home_footer_contact()}
+      </a>
+    </div>
+  </section>
+
   <!-- About the Data -->
   <section id="about" class="border-t border-slate-200 bg-slate-50 py-12">
     <div class="mx-auto max-w-4xl px-6">
       <div class="content">
         {@html data.aboutDataHtml}
-      </div>
-
-      <div class="mt-12 rounded-lg border-2 border-teal-100 bg-teal-50 p-6">
-        <p class="mb-4 text-lg font-semibold text-slate-900">
-          {m.home_footer_cta()}
-        </p>
-        <a
-          id="donate"
-          href={donateUrl}
-          class="inline-block rounded-lg bg-[#0f766e] px-6 py-3 font-semibold text-white no-underline transition-colors hover:bg-[#065f46]"
-        >
-          {m.home_footer_contact()}
-        </a>
       </div>
     </div>
   </section>
