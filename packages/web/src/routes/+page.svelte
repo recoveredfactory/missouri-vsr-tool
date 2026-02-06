@@ -46,10 +46,11 @@
   ];
 
   function getDownloadLabel(file) {
+    if (file.group === "json" && /downloads\.json$/i.test(file.path)) {
+      return "All datasets combined";
+    }
     if (/vsr_statistics/i.test(file.path)) {
-      return file.group === "json"
-        ? "All datasets combined"
-        : "Vehicle stops report statistics by agency";
+      return "Vehicle stops report statistics by agency";
     }
     const match = downloadLabelMatchers.find((entry) => entry.test.test(file.path));
     return match ? match.label : file.path;
@@ -74,9 +75,6 @@
     const orderedGroups = [];
     manifest.files.forEach((file) => {
       const group = file.group || "other";
-      if (group === "json" && !/vsr_statistics\.json$/i.test(file.path)) {
-        return;
-      }
       if (!groups.has(group)) {
         groups.set(group, []);
         orderedGroups.push(group);
