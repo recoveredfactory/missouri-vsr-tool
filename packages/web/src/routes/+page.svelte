@@ -192,7 +192,7 @@
         <div class="grid gap-6 md:grid-cols-2">
           <!-- Chart 1a: Total Stops -->
           <div class="rounded-lg border border-slate-200 bg-white p-4 sm:p-6 flex flex-col">
-            <div class="mb-3 sm:mb-4">
+            <div class="mb-3 sm:mb-4 text-center">
               <h3 class="text-lg sm:text-xl font-bold text-slate-900">
                 Traffic stops remain relatively steady statewide
               </h3>
@@ -262,7 +262,7 @@
 
           <!-- Chart 1b: Consent Searches -->
           <div class="rounded-lg border border-slate-200 bg-white p-4 sm:p-6 flex flex-col">
-            <div class="mb-3 sm:mb-4">
+            <div class="mb-3 sm:mb-4 text-center">
               <h3 class="text-lg sm:text-xl font-bold text-slate-900">
                 Consent searches dropped 32% since 2020
               </h3>
@@ -335,7 +335,7 @@
         <div class="grid gap-6 md:grid-cols-2">
           <!-- Chart 2: Population vs Stops Comparison -->
           <div class="rounded-lg border border-slate-200 bg-white p-4 sm:p-6 flex flex-col">
-            <div class="mb-3 sm:mb-4">
+            <div class="mb-3 sm:mb-4 text-center">
               <h3 class="text-lg sm:text-xl font-bold text-slate-900">
                 Black drivers were involved in 17% of stops, but represent 11% of Missouri's population
               </h3>
@@ -467,7 +467,7 @@
 
           <!-- Chart 3: Historical Outcomes - Stacked Bar Chart -->
           <div class="rounded-lg border border-slate-200 bg-white p-4 sm:p-6 flex flex-col">
-            <div class="mb-3 sm:mb-4">
+            <div class="mb-3 sm:mb-4 text-center">
               <h3 class="text-lg sm:text-xl font-bold text-slate-900">
                 About half of all traffic stops result in no formal action
               </h3>
