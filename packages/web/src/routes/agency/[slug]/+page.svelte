@@ -1139,7 +1139,7 @@
           </a>
           <a
             class="inline-flex items-center gap-1 underline"
-            href="/data/downloads/all_combined_output.parquet"
+            href="/#download"
           >
             <span aria-hidden="true">↓</span>
             {m?.agency_download_all_data?.() ?? "Download all data"}
