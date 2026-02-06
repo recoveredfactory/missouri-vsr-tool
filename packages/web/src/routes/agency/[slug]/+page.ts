@@ -23,12 +23,6 @@ export async function load({ fetch, params }) {
   const agencies = indexResponse.ok ? await indexResponse.json() : [];
   const boundary = boundaryResponse.ok ? await boundaryResponse.json() : null;
 
-  if (!boundaryResponse.ok) {
-    console.warn(
-      `[agency] boundary missing for ${agencyId} (${boundaryResponse.status})`
-    );
-  }
-
   return {
     slug,
     data,
