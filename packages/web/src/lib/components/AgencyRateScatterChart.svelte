@@ -173,7 +173,7 @@
   $: maxYTick = yTicks.length ? yTicks[yTicks.length - 1] : null;
 </script>
 
-<div role="img" aria-label="Scatter chart comparing agency rates">
+<div role="img" aria-label="Scatter chart comparing agency rates" class="h-full w-full">
 <Chart
   data={points}
   x="x"
