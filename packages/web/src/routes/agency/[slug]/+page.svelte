@@ -123,6 +123,19 @@
     return acc;
   }, {});
 
+  $: reportingAgencyCount = (() => {
+    if (!selectedYear) return null;
+    const yearRows = rowsByYear?.[selectedYear] ?? [];
+    const totalRow = yearRows.find(
+      (row) => row?.row_key === "rates-by-race--totals--all-stops"
+    );
+    const rankCountRaw = totalRow?.rank_count;
+    const rankCount = typeof rankCountRaw === "string" ? Number(rankCountRaw) : rankCountRaw;
+    if (Number.isFinite(rankCount) && rankCount > 0) return rankCount;
+    const agencyCount = Number(data?.agencyCount);
+    return Number.isFinite(agencyCount) && agencyCount > 0 ? agencyCount : null;
+  })();
+
   $: {
     try {
       locale = getLocale();
@@ -579,28 +592,16 @@
         let segmentSentence = "";
         let segmentLabel = "";
         if (Number.isFinite(percentileNumeric)) {
-          const topThreshold = 80;
-          const bottomThreshold = 20;
-          let segmentKey = "middle";
-          if (percentileNumeric >= topThreshold) segmentKey = "top";
-          else if (percentileNumeric <= bottomThreshold) segmentKey = "bottom";
-          segmentLabel =
-            segmentKey === "top"
-              ? typeof m?.agency_stop_volume_segment_top === "function"
-                ? m.agency_stop_volume_segment_top()
-                : "top 20%"
-              : segmentKey === "bottom"
-              ? typeof m?.agency_stop_volume_segment_bottom === "function"
-                ? m.agency_stop_volume_segment_bottom()
-                : "bottom 20%"
-              : typeof m?.agency_stop_volume_segment_middle === "function"
-              ? m.agency_stop_volume_segment_middle()
-              : "middle 60%";
+          const isTopHalf = percentileNumeric >= 50;
+          const percentValue = isTopHalf
+            ? Math.max(1, Math.round(100 - percentileNumeric))
+            : Math.max(1, Math.round(percentileNumeric));
+          segmentLabel = isTopHalf ? `top ${percentValue}%` : `bottom ${percentValue}%`;
           const segmentFn = m?.agency_stop_volume_segment_sentence;
           segmentSentence =
             typeof segmentFn === "function"
               ? segmentFn({ segment: segmentLabel })
-              : `putting it in the ${segmentLabel} of departments by stop volume`;
+              : `putting it in the ${segmentLabel} of agencies by stop volume`;
         }
         segmentSentence = segmentSentence.replace(/[.!?]+$/, "").trim();
         const rankValue =
@@ -633,12 +634,12 @@
               rankClause =
                 typeof rankFn === "function"
                   ? rankFn({ rank: rankDisplay, total: totalDisplay })
-                  : `ranked #${rankDisplay} out of ${totalDisplay} departments`;
+                  : `ranked #${rankDisplay} out of ${totalDisplay} agencies, ties included`;
             } else {
               rankClause =
                 typeof rankSimpleFn === "function"
                   ? rankSimpleFn({ rank: rankDisplay })
-                  : `ranked #${rankDisplay}`;
+                  : `ranked #${rankDisplay}, ties included`;
             }
           }
         }
@@ -1362,6 +1363,12 @@
                 theme={PlainTableCssTheme}
               />
             </div>
+            <p class="mt-3 text-xs text-slate-500">
+              Rankings can include ties.
+              {#if reportingAgencyCount && selectedYear}
+                {` ${stopCountFormatter.format(reportingAgencyCount)} agencies reporting in ${selectedYear}.`}
+              {/if}
+            </p>
             <div class="mt-12">
               <div class="flex flex-col gap-3">
                 <div
