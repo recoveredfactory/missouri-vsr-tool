@@ -1,20 +1,23 @@
 import { error } from "@sveltejs/kit";
+import { withDataBase } from "$lib/dataBase";
 
 // Disable SSR to avoid circular dependency issues with layerchart
 export const ssr = false;
 
 export async function load({ fetch, params }) {
   const slug = params.slug;
-  const response = await fetch(`/data/dist/agency_year/${slug}.json`);
+  const response = await fetch(withDataBase(`/data/dist/agency_year/${slug}.json`));
 
   if (!response.ok) {
     throw error(404, `Agency not found: ${slug}`);
   }
 
   const data = await response.json();
-  const baselineResponse = await fetch("/data/dist/statewide_slug_baselines.json");
-  const indexResponse = await fetch("/data/dist/agency_index.json");
-  const boundaryIndexResponse = await fetch("/data/dist/agency_boundaries_index.json");
+  const baselineResponse = await fetch(withDataBase("/data/dist/statewide_slug_baselines.json"));
+  const indexResponse = await fetch(withDataBase("/data/dist/agency_index.json"));
+  const boundaryIndexResponse = await fetch(
+    withDataBase("/data/dist/agency_boundaries_index.json")
+  );
   const agencyId =
     data?.agency_metadata?.agency_id || data?.agency_metadata?.agency_slug || slug;
   let boundary = null;
@@ -25,7 +28,7 @@ export async function load({ fetch, params }) {
       const slugs = Array.isArray(boundaryIndex?.slugs) ? boundaryIndex.slugs : [];
       if (slugs.includes(agencyId)) {
         const boundaryResponse = await fetch(
-          `/data/dist/agency_boundaries/${agencyId}.geojson`
+          withDataBase(`/data/dist/agency_boundaries/${agencyId}.geojson`)
         );
         boundary = boundaryResponse.ok ? await boundaryResponse.json() : null;
       }
@@ -34,7 +37,7 @@ export async function load({ fetch, params }) {
     }
   } else {
     const boundaryResponse = await fetch(
-      `/data/dist/agency_boundaries/${agencyId}.geojson`
+      withDataBase(`/data/dist/agency_boundaries/${agencyId}.geojson`)
     );
     boundary = boundaryResponse.ok ? await boundaryResponse.json() : null;
   }

@@ -24,6 +24,7 @@ export default $config({
       domain: webDomain,
       environment: {
         PUBLIC_DONATE_URL: process.env.PUBLIC_DONATE_URL ?? "",
+        PUBLIC_DATA_BASE_URL: process.env.PUBLIC_DATA_BASE_URL ?? "",
       },
     });
   },

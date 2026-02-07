@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import * as m from "$lib/paraglide/messages";
+  import { withDataBase } from "$lib/dataBase";
   import { scatterDomainGroupStore, type ScatterDomainRange } from "$lib/stores/scatter";
 
   type MetricYearSubset = {
@@ -104,7 +105,7 @@
   export let note = "";
   export let domainGroup: string | null = null;
   export let showMeanLines = false;
-  export let dataUrl = "/data/dist/metric_year_subset.json";
+  export let dataUrl = withDataBase("/data/dist/metric_year_subset.json");
   export let xMetricKey = "rates-by-race--totals--contraband-rate";
   export let yMetricKey = "rates-by-race--totals--searches-rate";
   export let xColumn: string | null = null;

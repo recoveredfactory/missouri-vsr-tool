@@ -11,10 +11,13 @@ Monorepo for the Missouri VSR (Vehicle Stops Report) site. The web app lives in
 - Create `.env` from `.env.example` to set the S3 bucket + prefix used by data sync.
 - For analytics, set `PUBLIC_UMAMI_WEBSITE_ID` in the repo-root `.env` for local dev.
 - `pnpm sync:data` pulls the latest data from S3 into `packages/web/static/data`.
+- To use the CDN-backed dataset, set `PUBLIC_DATA_BASE_URL` (ex: `https://data.vsr.recoveredfactory.net`).
 
 ## Data Notes
 
-Static datasets live in `packages/web/static/data`.
+Static datasets live in `packages/web/static/data` for local dev, but the app
+can load everything from the CDN by setting `PUBLIC_DATA_BASE_URL`. The CDN
+is expected to serve the same `/data/...` paths (ex: `/data/dist/...`).
 
 - `agency_year/*.json` is row-based (array of rows).
 - `report_dimensions.json` lists `table_id`, `section_id`, and `metric_id` keys.
@@ -40,6 +43,7 @@ These live in `packages/web/messages/en.json` and `packages/web/messages/es.json
 ## Deployment env
 
 - Set the deployed analytics ID with `sst secret set PUBLIC_UMAMI_WEBSITE_ID <value>`.
+- Set `PUBLIC_DATA_BASE_URL` to your data CDN domain to avoid deploying large static datasets.
 
 ## Analytics events
 
