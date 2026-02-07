@@ -65,19 +65,15 @@ const buildHistoricalData = (statewideYearSums) => {
       : years.map((y) => rowsByKey.get(rowKey)?.get(String(y)) ?? 0);
 
   const totalStopsKey = "rates-by-race--totals--all-stops";
-  const consentSearchKeyCandidates = [
-    "search-statistics--search-reason--consent",
-    "search-statistics--probable-cause--consent",
-  ];
-  const consentSearchesKey = consentSearchKeyCandidates.find((key) =>
-    rowKeySet.has(key)
-  );
+  const consentSearchesKey = "search-statistics--probable-cause--consent";
 
   const historicalData = rowKeySet.has(totalStopsKey)
     ? {
         years,
         totalStops: getSeries(totalStopsKey),
-        consentSearches: consentSearchesKey ? getSeries(consentSearchesKey) : null,
+        consentSearches: rowKeySet.has(consentSearchesKey)
+          ? getSeries(consentSearchesKey)
+          : null,
       }
     : null;
 
