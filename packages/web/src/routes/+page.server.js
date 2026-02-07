@@ -135,7 +135,7 @@ export async function load({ fetch }) {
   const dataBaseUrl = import.meta.env.PUBLIC_DATA_BASE_URL;
   const [statsData, statewideYearSums, downloadManifest] = await Promise.all([
     fetchJson(fetch, "/data/homepage_2024_stats.json", dataBaseUrl),
-    fetchJson(fetch, "/data/statewide_year_sums_subset.json", dataBaseUrl),
+    fetchJson(fetch, "/data/dist/statewide_year_sums_subset.json", dataBaseUrl),
     fetchJson(
       fetch,
       "/data/downloads/missouri_vsr_2020_2024_downloads_manifest.json",
