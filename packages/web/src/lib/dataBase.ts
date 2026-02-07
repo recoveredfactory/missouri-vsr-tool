@@ -3,8 +3,13 @@ const normalizeBaseUrl = (value: string) => {
   return value.endsWith("/") ? value.slice(0, -1) : value;
 };
 
-const getBaseUrl = (overrideBase?: string) =>
-  normalizeBaseUrl(overrideBase ?? (import.meta.env.PUBLIC_DATA_BASE_URL ?? ""));
+const defaultDevBaseUrl = "https://data.vsr.recoveredfactory.net";
+
+const getBaseUrl = (overrideBase?: string) => {
+  const envBase = normalizeBaseUrl(overrideBase ?? (import.meta.env.PUBLIC_DATA_BASE_URL ?? ""));
+  if (envBase) return envBase;
+  return import.meta.env.DEV ? defaultDevBaseUrl : "";
+};
 
 export const withDataBase = (path: string, overrideBase?: string) => {
   const baseUrl = getBaseUrl(overrideBase);
