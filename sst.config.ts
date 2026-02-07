@@ -85,7 +85,7 @@ export default $config({
               '  event.response.headers["access-control-allow-methods"] = { value: "GET,HEAD,OPTIONS" };',
               '  event.response.headers["access-control-allow-headers"] = { value: "*" };',
               "}",
-            ].join(\"\\n\"),
+            ].join("\n"),
           },
         },
       });
