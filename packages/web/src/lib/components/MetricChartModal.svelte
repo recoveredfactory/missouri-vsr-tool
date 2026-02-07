@@ -268,6 +268,13 @@
     }
   };
 
+  const handleGlobalKeydown = (event) => {
+    if (!open) return;
+    if (event.key === "Escape") {
+      dispatch("close");
+    }
+  };
+
   $: if (open) {
     if (typeof document !== "undefined") {
       document.body.style.overflow = "hidden";
@@ -275,15 +282,24 @@
     if (typeof requestAnimationFrame !== "undefined") {
       requestAnimationFrame(() => dialogEl?.focus());
     }
+    if (typeof window !== "undefined") {
+      window.addEventListener("keydown", handleGlobalKeydown);
+    }
   } else {
     if (typeof document !== "undefined") {
       document.body.style.overflow = "";
+    }
+    if (typeof window !== "undefined") {
+      window.removeEventListener("keydown", handleGlobalKeydown);
     }
   }
 
   onDestroy(() => {
     if (typeof document !== "undefined") {
       document.body.style.overflow = "";
+    }
+    if (typeof window !== "undefined") {
+      window.removeEventListener("keydown", handleGlobalKeydown);
     }
   });
 

@@ -226,8 +226,8 @@
     trackSearch("select", item, "enter");
     closeMenu("search_select");
     resetSearch();
-    goto(`/agency/${slug}`).catch(() => {
-      window.location.href = `/agency/${slug}`;
+    goto(`${localeBase}/agency/${slug}`).catch(() => {
+      window.location.href = `${localeBase}/agency/${slug}`;
     });
   };
 
@@ -394,7 +394,7 @@
             <ul role="listbox" aria-label="Search results" class="absolute left-0 right-0 top-full z-50 mt-1 max-h-80 overflow-y-auto rounded-lg border border-slate-200 bg-white py-1 shadow-lg">
               {#each results as result, index}
                 {@const slug = toSlug(result.item)}
-                {@const href = slug ? `/agency/${slug}` : "#"}
+                {@const href = slug ? `${localeBase}/agency/${slug}` : "#"}
                 {@const stops = formatStops(toStops(result.item))}
                 <li role="option" aria-selected={index === selectedIndex}>
                   <a
