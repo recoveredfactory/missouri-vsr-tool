@@ -16,8 +16,9 @@ Monorepo for the Missouri VSR (Vehicle Stops Report) site. The web app lives in
 ## Data Notes
 
 Static datasets live in `packages/web/static/data` for local dev, but the app
-can load everything from the CDN by setting `PUBLIC_DATA_BASE_URL`. The CDN
-is expected to serve the same `/data/...` paths (ex: `/data/dist/...`).
+can load everything from the CDN by setting `PUBLIC_DATA_BASE_URL`. When the
+CDN base URL is set, the `/data/` prefix is stripped (so `/data/dist/...`
+becomes `https://your-cdn/dist/...`).
 
 - `agency_year/*.json` is row-based (array of rows).
 - `report_dimensions.json` lists `table_id`, `section_id`, and `metric_id` keys.

@@ -11,5 +11,8 @@ export const withDataBase = (path: string) => {
   if (!dataBaseUrl) return path;
   if (!path) return dataBaseUrl;
   const normalizedPath = path.startsWith("/") ? path : `/${path}`;
-  return `${dataBaseUrl}${normalizedPath}`;
+  const strippedPath = normalizedPath.startsWith("/data/")
+    ? normalizedPath.slice("/data".length)
+    : normalizedPath;
+  return `${dataBaseUrl}${strippedPath}`;
 };
