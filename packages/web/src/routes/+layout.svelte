@@ -1,11 +1,16 @@
 <script>
   import "../app.css";
   import SiteFooter from "$lib/components/SiteFooter.svelte";
+  import { setDataBaseUrl } from "$lib/dataBase";
 
   export let data;
 
   const fallbackUmamiWebsiteId = import.meta.env.PUBLIC_UMAMI_WEBSITE_ID ?? null;
   $: umamiWebsiteId = data?.umamiWebsiteId ?? fallbackUmamiWebsiteId;
+  $: dataBaseUrl = data?.dataBaseUrl ?? "";
+  $: if (dataBaseUrl) {
+    setDataBaseUrl(dataBaseUrl);
+  }
 </script>
 
 <svelte:head>
@@ -15,6 +20,11 @@
       src="https://cloud.umami.is/script.js"
       data-website-id={umamiWebsiteId}
     ></script>
+  {/if}
+  {#if dataBaseUrl}
+    <script>
+      window.__DATA_BASE_URL__ = {JSON.stringify(dataBaseUrl)};
+    </script>
   {/if}
 </svelte:head>
 

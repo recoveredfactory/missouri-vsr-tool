@@ -5,6 +5,14 @@
 
 declare module "sst" {
   export interface Resource {
+    "DataBucket": {
+      "name": string
+      "type": "sst.aws.Bucket"
+    }
+    "DataRouter": {
+      "type": "sst.aws.Router"
+      "url": string
+    }
     "Web": {
       "type": "sst.aws.SvelteKit"
       "url": string
