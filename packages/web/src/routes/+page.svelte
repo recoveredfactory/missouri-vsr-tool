@@ -207,7 +207,7 @@
               </p>
             </div>
 
-            {#if historicalData}
+            {#if historicalData?.totalStops?.length}
               {@const years = historicalData.years}
               {@const stops = historicalData.totalStops}
               {@const padding = { top: 24, right: 12, bottom: 35, left: 45 }}
@@ -277,7 +277,7 @@
               </p>
             </div>
 
-            {#if historicalData}
+            {#if historicalData?.consentSearches?.length}
               {@const years = historicalData.years}
               {@const consent = historicalData.consentSearches}
               {@const padding = { top: 24, right: 12, bottom: 35, left: 45 }}
