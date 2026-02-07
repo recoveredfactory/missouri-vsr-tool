@@ -42,7 +42,7 @@ export default $config({
         return {};
       }
     })();
-    const env = { ...localEnv, ...process.env };
+    const env = { ...process.env, ...localEnv };
     const webDomain = isProdStage
       ? "vsr.recoveredfactory.net"
       : isStagingStage
@@ -73,12 +73,19 @@ export default $config({
       });
     }
 
+    const dataBaseUrl =
+      env.PUBLIC_DATA_BASE_URL && env.PUBLIC_DATA_BASE_URL !== "/data"
+        ? env.PUBLIC_DATA_BASE_URL
+        : env.DATA_CDN_DOMAIN
+          ? `https://${env.DATA_CDN_DOMAIN}`
+          : env.PUBLIC_DATA_BASE_URL ?? "";
+
     new sst.aws.SvelteKit("Web", {
       path: "packages/web",
       domain: webDomain,
       environment: {
         PUBLIC_DONATE_URL: env.PUBLIC_DONATE_URL ?? "",
-        PUBLIC_DATA_BASE_URL: env.PUBLIC_DATA_BASE_URL ?? "",
+        PUBLIC_DATA_BASE_URL: dataBaseUrl,
       },
     });
 
