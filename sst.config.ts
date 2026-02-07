@@ -67,9 +67,6 @@ export default $config({
 
       dataRouter = new sst.aws.Router("DataRouter", {
         domain: dataCdnDomain,
-      });
-      dataRouter.routeBucket(dataCdnDomain, dataBucket, {
-        cachePolicy: "658327ea-f89d-4fab-a63d-7e88639e58f6",
         edge: {
           viewerResponse: {
             injection: [
@@ -88,6 +85,9 @@ export default $config({
             ].join("\n"),
           },
         },
+      });
+      dataRouter.routeBucket(dataCdnDomain, dataBucket, {
+        cachePolicy: "658327ea-f89d-4fab-a63d-7e88639e58f6",
       });
     }
 
