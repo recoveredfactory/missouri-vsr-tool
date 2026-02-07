@@ -67,27 +67,30 @@ export default $config({
 
       dataRouter = new sst.aws.Router("DataRouter", {
         domain: dataCdnDomain,
-        edge: {
-          viewerResponse: {
-            injection: [
-              "const allowedOrigins = [",
-              '  "https://vsr.recoveredfactory.net",',
-              '  "https://staging.vsr.recoveredfactory.net",',
-              "];",
-              "const originHeader = event.request.headers.origin;",
-              "const origin = originHeader && originHeader.value;",
-              "if (origin && allowedOrigins.includes(origin)) {",
-              '  event.response.headers["access-control-allow-origin"] = { value: origin };',
-              '  event.response.headers["vary"] = { value: "Origin" };',
-              '  event.response.headers["access-control-allow-methods"] = { value: "GET,HEAD,OPTIONS" };',
-              '  event.response.headers["access-control-allow-headers"] = { value: "*" };',
-              "}",
-            ].join("\n"),
+        routes: {
+          "/*": {
+            bucket: dataBucket,
+            cachePolicy: "658327ea-f89d-4fab-a63d-7e88639e58f6",
+            edge: {
+              viewerResponse: {
+                injection: [
+                  "const allowedOrigins = [",
+                  '  "https://vsr.recoveredfactory.net",',
+                  '  "https://staging.vsr.recoveredfactory.net",',
+                  "];",
+                  "const originHeader = event.request.headers.origin;",
+                  "const origin = originHeader && originHeader.value;",
+                  "if (origin && allowedOrigins.includes(origin)) {",
+                  '  event.response.headers["access-control-allow-origin"] = { value: origin };',
+                  '  event.response.headers["vary"] = { value: "Origin" };',
+                  '  event.response.headers["access-control-allow-methods"] = { value: "GET,HEAD,OPTIONS" };',
+                  '  event.response.headers["access-control-allow-headers"] = { value: "*" };',
+                  "}",
+                ].join("\n"),
+              },
+            },
           },
         },
-      });
-      dataRouter.routeBucket(dataCdnDomain, dataBucket, {
-        cachePolicy: "658327ea-f89d-4fab-a63d-7e88639e58f6",
       });
     }
 
