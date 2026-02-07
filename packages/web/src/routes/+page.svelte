@@ -21,6 +21,7 @@
     window.umami?.track?.(event, payload);
   };
 
+  const siteUrl = import.meta.env.PUBLIC_SITE_URL ?? "https://missourivsr.com";
   const downloadManifest = data?.downloadManifest;
 
   const downloadGroupMeta = {
@@ -152,11 +153,15 @@
     name="description"
     content="Who gets stopped? why? What happens next? This tool reveals how traffic enforcement varies across Missouri's agencies."
   />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="{siteUrl}/" />
+  <meta property="og:site_name" content="Missouri Vehicle Stops Report" />
   <meta property="og:title" content="Missouri Vehicle Stops" />
   <meta
     property="og:description"
     content="Who gets stopped? why? What happens next? This tool reveals how traffic enforcement varies across Missouri's agencies."
   />
+  <!-- TODO(#123): add og:image + twitter:image, then switch twitter:card to summary_large_image -->
   <meta property="twitter:card" content="summary" />
   <meta property="twitter:title" content="Missouri Vehicle Stops" />
   <meta
