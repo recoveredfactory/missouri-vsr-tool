@@ -46,6 +46,19 @@ These live in `packages/web/messages/en.json` and `packages/web/messages/es.json
 - Set the deployed analytics ID with `sst secret set PUBLIC_UMAMI_WEBSITE_ID <value>`.
 - Set `PUBLIC_DATA_BASE_URL` to your data CDN domain to avoid deploying large static datasets.
 
+## Data CDN
+
+The data bucket is managed outside this repo, but SST can create a CloudFront
+distribution in front of it (prod stage only). Configure:
+
+- `MISSOURI_VSR_BUCKET_NAME` + `MISSOURI_VSR_BUCKET_REGION`
+- `DATA_CDN_DOMAIN` (ex: `data.vsr.recoveredfactory.net`)
+- `PUBLIC_DATA_BASE_URL` to the same domain
+
+After the first prod deploy, SST outputs `dataCdnDistributionId`. Use that ID
+in the S3 bucket policy to allow CloudFront `s3:GetObject` access (CloudFront
+origin access control). The bucket policy is managed outside this repo.
+
 ## Analytics events
 
 - `search_action`: search box usage on home/agency header (payload: `action`, `method`, `term`, `slug`).
