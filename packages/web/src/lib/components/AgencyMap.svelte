@@ -3,6 +3,7 @@
   import { goto } from "$app/navigation";
   import { getLocale } from "$lib/paraglide/runtime";
   import { browser } from "$app/environment";
+  import { withDataBase } from "$lib/dataBase";
 
   export let addressResponse = null;
   export let fallbackResponse = null;
@@ -15,7 +16,8 @@
   export let pmtilesUrl = "";
   export let pmtilesSourceLayer = "counties";
   export let showJurisdictionTiles = false;
-  export let agencyBoundaryBasePath = "/data/dist/agency_boundaries";
+
+  export let agencyBoundaryBasePath = withDataBase("/data/dist/agency_boundaries");
   export let boundaryDataOverride = undefined;
   export let basemapPmtilesUrl = "";
   export let basemapStyleUrl = "/map/style.en.json";

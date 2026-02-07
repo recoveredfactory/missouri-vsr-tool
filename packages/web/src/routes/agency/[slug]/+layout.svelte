@@ -11,6 +11,7 @@
   import { page } from "$app/stores";
   import { onMount, tick } from "svelte";
   import * as m from "$lib/paraglide/messages";
+  import { withDataBase } from "$lib/dataBase";
   import { getLocale } from "$lib/paraglide/runtime";
   import {
     agency_location_heading,
@@ -1170,7 +1171,7 @@
         <div class="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-slate-500">
           <a
             class="inline-flex items-center gap-1 underline"
-            href={`/data/dist/agency_year/${data.slug}.json`}
+            href={withDataBase(`/data/dist/agency_year/${data.slug}.json`)}
             download
           >
             <span aria-hidden="true">↓</span>
@@ -1200,7 +1201,7 @@
         data.slug}
       basemapPmtilesUrl="https://pmtiles.grupovisual.org/latest.pmtiles"
       basemapStyleUrl={basemapStyleUrl}
-      pmtilesUrl="/data/dist/tiles/mo_jurisdictions_2024_500k.pmtiles"
+      pmtilesUrl={withDataBase("/data/dist/tiles/mo_jurisdictions_2024_500k.pmtiles")}
       boundaryDataOverride={boundaryData}
     />
   </section>

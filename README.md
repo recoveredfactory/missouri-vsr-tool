@@ -11,10 +11,16 @@ Monorepo for the Missouri VSR (Vehicle Stops Report) site. The web app lives in
 - Create `.env` from `.env.example` to set the S3 bucket + prefix used by data sync.
 - For analytics, set `PUBLIC_UMAMI_WEBSITE_ID` in the repo-root `.env` for local dev.
 - `pnpm sync:data` pulls the latest data from S3 into `packages/web/static/data`.
+- To use the CDN-backed dataset, set `PUBLIC_DATA_BASE_URL` (ex: `https://data.vsr.recoveredfactory.net`).
 
 ## Data Notes
 
-Static datasets live in `packages/web/static/data`.
+Static datasets live in `packages/web/static/data` for local dev, but the app
+can load everything from the CDN by setting `PUBLIC_DATA_BASE_URL`. When the
+CDN base URL is set, the `/data/` prefix is stripped (so `/data/dist/...`
+becomes `https://your-cdn/dist/...`). If `PUBLIC_DATA_BASE_URL` is empty in
+local dev, the app will fall back to the production CDN. To force local files,
+set `PUBLIC_DATA_BASE_URL=/data` and run `pnpm sync:data`.
 
 - `agency_year/*.json` is row-based (array of rows).
 - `report_dimensions.json` lists `table_id`, `section_id`, and `metric_id` keys.
@@ -40,6 +46,20 @@ These live in `packages/web/messages/en.json` and `packages/web/messages/es.json
 ## Deployment env
 
 - Set the deployed analytics ID with `sst secret set PUBLIC_UMAMI_WEBSITE_ID <value>`.
+- Set `PUBLIC_DATA_BASE_URL` to your data CDN domain to avoid deploying large static datasets.
+
+## Data CDN
+
+The data bucket is managed outside this repo, but SST can create a CloudFront
+distribution in front of it (prod stage only). Configure:
+
+- `MISSOURI_VSR_BUCKET_NAME` + `MISSOURI_VSR_BUCKET_REGION`
+- `DATA_CDN_DOMAIN` (ex: `data.vsr.recoveredfactory.net`)
+- `PUBLIC_DATA_BASE_URL` to the same domain
+
+After the first prod deploy, SST outputs `dataCdnDistributionId`. Use that ID
+in the S3 bucket policy to allow CloudFront `s3:GetObject` access (CloudFront
+origin access control). The bucket policy is managed outside this repo.
 
 ## Analytics events
 

@@ -2,6 +2,7 @@
   import StickyHeader from "$lib/components/StickyHeader.svelte";
   import * as m from "$lib/paraglide/messages";
   import { raceColors, raceTextColors, outcomeColors } from "$lib/colors.js";
+  import { withDataBase } from "$lib/dataBase";
 
   export let data;
 
@@ -592,9 +593,11 @@
               </p>
               {#each downloadGroup.files as file, index (file.path)}
                 <a
-                  href={`/data/downloads/${file.path}`}
+                  href={withDataBase(`/data/downloads/${file.path}`)}
                   download
-                  on:click={() => handleDownloadClick(file, `/data/downloads/${file.path}`)}
+                  on:click={() =>
+                    handleDownloadClick(file, withDataBase(`/data/downloads/${file.path}`))
+                  }
                   class={`block rounded-lg bg-[#25784c] px-5 py-2.5 text-sm font-semibold text-white no-underline transition-colors hover:bg-[#1b613c] ${
                     index === downloadGroup.files.length - 1 ? "" : "mb-3"
                   }`}
