@@ -618,7 +618,7 @@
       {/if}
 
       <p class="mt-8 text-center text-sm text-slate-600">
-        See the <a href="#about" class="text-[#318c5d] underline hover:text-[#1b613c]">About the Data</a> section for usage details and methodology.
+        See the <a href="#about" class="text-[#318c5d] underline hover:text-[#1b613c]">About the Data</a> section for usage details, methodology, and more downloads.
       </p>
     </div>
   </section>
