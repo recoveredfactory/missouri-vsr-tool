@@ -73,10 +73,14 @@ const buildHistoricalData = (statewideYearSums) => {
   const totalStopsKey = "rates-by-race--totals--all-stops";
   const consentSearchesKey = "search-statistics--probable-cause--consent";
 
-  const historicalData = rowKeySet.has(totalStopsKey)
+  const totalStopsSeries = rowKeySet.has(totalStopsKey)
+    ? getSeries(totalStopsKey)
+    : null;
+
+  const historicalData = totalStopsSeries
     ? {
         years,
-        totalStops: getSeries(totalStopsKey),
+        totalStops: totalStopsSeries,
         consentSearches: rowKeySet.has(consentSearchesKey)
           ? getSeries(consentSearchesKey)
           : null,
@@ -104,18 +108,18 @@ const buildHistoricalData = (statewideYearSums) => {
       const citations = outcomeCitations[idx] ?? 0;
       const warnings = outcomeWarnings[idx] ?? 0;
       const noAction = outcomeNoAction[idx] ?? 0;
+      const totalStops = totalStopsSeries?.[idx] ?? 0;
 
-      const total = arrests + citations + warnings + noAction;
-      if (!total) {
+      if (!totalStops) {
         return { year: y, arrests: 0, citations: 0, warnings: 0, noAction: 0 };
       }
 
       return {
         year: y,
-        arrests: (arrests / total) * 100,
-        citations: (citations / total) * 100,
-        warnings: (warnings / total) * 100,
-        noAction: (noAction / total) * 100,
+        arrests: (arrests / totalStops) * 100,
+        citations: (citations / totalStops) * 100,
+        warnings: (warnings / totalStops) * 100,
+        noAction: (noAction / totalStops) * 100,
       };
     }),
   };
