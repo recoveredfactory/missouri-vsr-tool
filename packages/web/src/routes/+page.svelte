@@ -200,14 +200,14 @@
           <div class="rounded-lg border border-slate-200 bg-white p-4 sm:p-6 flex flex-col">
             <div class="mb-3 sm:mb-4 text-center">
               <h3 class="text-lg sm:text-xl font-bold text-slate-900">
-                Traffic stops remain relatively steady statewide
+                Missouri law enforcement made 1.28 million traffic stops in 2024
               </h3>
               <p class="mt-1 sm:mt-2 text-xs sm:text-sm leading-relaxed text-slate-600">
-                Missouri police made almost 1.3 million traffic stops in 2024.
+                Vehicle stops climbed slightly since the pandemic, with an average of 1.26 million per year.
               </p>
             </div>
 
-            {#if historicalData}
+            {#if historicalData?.totalStops?.length}
               {@const years = historicalData.years}
               {@const stops = historicalData.totalStops}
               {@const padding = { top: 24, right: 12, bottom: 35, left: 45 }}
@@ -277,7 +277,7 @@
               </p>
             </div>
 
-            {#if historicalData}
+            {#if historicalData?.consentSearches?.length}
               {@const years = historicalData.years}
               {@const consent = historicalData.consentSearches}
               {@const padding = { top: 24, right: 12, bottom: 35, left: 45 }}
