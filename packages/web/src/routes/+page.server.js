@@ -5,8 +5,14 @@ import { withDataBase } from "$lib/dataBase";
 const unwrapHtmlBlocks = (html) =>
   html.replace(/{@html\s+`([\s\S]*?)`}/g, (_match, inner) => inner);
 
+const wrapTables = (html) =>
+  html.replace(
+    /<table([\s\S]*?)<\/table>/g,
+    (_match, inner) => `<div class="table-wrapper"><table${inner}</table></div>`
+  );
+
 const aboutDataHtmlPromise = compile(aboutMarkdown).then((compiled) =>
-  unwrapHtmlBlocks(compiled.code),
+  wrapTables(unwrapHtmlBlocks(compiled.code)),
 );
 
 const isStructuredSums = (data) =>

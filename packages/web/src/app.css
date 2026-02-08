@@ -138,7 +138,8 @@
 
   /* Tables */
   .content .table-wrapper {
-    @apply overflow-x-auto -mx-6 px-6;
+    @apply overflow-auto -mx-6 px-6;
+    max-height: 70vh;
   }
 
   .content table {
