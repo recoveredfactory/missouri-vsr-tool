@@ -471,98 +471,100 @@
             {/if}
           </div>
 
-          <!-- Chart 3: Historical Outcomes - Stacked Bar Chart -->
+          <!-- Chart 3: Outcome Rates - Multi-Series Line Chart -->
           <div class="rounded-lg border border-slate-200 bg-white p-4 sm:p-6 flex flex-col">
             <div class="mb-3 sm:mb-4 text-center">
               <h3 class="text-lg sm:text-xl font-bold text-slate-900">
-                About half of all traffic stops result in no formal action
+                Law enforcement issues citations in 41% of stops
               </h3>
               <p class="mt-1 sm:mt-2 text-xs sm:text-sm leading-relaxed text-slate-600">
-                See how outcomes break down year by year — citations, arrests, searches, and no action.
+                Outcome rates are computed against total stops. A single stop may have multiple outcomes.
               </p>
             </div>
 
             {#if historicalOutcomes}
-              {@const outcomeLabels = { noAction: "No Action", citations: "Citations", warnings: "Warnings", arrests: "Arrests" }}
-          {@const stackOrder = ["noAction", "citations", "warnings", "arrests"]}
-          {@const years3 = historicalOutcomes.years}
-          {@const padding3 = { top: 12, right: 12, bottom: 35, left: 35 }}
-          {@const width3 = 280}
-          {@const height3 = 200}
-          {@const barWidth3 = width3 / years3.length * 0.6}
-          {@const barGap3 = width3 / years3.length}
+              {@const outcomeLabels = { warnings: "Warnings", citations: "Citations", arrests: "Arrests", noAction: "No Action" }}
+              {@const seriesKeys = ["warnings", "citations", "arrests", "noAction"]}
+              {@const years3 = historicalOutcomes.years}
+              {@const padding3 = { top: 12, right: 65, bottom: 35, left: 35 }}
+              {@const width3 = 220}
+              {@const height3 = 200}
+              {@const allValues = historicalOutcomes.data.flatMap(d => seriesKeys.map(k => d[k] ?? 0))}
+              {@const yMax = Math.ceil(Math.max(...allValues) / 10) * 10}
+              {@const yTicks = [0, Math.round(yMax / 4), Math.round(yMax / 2), Math.round(yMax * 3 / 4), yMax]}
 
-          <!-- Screen reader data summary -->
-          <div class="sr-only">
-            Data summary: Stop outcomes by year. {#each historicalOutcomes.data as d}{d.year}: {(d.noAction ?? 0).toFixed(0)}% no action, {(d.citations ?? 0).toFixed(0)}% citations, {(d.warnings ?? 0).toFixed(0)}% warnings, {(d.arrests ?? 0).toFixed(0)}% arrests. {/each}
-          </div>
-          <div class="flex flex-col" role="img" aria-label="Stacked bar chart showing stop outcomes by year">
-            <svg viewBox="0 0 {width3 + padding3.left + padding3.right} {height3 + padding3.top + padding3.bottom}" class="w-full h-[220px] sm:h-[260px] md:h-[280px]">
-              <!-- Grid lines -->
-              {#each [0, 25, 50, 75, 100] as tick}
-                <line x1={padding3.left} y1={padding3.top + (1 - tick/100) * height3} x2={padding3.left + width3} y2={padding3.top + (1 - tick/100) * height3} stroke="#e2e8f0" stroke-width="0.5" />
-              {/each}
-
-              <!-- Y-axis labels -->
-              <text x={padding3.left - 6} y={padding3.top + 4} text-anchor="end" font-size="8" fill="#64748b">100%</text>
-              <text x={padding3.left - 6} y={padding3.top + height3/2 + 3} text-anchor="end" font-size="8" fill="#64748b">50%</text>
-              <text x={padding3.left - 6} y={padding3.top + height3 + 3} text-anchor="end" font-size="8" fill="#64748b">0%</text>
-
-              <!-- Stacked bars -->
-              {#each years3 as year, i}
-                {@const d = historicalOutcomes.data[i]}
-                {@const barX = padding3.left + i * barGap3 + (barGap3 - barWidth3) / 2}
-                {@const segments = stackOrder.map(key => ({ key, value: d[key] }))}
-
-                <!-- Year label -->
-                <text x={barX + barWidth3/2} y={padding3.top + height3 + 16} text-anchor="middle" font-size="9" fill="#64748b">{year}</text>
-
-                <!-- Stack segments bottom to top -->
-                {#each segments as segment, j}
-                  {@const yStart = segments.slice(0, j).reduce((sum, s) => sum + s.value, 0)}
-                  {@const segHeight = (segment.value / 100) * height3}
-                  {@const segY = padding3.top + height3 - yStart/100 * height3 - segHeight}
-                  <rect
-                    x={barX}
-                    y={segY}
-                    width={barWidth3}
-                    height={segHeight}
-                    fill={outcomeColors[segment.key]}
-                    tabindex="0"
-                    role="button"
-                    aria-label="{outcomeLabels[segment.key]}: {segment.value.toFixed(1)}% of stops in {year}"
-                    class="cursor-pointer hover:opacity-80 transition-opacity focus:outline-none focus:ring-2 focus:ring-slate-400"
-                    on:mouseenter={(e) => showTooltip(e, `${outcomeLabels[segment.key]}: ${segment.value.toFixed(1)}% (${year})`)}
-                    on:mouseleave={hideTooltip}
-                    on:focus={(e) => showTooltip(e, `${outcomeLabels[segment.key]}: ${segment.value.toFixed(1)}% (${year})`)}
-                    on:blur={hideTooltip}
-                  />
-                  <!-- Inline label if segment is tall enough -->
-                  {#if segHeight > 18}
-                    <text
-                      x={barX + barWidth3/2}
-                      y={segY + segHeight/2 + 3}
-                      text-anchor="middle"
-                      font-size="7"
-                      fill={segment.key === "noAction" ? "#022613" : "#ffffff"}
-                      font-weight="600"
-                      class="pointer-events-none"
-                    >{Math.round(segment.value)}%</text>
-                  {/if}
-                {/each}
-              {/each}
-            </svg>
-
-              <!-- Compact legend -->
-              <div class="flex flex-wrap justify-center gap-3 mt-1">
-                {#each stackOrder as outcome}
-                  <span class="flex items-center gap-1">
-                    <span class="w-2.5 h-2.5 rounded-sm" style="background-color: {outcomeColors[outcome]}"></span>
-                    <span class="text-[10px] text-slate-600">{outcomeLabels[outcome]}</span>
-                  </span>
-                {/each}
+              <!-- Screen reader data summary -->
+              <div class="sr-only">
+                Data summary: Stop outcome rates by year. {#each historicalOutcomes.data as d}{d.year}: {(d.warnings ?? 0).toFixed(0)}% warnings, {(d.citations ?? 0).toFixed(0)}% citations, {(d.arrests ?? 0).toFixed(0)}% arrests, {(d.noAction ?? 0).toFixed(0)}% no action. {/each}
               </div>
-            </div>
+              <div class="flex flex-col" role="img" aria-label="Line chart showing stop outcome rates by year">
+                <svg viewBox="0 0 {width3 + padding3.left + padding3.right} {height3 + padding3.top + padding3.bottom}" class="w-full h-[220px] sm:h-[260px] md:h-[280px]">
+                  <!-- Grid lines -->
+                  {#each yTicks as tick}
+                    <line x1={padding3.left} y1={padding3.top + (1 - tick / yMax) * height3} x2={padding3.left + width3} y2={padding3.top + (1 - tick / yMax) * height3} stroke="#e2e8f0" stroke-width="0.5" />
+                  {/each}
+
+                  <!-- X-axis -->
+                  <line x1={padding3.left} y1={padding3.top + height3} x2={padding3.left + width3} y2={padding3.top + height3} stroke="#94a3b8" stroke-width="1" />
+
+                  <!-- Y-axis labels -->
+                  {#each yTicks as tick}
+                    <text x={padding3.left - 6} y={padding3.top + (1 - tick / yMax) * height3 + 3} text-anchor="end" font-size="8" fill="#64748b">{tick}%</text>
+                  {/each}
+
+                  <!-- X-axis year labels -->
+                  {#each years3 as year, i}
+                    <text x={padding3.left + (i / (years3.length - 1)) * width3} y={padding3.top + height3 + 16} text-anchor="middle" font-size="9" fill="#64748b">{year}</text>
+                  {/each}
+
+                  <!-- Lines + data points for each outcome -->
+                  {#each seriesKeys as key}
+                    {@const color = outcomeColors[key]}
+                    {@const values = historicalOutcomes.data.map(d => d[key] ?? 0)}
+                    {@const lastVal = values[values.length - 1]}
+                    {@const lastX = padding3.left + width3}
+                    {@const lastY = padding3.top + (1 - lastVal / yMax) * height3}
+
+                    <!-- Line -->
+                    <polyline
+                      fill="none"
+                      stroke={color}
+                      stroke-width="2.5"
+                      points={values.map((v, i) => `${padding3.left + (i / (years3.length - 1)) * width3},${padding3.top + (1 - v / yMax) * height3}`).join(" ")}
+                    />
+
+                    <!-- Data point circles -->
+                    {#each values as v, i}
+                      <g
+                        class="cursor-pointer"
+                        tabindex="0"
+                        role="button"
+                        aria-label="{outcomeLabels[key]}: {v.toFixed(1)}% in {years3[i]}"
+                        on:mouseenter={(e) => showTooltip(e, `${outcomeLabels[key]}: ${v.toFixed(1)}% (${years3[i]})`)}
+                        on:mouseleave={hideTooltip}
+                        on:focus={(e) => showTooltip(e, `${outcomeLabels[key]}: ${v.toFixed(1)}% (${years3[i]})`)}
+                        on:blur={hideTooltip}
+                      >
+                        <circle cx={padding3.left + (i / (years3.length - 1)) * width3} cy={padding3.top + (1 - v / yMax) * height3} r="8" fill="transparent" />
+                        <circle cx={padding3.left + (i / (years3.length - 1)) * width3} cy={padding3.top + (1 - v / yMax) * height3} r="3" fill={color} class="pointer-events-none" />
+                      </g>
+                    {/each}
+
+                    <!-- End label -->
+                    <text x={lastX + 5} y={lastY + 3} font-size="8" fill={color} font-weight="600">{outcomeLabels[key]}</text>
+                  {/each}
+                </svg>
+
+                <!-- Compact legend -->
+                <div class="flex flex-wrap justify-center gap-3 mt-1">
+                  {#each seriesKeys as key}
+                    <span class="flex items-center gap-1">
+                      <span class="w-2.5 h-2.5 rounded-sm" style="background-color: {outcomeColors[key]}"></span>
+                      <span class="text-[10px] text-slate-600">{outcomeLabels[key]}</span>
+                    </span>
+                  {/each}
+                </div>
+              </div>
             {/if}
           </div>
         </div>
