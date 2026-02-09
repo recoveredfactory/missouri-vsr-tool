@@ -486,8 +486,8 @@
               {@const outcomeLabels = { warnings: "Warnings", citations: "Citations", arrests: "Arrests", noAction: "No Action" }}
               {@const seriesKeys = ["warnings", "citations", "arrests", "noAction"]}
               {@const years3 = historicalOutcomes.years}
-              {@const padding3 = { top: 12, right: 65, bottom: 35, left: 35 }}
-              {@const width3 = 220}
+              {@const padding3 = { top: 12, right: 12, bottom: 35, left: 35 }}
+              {@const width3 = 280}
               {@const height3 = 200}
               {@const allValues = historicalOutcomes.data.flatMap(d => seriesKeys.map(k => d[k] ?? 0))}
               {@const yMax = Math.ceil(Math.max(...allValues) / 10) * 10}
@@ -521,9 +521,6 @@
                   {#each seriesKeys as key}
                     {@const color = outcomeColors[key]}
                     {@const values = historicalOutcomes.data.map(d => d[key] ?? 0)}
-                    {@const lastVal = values[values.length - 1]}
-                    {@const lastX = padding3.left + width3}
-                    {@const lastY = padding3.top + (1 - lastVal / yMax) * height3}
 
                     <!-- Line -->
                     <polyline
@@ -549,9 +546,6 @@
                         <circle cx={padding3.left + (i / (years3.length - 1)) * width3} cy={padding3.top + (1 - v / yMax) * height3} r="3" fill={color} class="pointer-events-none" />
                       </g>
                     {/each}
-
-                    <!-- End label -->
-                    <text x={lastX + 5} y={lastY + 3} font-size="8" fill={color} font-weight="600">{outcomeLabels[key]}</text>
                   {/each}
                 </svg>
 

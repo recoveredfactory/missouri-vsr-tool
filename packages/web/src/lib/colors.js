@@ -26,13 +26,13 @@ export const raceTextColors = {
   Black: "#3e9e6c",
 };
 
-/** Green gradient — outcome categories (light → dark) */
+/** Distinct colors — outcome categories (one per color family) */
 export const outcomeColors = {
-  noAction: "#3e9e6c",
+  noAction: "#658cad",
   warnings: "#25784c",
   searches: "#25784c",
-  citations: "#105430",
-  arrests: "#022613",
+  citations: "#1c4f74",
+  arrests: "#792a3b",
 };
 
 /** Accent colors for callouts and highlights */
