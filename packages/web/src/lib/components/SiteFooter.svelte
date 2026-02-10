@@ -6,12 +6,12 @@
     "https://buy.stripe.com/6oU9AU1KEa7Z6gcdr6fAc03";
 </script>
 
-<footer class="border-t-6 border-t-[#318c5d] bg-white">
+<footer class="border-t-6 border-t-[#1b613c] bg-white">
   <div class="mx-auto w-full max-w-7xl px-4 py-10 sm:px-6 sm:py-12 md:w-[85%] md:px-0">
     <div class="flex flex-col gap-8 md:flex-row md:items-start md:justify-between">
       <div class="space-y-4 text-center md:text-left">
         <div>
-          <a href="/" class="text-lg font-bold text-[#318c5d] no-underline hover:text-[#1b613c]">
+          <a href="/" class="text-lg font-bold text-[#1b613c] no-underline hover:text-[#105430]">
             {m.home_header_title()}
           </a>
         </div>
@@ -22,7 +22,7 @@
               href="https://recoveredfactory.net/en#signup"
               target="_blank"
               rel="noopener noreferrer"
-              class="font-medium text-slate-700 underline decoration-slate-400 underline-offset-2 hover:text-[#1b613c] hover:decoration-[#1b613c]"
+              class="font-medium text-slate-700 underline decoration-slate-400 underline-offset-2 hover:text-[#105430] hover:decoration-[#105430]"
             >Recovered Factory</a>
           </p>
           <p>
@@ -31,14 +31,14 @@
               href="https://davideads.com/en"
               target="_blank"
               rel="noopener noreferrer"
-              class="font-medium text-slate-700 underline decoration-slate-400 underline-offset-2 hover:text-[#1b613c] hover:decoration-[#1b613c]"
+              class="font-medium text-slate-700 underline decoration-slate-400 underline-offset-2 hover:text-[#105430] hover:decoration-[#105430]"
             >David Eads</a>
             and
             <a
               href="https://www.tlysik.com/"
               target="_blank"
               rel="noopener noreferrer"
-              class="font-medium text-slate-700 underline decoration-slate-400 underline-offset-2 hover:text-[#1b613c] hover:decoration-[#1b613c]"
+              class="font-medium text-slate-700 underline decoration-slate-400 underline-offset-2 hover:text-[#105430] hover:decoration-[#105430]"
             >Tory Lysik</a>
           </p>
         </div>
@@ -53,7 +53,7 @@
       <div class="flex flex-col items-center gap-3 md:items-end">
         <a
           href={donateUrl}
-          class="inline-flex items-center rounded-lg bg-[#318c5d] px-6 py-2.5 text-sm font-semibold text-white no-underline transition-colors hover:bg-[#1b613c]"
+          class="inline-flex items-center rounded-lg bg-[#1b613c] px-6 py-2.5 text-sm font-semibold text-white no-underline transition-colors hover:bg-[#105430]"
         >
           {m.home_donate_button()}
         </a>

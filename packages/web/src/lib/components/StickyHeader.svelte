@@ -302,7 +302,7 @@
 
 <header
   bind:clientHeight={headerHeight}
-  class="sticky top-0 z-50 border-b-6 border-b-[#25784c] bg-white/95 backdrop-blur-sm shadow-sm"
+  class="sticky top-0 z-50 border-b-6 border-b-[#1b613c] bg-white/95 backdrop-blur-sm shadow-sm"
 >
   <div class="mx-auto w-full max-w-7xl px-4 sm:px-6 md:w-[85%] md:px-0">
     <div class="py-2 sm:py-2.5">
@@ -310,7 +310,7 @@
         <div class="min-w-0">
           <a
             href="/"
-            class="min-w-0 font-bold text-[#318c5d] no-underline text-[clamp(0.95rem,4vw,1.45rem)] leading-tight"
+            class="min-w-0 font-bold text-[#1b613c] no-underline text-[clamp(0.95rem,4vw,1.45rem)] leading-tight"
           >
             {m.home_header_title()}
           </a>
@@ -322,7 +322,7 @@
               <select
                 bind:value={currentLocale}
                 on:change={handleLocaleChange}
-                class="h-9 appearance-none rounded-lg border border-slate-200 bg-white pl-2.5 pr-7 text-sm font-semibold uppercase tracking-wide text-slate-700 shadow-sm transition-colors hover:border-[#318c5d] focus:border-[#318c5d] focus:outline-none"
+                class="h-9 appearance-none rounded-lg border border-slate-200 bg-white pl-2.5 pr-7 text-sm font-semibold uppercase tracking-wide text-slate-700 shadow-sm transition-colors hover:border-[#105430] focus:border-[#1b613c] focus:outline-none"
               >
                 {#each locales as locale}
                   <option value={locale}>{locale.toUpperCase()}</option>
@@ -344,7 +344,7 @@
           {/if}
           <a
             href={donateUrl}
-            class="inline-flex h-9 items-center rounded-lg bg-[#25784c] px-4 text-sm font-semibold text-white no-underline transition-colors hover:bg-[#1b613c]"
+            class="inline-flex h-9 items-center rounded-lg bg-[#1b613c] px-4 text-sm font-semibold text-white no-underline transition-colors hover:bg-[#105430]"
           >
             {m.home_donate_button()}
           </a>
@@ -383,7 +383,7 @@
             on:keydown={handleKeydown}
             aria-label={m.search_aria_label()}
             autocomplete="off"
-            class="w-full rounded-lg border border-[#25784c]/70 bg-white px-4 py-2.5 text-[1.05rem] shadow-[0_8px_24px_-14px_rgba(15,23,42,0.55)] focus:border-[#25784c] focus:outline-none focus:ring-2 focus:ring-[#25784c] focus:ring-offset-1"
+            class="w-full rounded-lg border border-[#1b613c]/70 bg-white px-4 py-2.5 text-[1.05rem] shadow-[0_8px_24px_-14px_rgba(15,23,42,0.55)] focus:border-[#1b613c] focus:outline-none focus:ring-2 focus:ring-[#1b613c] focus:ring-offset-1"
           />
           <div class="sr-only" aria-live="polite" aria-atomic="true">
             {#if results.length}
@@ -401,7 +401,7 @@
                     {href}
                     on:click={(event) => handleResultClick(event, result.item)}
                     aria-disabled={!slug}
-                    class="flex flex-col gap-1 px-4 py-2 text-sm text-slate-900 no-underline hover:bg-[#25784c]/10 {index === selectedIndex ? 'bg-[#25784c]/10' : ''}"
+                    class="flex flex-col gap-1 px-4 py-2 text-sm text-slate-900 no-underline hover:bg-[#105430]/10 {index === selectedIndex ? 'bg-[#1b613c]/10' : ''}"
                   >
                     <span class="font-semibold text-slate-900">{toLabel(result.item)}</span>
                     {#if stops || toSubLabel(result.item)}
@@ -422,11 +422,11 @@
           {/if}
         </div>
         <nav class="hidden items-center justify-end gap-2.5 text-sm md:flex">
-          <a href={`${localeBase}/#download`} class="text-slate-700 no-underline hover:text-[#1b613c]">
+          <a href={`${localeBase}/#download`} class="font-semibold text-[#1b613c] no-underline hover:text-[#105430]">
             {m.home_toc_download()}
           </a>
           <span class="text-slate-300">•</span>
-          <a href={`${localeBase}/#about`} class="text-slate-700 no-underline hover:text-[#1b613c]">
+          <a href={`${localeBase}/#about`} class="font-semibold text-[#1b613c] no-underline hover:text-[#105430]">
             {m.home_toc_learn()}
           </a>
         </nav>
@@ -479,7 +479,7 @@
                   type="button"
                   class={`rounded-lg border px-3 py-2 text-sm font-semibold uppercase tracking-wide ${
                     locale === currentLocale
-                      ? "border-[#318c5d] bg-[#318c5d] text-white"
+                      ? "border-[#1b613c] bg-[#1b613c] text-white"
                       : "border-slate-200 text-slate-700"
                   }`}
                   on:click={() => switchLocale(locale)}
@@ -494,7 +494,7 @@
         <div class="mt-auto pt-8">
           <a
             href={donateUrl}
-            class="inline-flex w-full items-center justify-center rounded-lg bg-[#25784c] px-4 py-3 text-base font-semibold text-white no-underline transition-colors hover:bg-[#1b613c]"
+            class="inline-flex w-full items-center justify-center rounded-lg bg-[#1b613c] px-4 py-3 text-base font-semibold text-white no-underline transition-colors hover:bg-[#105430]"
             on:click={() => closeMenu("donate")}
           >
             {m.home_donate_button()}

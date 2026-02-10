@@ -6,24 +6,24 @@
  * Accent colors use a rose/pink palette for callouts.
  */
 
-/** Green gradient — race categories (light → dark) */
+/** Green gradient — race categories (wide spread, light → dark) */
 export const raceColors = {
-  White: "#3e9e6c",
-  Hispanic: "#25784c",
-  Asian: "#1b613c",
-  "Native American": "#105430",
-  Other: "#043b1d",
+  White: "#b7e4c7",
+  Hispanic: "#6abb8d",
+  Asian: "#3e9e6c",
+  "Native American": "#25784c",
+  Other: "#105430",
   Black: "#022613",
 };
 
 /** Text colors for race segments — dark text on light backgrounds, white on dark */
 export const raceTextColors = {
   White: "#022613",
-  Hispanic: "#ffffff",
+  Hispanic: "#022613",
   Asian: "#ffffff",
   "Native American": "#ffffff",
   Other: "#ffffff",
-  Black: "#3e9e6c",
+  Black: "#6abb8d",
 };
 
 /** Distinct colors — outcome categories (one per color family) */

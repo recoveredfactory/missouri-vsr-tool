@@ -15,7 +15,7 @@
     --color-surface-100: #f8fafc; /* slate-50 - lightest surface */
     --color-surface-200: #f1f5f9; /* slate-100 */
     --color-surface-300: #e2e8f0; /* slate-200 */
-    --color-primary: #25784c; /* brand green */
+    --color-primary: #1b613c; /* brand green */
     --color-secondary: #64748b; /* slate-500 */
     --color-success: #3e9e6c; /* light brand green */
     --color-warning: #f59e0b; /* amber-500 */
@@ -32,7 +32,7 @@
   }
 
   a:hover {
-    @apply text-[#318c5d] decoration-[#318c5d];
+    @apply text-[#1b613c] decoration-[#1b613c];
   }
 
   a:focus-visible {

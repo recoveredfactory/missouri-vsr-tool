@@ -203,7 +203,7 @@
                 Missouri law enforcement made 1.28 million traffic stops in 2024
               </h3>
               <p class="mt-1 sm:mt-2 text-xs sm:text-sm leading-relaxed text-slate-600">
-                Vehicle stops climbed slightly since the pandemic, with an average of 1.26 million per year.
+                Vehicle stops climbed slightly since the pandemic, with an average of 1.26 million per year
               </p>
             </div>
 
@@ -273,7 +273,7 @@
                 Consent searches dropped 32% since 2020
               </h3>
               <p class="mt-1 sm:mt-2 text-xs sm:text-sm leading-relaxed text-slate-600">
-                Law enforcement officers are carrying out discretionary searches less often.
+                Law enforcement officers are carrying out discretionary searches less often
               </p>
             </div>
 
@@ -346,7 +346,7 @@
                 Black drivers were involved in 17% of stops, but represent 11% of Missouri's population
               </h3>
               <p class="mt-1 sm:mt-2 text-xs sm:text-sm leading-relaxed text-slate-600">
-                Black drivers have the largest disparity in stops vs. percentage of the state population. 
+                Black drivers have the largest disparity in stops vs. percentage of the state population
               </p>
             </div>
 
@@ -478,7 +478,7 @@
                 Law enforcement issues citations in 41% of stops
               </h3>
               <p class="mt-1 sm:mt-2 text-xs sm:text-sm leading-relaxed text-slate-600">
-                Outcome rates are computed against total stops. A single stop may have multiple outcomes.
+                Outcome rates are computed against total stops. A single stop may have multiple outcomes
               </p>
             </div>
 
@@ -594,7 +594,7 @@
                   on:click={() =>
                     handleDownloadClick(file, withDataBase(`/data/downloads/${file.path}`))
                   }
-                  class={`block rounded-lg bg-[#25784c] px-5 py-2.5 text-sm font-semibold text-white no-underline transition-colors hover:bg-[#1b613c] ${
+                  class={`block rounded-lg bg-[#1b613c] px-5 py-2.5 text-sm font-semibold text-white no-underline transition-colors hover:bg-[#105430] ${
                     index === downloadGroup.files.length - 1 ? "" : "mb-3"
                   }`}
                 >
@@ -614,7 +614,7 @@
       {/if}
 
       <p class="mt-8 text-center text-sm text-slate-600">
-        See the <a href="#about" class="text-[#318c5d] underline hover:text-[#1b613c]">About the Data</a> section for usage details, methodology, and more downloads.
+        See the <a href="#about" class="text-[#1b613c] underline hover:text-[#105430]">About the Data</a> section for usage details, methodology, and more downloads.
       </p>
     </div>
   </section>
@@ -627,7 +627,7 @@
       </p>
       <a
         href="mailto:davideads@recoveredfactory.net"
-        class="inline-block rounded-lg bg-[#25784c] px-6 py-3 font-semibold text-white no-underline transition-colors hover:bg-[#1b613c] focus:outline-none focus:ring-2 focus:ring-[#25784c] focus:ring-offset-2"
+        class="inline-block rounded-lg bg-[#1b613c] px-6 py-3 font-semibold text-white no-underline transition-colors hover:bg-[#105430] focus:outline-none focus:ring-2 focus:ring-[#1b613c] focus:ring-offset-2"
         aria-label="Send email to get in touch about hiring us"
       >
         {m.home_footer_contact()}
