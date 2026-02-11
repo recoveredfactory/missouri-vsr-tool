@@ -427,6 +427,7 @@
   let stopVolumeSegmentSuffix = "";
   let stopVolumeRankClause = "";
   let stopVolumeStopsDisplay = "";
+  const siteUrl = import.meta.env.PUBLIC_SITE_URL ?? "https://vsr.recoveredfactory.net";
   let metaTitle = "";
   let metaDescription = "";
   const formatPhone = (value) => {
@@ -1051,9 +1052,19 @@
 <svelte:head>
   <title>{metaTitle}</title>
   <meta name="description" content={metaDescription} />
+  <meta property="og:type" content="article" />
+  <meta property="og:url" content="{siteUrl}/agency/{data.slug}" />
+  <meta property="og:site_name" content="Missouri Vehicle Stops" />
   <meta property="og:title" content={metaTitle} />
   <meta property="og:description" content={metaDescription} />
-  <meta property="twitter:card" content="summary" />
+  <meta property="og:image" content="{siteUrl}/social-meta.png" />
+  <meta property="og:image:secure_url" content="{siteUrl}/social-meta.png" />
+  <meta property="og:image:alt" content="Missouri Vehicle Stops overview" />
+  <meta property="og:image:type" content="image/png" />
+  <meta property="og:image:width" content="1600" />
+  <meta property="og:image:height" content="838" />
+  <meta property="twitter:card" content="summary_large_image" />
+  <meta property="twitter:image" content="{siteUrl}/social-meta.png" />
   <meta property="twitter:title" content={metaTitle} />
   <meta property="twitter:description" content={metaDescription} />
 </svelte:head>
