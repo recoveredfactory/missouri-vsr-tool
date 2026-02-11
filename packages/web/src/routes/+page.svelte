@@ -162,8 +162,10 @@
     property="og:description"
     content="Who gets stopped? why? What happens next? This tool reveals how traffic enforcement varies across Missouri's agencies."
   />
-  <!-- TODO(#123): add og:image + twitter:image, then switch twitter:card to summary_large_image -->
-  <meta property="twitter:card" content="summary" />
+  <meta property="og:image" content="{siteUrl}/social-meta.png" />
+  <meta property="og:image:alt" content="Missouri Vehicle Stops overview" />
+  <meta property="twitter:card" content="summary_large_image" />
+  <meta property="twitter:image" content="{siteUrl}/social-meta.png" />
   <meta property="twitter:title" content={metaTitle} />
   <meta property="twitter:description" content={metaDescription} />
 </svelte:head>
