@@ -8,12 +8,12 @@
 
 /** Green gradient — race categories (wide spread, light → dark) */
 export const raceColors = {
-  White: "#b7e4c7",
-  Hispanic: "#6abb8d",
-  Asian: "#3e9e6c",
-  "Native American": "#25784c",
-  Other: "#105430",
-  Black: "#022613",
+  White: "#25784c",
+  Hispanic: "#1c4f74",
+  Asian: "#b5697a",
+  "Native American": "#61c7ed",
+  Other: "#658cad",
+  Black: "#792a3b",
 };
 
 /** Text colors for race segments — dark text on light backgrounds, white on dark */
@@ -31,8 +31,8 @@ export const outcomeColors = {
   noAction: "#658cad",
   warnings: "#25784c",
   searches: "#25784c",
-  citations: "#1c4f74",
-  arrests: "#792a3b",
+  arrests: "#1c4f74",
+  citations: "#792a3b",
 };
 
 /** Accent colors for callouts and highlights */
