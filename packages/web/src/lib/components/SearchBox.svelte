@@ -2,6 +2,7 @@
   import { goto } from "$app/navigation";
   import { QuickScore } from "quick-score";
   import { searchState } from "$lib/stores/search";
+  import { getLocale } from "$lib/paraglide/runtime";
   import {
     search_aria_label,
     search_placeholder,
@@ -15,6 +16,15 @@
   let results = [];
   let selectedIndex = -1;
   let previousQuery = "";
+  let localeBase = "/en";
+
+  $: {
+    try {
+      localeBase = `/${getLocale() || "en"}`;
+    } catch {
+      localeBase = "/en";
+    }
+  }
 
   const toLabel = (item) =>
     item?.canonical_name ||
@@ -144,8 +154,8 @@
     const slug = toSlug(item);
     if (!slug) return;
     resetSearch();
-    goto(`/agency/${slug}`).catch(() => {
-      window.location.href = `/agency/${slug}`;
+    goto(`${localeBase}/agency/${slug}`).catch(() => {
+      window.location.href = `${localeBase}/agency/${slug}`;
     });
   };
 
@@ -197,7 +207,7 @@
     >
       {#each results as result, index}
         {@const slug = toSlug(result.item)}
-        {@const href = slug ? `/agency/${slug}` : "#"}
+        {@const href = slug ? `${localeBase}/agency/${slug}` : "#"}
         {@const stops = formatStops(toStops(result.item))}
         <li role="option" aria-selected={index === selectedIndex}>
           <a

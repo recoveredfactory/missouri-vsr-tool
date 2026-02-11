@@ -144,7 +144,7 @@
     return toNumber(row[race] ?? row[lower] ?? 0);
   };
 
-  const raceColor = (race) => importedRaceColors[race] || "#0f766e";
+  const raceColor = (race) => importedRaceColors[race] || "#25784c";
 
   $: stackedRaceKeys = stackRaceKeys(resolvedRaceKeys);
   $: lineRaceKeys = stackedRaceKeys.length ? stackedRaceKeys : ["Total"];
@@ -268,6 +268,13 @@
     }
   };
 
+  const handleGlobalKeydown = (event) => {
+    if (!open) return;
+    if (event.key === "Escape") {
+      dispatch("close");
+    }
+  };
+
   $: if (open) {
     if (typeof document !== "undefined") {
       document.body.style.overflow = "hidden";
@@ -275,15 +282,24 @@
     if (typeof requestAnimationFrame !== "undefined") {
       requestAnimationFrame(() => dialogEl?.focus());
     }
+    if (typeof window !== "undefined") {
+      window.addEventListener("keydown", handleGlobalKeydown);
+    }
   } else {
     if (typeof document !== "undefined") {
       document.body.style.overflow = "";
+    }
+    if (typeof window !== "undefined") {
+      window.removeEventListener("keydown", handleGlobalKeydown);
     }
   }
 
   onDestroy(() => {
     if (typeof document !== "undefined") {
       document.body.style.overflow = "";
+    }
+    if (typeof window !== "undefined") {
+      window.removeEventListener("keydown", handleGlobalKeydown);
     }
   });
 
@@ -305,12 +321,14 @@
   <!-- svelte-ignore a11y_click_events_have_key_events -->
   <div
     class="fixed inset-0 z-[60] flex items-stretch justify-center bg-slate-950/60 sm:items-center sm:px-4 sm:py-8"
+    style="top: var(--site-header-height, 0px); height: calc(100dvh - var(--site-header-height, 0px));"
     on:click={handleBackdrop}
     role="presentation"
   >
     <div
       bind:this={dialogEl}
-      class="w-full max-w-full rounded-none bg-white p-4 shadow-2xl sm:max-w-4xl sm:rounded-2xl sm:p-6 max-h-[100svh] overflow-y-auto overflow-x-hidden sm:max-h-[90vh]"
+      class="w-full max-w-full rounded-none bg-white p-4 shadow-2xl focus:outline-none sm:max-w-4xl sm:rounded-2xl sm:p-6 overflow-y-auto overflow-x-hidden"
+      style="max-height: calc(100dvh - var(--site-header-height, 0px) - 2rem);"
       role="dialog"
       aria-modal="true"
       aria-labelledby="modal-title"

@@ -1,34 +1,44 @@
 /**
  * Shared color palettes for charts and visualizations.
  *
- * Race data uses a teal gradient (brand color family).
- * Outcome data uses a slate gradient (neutral family).
+ * Race data uses a green gradient (brand color family).
+ * Outcome data uses a blue gradient.
+ * Accent colors use a rose/pink palette for callouts.
  */
 
-/** Teal gradient — race categories (light → dark) */
+/** Green gradient — race categories (wide spread, light → dark) */
 export const raceColors = {
-  White: "#ccfbf1", // teal-100
-  Hispanic: "#5eead4", // teal-300
-  Asian: "#14b8a6", // teal-500
-  "Native American": "#0d9488", // teal-600
-  Other: "#0f766e", // teal-700 (brand)
-  Black: "#134e4a", // teal-900
+  White: "#25784c",
+  Hispanic: "#1c4f74",
+  Asian: "#b5697a",
+  "Native American": "#61c7ed",
+  Other: "#658cad",
+  Black: "#792a3b",
 };
 
 /** Text colors for race segments — dark text on light backgrounds, white on dark */
 export const raceTextColors = {
-  White: "#134e4a", // dark on teal-100
-  Hispanic: "#134e4a", // dark on teal-300
+  White: "#022613",
+  Hispanic: "#022613",
   Asian: "#ffffff",
   "Native American": "#ffffff",
   Other: "#ffffff",
-  Black: "#ccfbf1", // light on teal-900
+  Black: "#6abb8d",
 };
 
-/** Slate gradient — outcome categories (light → dark) */
+/** Distinct colors — outcome categories (one per color family) */
 export const outcomeColors = {
-  noAction: "#cbd5e1", // slate-300
-  citations: "#64748b", // slate-500
-  searches: "#334155", // slate-700
-  arrests: "#0f172a", // slate-900
+  noAction: "#658cad",
+  warnings: "#25784c",
+  searches: "#25784c",
+  arrests: "#1c4f74",
+  citations: "#792a3b",
+};
+
+/** Accent colors for callouts and highlights */
+export const accentColors = {
+  dark: "#792a3b",
+  mid: "#b5697a",
+  light: "#f1a7b8",
+  lightest: "#f5c2ce",
 };

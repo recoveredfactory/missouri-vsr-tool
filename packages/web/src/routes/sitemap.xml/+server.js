@@ -1,13 +1,14 @@
 const BASE_URL = import.meta.env.PUBLIC_SITE_URL || "https://missourivsr.com";
 
 function urlEntry(path) {
-  const en = `${BASE_URL}${path}`;
+  const en = `${BASE_URL}/en${path}`;
   const es = `${BASE_URL}/es${path}`;
+  const xDefault = `${BASE_URL}${path}`;
   return `  <url>
     <loc>${en}</loc>
     <xhtml:link rel="alternate" hreflang="en" href="${en}"/>
     <xhtml:link rel="alternate" hreflang="es" href="${es}"/>
-    <xhtml:link rel="alternate" hreflang="x-default" href="${en}"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="${xDefault}"/>
   </url>`;
 }
 

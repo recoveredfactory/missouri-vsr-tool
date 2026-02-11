@@ -1,11 +1,13 @@
 <script>
   import "../app.css";
   import SiteFooter from "$lib/components/SiteFooter.svelte";
+  import { navigating } from "$app/stores";
 
   export let data;
 
   const fallbackUmamiWebsiteId = import.meta.env.PUBLIC_UMAMI_WEBSITE_ID ?? null;
   $: umamiWebsiteId = data?.umamiWebsiteId ?? fallbackUmamiWebsiteId;
+  $: isNavigating = Boolean($navigating);
 </script>
 
 <svelte:head>
@@ -20,9 +22,11 @@
 
 <a
   href="#main-content"
-  class="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:rounded-lg focus:bg-white focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-slate-900 focus:shadow-lg focus:ring-2 focus:ring-[#0f766e]"
+  class="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:rounded-lg focus:bg-white focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-slate-900 focus:shadow-lg focus:ring-2 focus:ring-[#25784c]"
 >
   Skip to main content
 </a>
-<slot />
+<div class={`page-fade ${isNavigating ? "page-fade--loading" : ""}`}>
+  <slot />
+</div>
 <SiteFooter />
