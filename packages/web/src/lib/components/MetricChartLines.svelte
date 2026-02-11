@@ -72,14 +72,12 @@
       {#if data}
         <Tooltip.Header>{data.year}</Tooltip.Header>
         <Tooltip.List>
-          {#each raceKeys as race}
-            <Tooltip.Item
-              label={raceLabel(race)}
-              value={formatChartValue(lineValuesByYear?.[data.year]?.[race])}
-              color={raceColor(race)}
-              valueAlign="right"
-            />
-          {/each}
+          <Tooltip.Item
+            label={raceLabel(data.race)}
+            value={formatChartValue(data.value)}
+            color={raceColor(data.race)}
+            valueAlign="right"
+          />
         </Tooltip.List>
       {/if}
     {/snippet}
