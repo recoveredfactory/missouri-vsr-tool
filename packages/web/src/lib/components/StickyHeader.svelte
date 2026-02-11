@@ -63,6 +63,13 @@
     selectedIndex = -1;
   }
 
+  $: if (headerHeight && typeof document !== "undefined") {
+    document.documentElement.style.setProperty(
+      "--site-header-height",
+      `${headerHeight}px`
+    );
+  }
+
   $: if (selectedAgencyLabel && selectedAgencyLabel !== lastPrefillLabel) {
     query = selectedAgencyLabel;
     lastPrefillLabel = selectedAgencyLabel;
