@@ -1,9 +1,6 @@
 import { error } from "@sveltejs/kit";
 import { withDataBase } from "$lib/dataBase";
 
-// Disable SSR to avoid circular dependency issues with layerchart
-export const ssr = false;
-
 export async function load({ fetch, params }) {
   const slug = params.slug;
   const response = await fetch(withDataBase(`/data/dist/agency_year/${slug}.json`));
