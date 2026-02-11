@@ -321,6 +321,7 @@
   <!-- svelte-ignore a11y_click_events_have_key_events -->
   <div
     class="fixed inset-0 z-[60] flex items-stretch justify-center bg-slate-950/60 sm:items-center sm:px-4 sm:py-8"
+    style="top: var(--site-header-height, 0px); height: calc(100dvh - var(--site-header-height, 0px));"
     on:click={handleBackdrop}
     role="presentation"
   >
