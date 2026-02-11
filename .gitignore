@@ -13,3 +13,4 @@ packages/web/static/data/
 !packages/web/static/data/dist/
 packages/web/static/data/dist/metric_year_subset.json
 .vscode/
+*:Zone.Identifier
