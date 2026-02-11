@@ -23,10 +23,6 @@
   };
 
   const siteUrl = import.meta.env.PUBLIC_SITE_URL ?? "https://vsr.recoveredfactory.net";
-  const metaTitle = "Missouri Vehicle Stops";
-  const metaDescription =
-    "Who gets stopped? why? What happens next? This tool reveals how traffic enforcement varies across Missouri's agencies.";
-
   const downloadManifest = data?.downloadManifest;
 
   const downloadGroupMeta = {
@@ -153,10 +149,14 @@
 </script>
 
 <svelte:head>
-  <title>{metaTitle}</title>
+  <title>Missouri Vehicle Stops</title>
+  <meta
+    name="description"
+    content="Who gets stopped? why? What happens next? This tool reveals how traffic enforcement varies across Missouri's agencies."
+  />
   <meta property="og:type" content="website" />
   <meta property="og:url" content="{siteUrl}/" />
-  <meta property="og:site_name" content="Missouri Vehicle Stops" />
+  <meta property="og:site_name" content="Missouri Vehicle Stops Report" />
   <meta property="og:title" content="Missouri Vehicle Stops" />
   <meta
     property="og:description"
@@ -166,8 +166,11 @@
   <meta property="og:image:alt" content="Missouri Vehicle Stops overview" />
   <meta property="twitter:card" content="summary_large_image" />
   <meta property="twitter:image" content="{siteUrl}/social-meta.png" />
-  <meta property="twitter:title" content={metaTitle} />
-  <meta property="twitter:description" content={metaDescription} />
+  <meta property="twitter:title" content="Missouri Vehicle Stops" />
+  <meta
+    property="twitter:description"
+    content="Who gets stopped? why? What happens next? This tool reveals how traffic enforcement varies across Missouri's agencies."
+  />
 </svelte:head>
 
 <StickyHeader agencies={data.agencies} />
