@@ -22,7 +22,7 @@
     window.umami?.track?.(event, payload);
   };
 
-  const siteUrl = import.meta.env.PUBLIC_SITE_URL ?? "https://missourivsr.com";
+  const siteUrl = import.meta.env.PUBLIC_SITE_URL ?? "https://vsr.recoveredfactory.net";
   const metaTitle = "Missouri Vehicle Stops";
   const metaDescription =
     "Who gets stopped? why? What happens next? This tool reveals how traffic enforcement varies across Missouri's agencies.";

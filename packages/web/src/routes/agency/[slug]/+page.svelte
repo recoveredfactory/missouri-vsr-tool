@@ -424,7 +424,7 @@
   let stopVolumeSegmentSuffix = "";
   let stopVolumeRankClause = "";
   let stopVolumeStopsDisplay = "";
-  const siteUrl = import.meta.env.PUBLIC_SITE_URL ?? "https://missourivsr.com";
+  const siteUrl = import.meta.env.PUBLIC_SITE_URL ?? "https://vsr.recoveredfactory.net";
   let metaTitle = "";
   let metaDescription = "";
   const formatPhone = (value) => {
