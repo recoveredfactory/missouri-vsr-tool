@@ -40,6 +40,14 @@
   }
 }
 
+.page-fade {
+  transition: opacity 220ms ease;
+}
+
+.page-fade--loading {
+  opacity: 0.65;
+}
+
 @media (max-width: 768px) {
   :root {
     --site-header-height: 3.5rem;

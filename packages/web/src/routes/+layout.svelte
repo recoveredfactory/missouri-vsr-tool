@@ -1,11 +1,13 @@
 <script>
   import "../app.css";
   import SiteFooter from "$lib/components/SiteFooter.svelte";
+  import { navigating } from "$app/stores";
 
   export let data;
 
   const fallbackUmamiWebsiteId = import.meta.env.PUBLIC_UMAMI_WEBSITE_ID ?? null;
   $: umamiWebsiteId = data?.umamiWebsiteId ?? fallbackUmamiWebsiteId;
+  $: isNavigating = Boolean($navigating);
 </script>
 
 <svelte:head>
@@ -24,5 +26,7 @@
 >
   Skip to main content
 </a>
-<slot />
+<div class={`page-fade ${isNavigating ? "page-fade--loading" : ""}`}>
+  <slot />
+</div>
 <SiteFooter />
