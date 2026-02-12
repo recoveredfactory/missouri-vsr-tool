@@ -1058,15 +1058,11 @@
   <meta property="og:title" content={metaTitle} />
   <meta property="og:description" content={metaDescription} />
   <meta property="og:image" content="{siteUrl}/social-meta.png" />
-<<<<<<< HEAD
-  <meta property="og:image:alt" content="Missouri Vehicle Stops overview" />
-=======
   <meta property="og:image:secure_url" content="{siteUrl}/social-meta.png" />
   <meta property="og:image:alt" content="Missouri Vehicle Stops overview" />
   <meta property="og:image:type" content="image/png" />
   <meta property="og:image:width" content="1600" />
   <meta property="og:image:height" content="838" />
->>>>>>> 2e6fe70513a48723d86223170f2446cf15c5b82d
   <meta property="twitter:card" content="summary_large_image" />
   <meta property="twitter:image" content="{siteUrl}/social-meta.png" />
   <meta property="twitter:title" content={metaTitle} />
