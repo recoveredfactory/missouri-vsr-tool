@@ -1,4 +1,4 @@
-const BASE_URL = import.meta.env.PUBLIC_SITE_URL || "https://missourivsr.com";
+const BASE_URL = import.meta.env.PUBLIC_SITE_URL || "https://vsr.recoveredfactory.net";
 
 function urlEntry(path) {
   const en = `${BASE_URL}/en${path}`;
