@@ -349,7 +349,7 @@
           <div class="rounded-lg border border-slate-200 bg-white p-4 sm:p-6 flex flex-col">
             <div class="mb-3 sm:mb-4 text-center">
               <h3 class="text-lg sm:text-xl font-bold text-slate-900">
-                Black drivers were involved in 17% of stops, but represent 11% of Missouri's population
+                Black drivers were involved in 17% of stops, but represent less than 11% of Missouri's population
               </h3>
               <p class="mt-1 sm:mt-2 text-xs sm:text-sm leading-relaxed text-slate-600">
                 Black drivers have the largest disparity in stops vs. percentage of the state population
@@ -357,7 +357,7 @@
             </div>
 
             {#if statsData}
-              {@const population = { White: 79.1, Black: 11.8, Hispanic: 4.4, Other: 4.7 }}
+              {@const population = { White: 78.7, Black: 10.7, Hispanic: 4.3, Other: 6.3 }}
           {@const totalStops = statsData.total_stops}
           {@const stopsData2 = {
             White: (statsData.by_race.all_stops.White / totalStops) * 100,
