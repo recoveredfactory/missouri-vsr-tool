@@ -1305,7 +1305,7 @@
         {#if metricGroups.length === 0}
           <p class="mt-4 text-sm text-slate-500">{agency_no_rows()}</p>
         {:else}
-          <div class="mb-6 max-w-full overflow-visible md:mx-[calc(50%-50vw+2rem)] md:w-[calc(100vw-4rem)] md:max-w-none">
+          <div class="mb-6 max-w-full overflow-visible">
             <div class="mt-4">
               <div class="text-2xl font-semibold text-slate-900 sm:text-3xl">
                 Annual vehicle stops statistics
@@ -1368,7 +1368,7 @@
               />
             </div>
             <div
-              class="gridcraft-table"
+              class="gridcraft-table agency-gridcraft-table--frame"
               bind:this={gridTableEl}
               style="
                 --gc-main-color: #ffffff;
@@ -1954,5 +1954,13 @@
 
   :global(.gridcraft-table .gc-td__groupby-count) {
     display: none;
+  }
+
+  @media (max-width: 640px) {
+    .agency-gridcraft-table--frame {
+      width: 100vw;
+      margin-left: calc(50% - 50vw);
+      margin-right: calc(50% - 50vw);
+    }
   }
 </style>
