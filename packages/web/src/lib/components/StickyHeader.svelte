@@ -64,9 +64,14 @@
   }
 
   $: if (headerHeight && typeof document !== "undefined") {
+    const measuredHeight = Math.ceil(headerHeight);
     document.documentElement.style.setProperty(
       "--site-header-height",
-      `${headerHeight}px`
+      `${measuredHeight}px`
+    );
+    document.documentElement.style.setProperty(
+      "--site-header-anchor-offset",
+      `${measuredHeight + 24}px`
     );
   }
 
@@ -429,12 +434,20 @@
           {/if}
         </div>
         <nav class="hidden items-center justify-end gap-2.5 text-sm md:flex">
+          <a href={`${localeBase}/#findings`} class="font-semibold text-[#1b613c] no-underline hover:text-[#105430]">
+            Findings
+          </a>
+          <span class="text-slate-300">•</span>
+          <a href={`${localeBase}/#agencies`} class="font-semibold text-[#1b613c] no-underline hover:text-[#105430]">
+            Agencies
+          </a>
+          <span class="text-slate-300">•</span>
           <a href={`${localeBase}/#download`} class="font-semibold text-[#1b613c] no-underline hover:text-[#105430]">
-            {m.home_toc_download()}
+            Download
           </a>
           <span class="text-slate-300">•</span>
           <a href={`${localeBase}/#about`} class="font-semibold text-[#1b613c] no-underline hover:text-[#105430]">
-            {m.home_toc_learn()}
+            About
           </a>
         </nav>
       </div>
@@ -462,18 +475,32 @@
         <p class="mt-8 text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">Explore</p>
         <nav class="mt-3 space-y-3">
           <a
+            href={`${localeBase}/#findings`}
+            class="block text-3xl font-semibold leading-tight text-slate-900 no-underline"
+            on:click={() => closeMenu("nav")}
+          >
+            Findings
+          </a>
+          <a
+            href={`${localeBase}/#agencies`}
+            class="block text-3xl font-semibold leading-tight text-slate-900 no-underline"
+            on:click={() => closeMenu("nav")}
+          >
+            Agencies
+          </a>
+          <a
             href={`${localeBase}/#download`}
             class="block text-3xl font-semibold leading-tight text-slate-900 no-underline"
             on:click={() => closeMenu("nav")}
           >
-            {m.home_toc_download()}
+            Download
           </a>
           <a
             href={`${localeBase}/#about`}
             class="block text-3xl font-semibold leading-tight text-slate-900 no-underline"
             on:click={() => closeMenu("nav")}
           >
-            {m.home_toc_learn()}
+            About
           </a>
         </nav>
 

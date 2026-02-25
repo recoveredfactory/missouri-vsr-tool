@@ -6,6 +6,7 @@
 @layer base {
   :root {
     --site-header-height: 3.5rem;
+    --site-header-anchor-offset: 7rem;
     --year-header-height: 1.75rem;
   }
 
@@ -25,6 +26,18 @@
 
   body {
     @apply bg-slate-50 font-sans text-slate-900 antialiased;
+  }
+
+  html,
+  body {
+    scroll-padding-top: var(--site-header-anchor-offset, 7rem);
+  }
+
+  #findings,
+  #agencies,
+  #download,
+  #about {
+    scroll-margin-top: var(--site-header-anchor-offset, 7rem);
   }
 
   a {
@@ -71,6 +84,7 @@
 @media (max-width: 768px) {
   :root {
     --site-header-height: 3.5rem;
+    --site-header-anchor-offset: 7rem;
   }
 }
 

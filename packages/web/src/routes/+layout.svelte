@@ -6,8 +6,19 @@
   export let data;
 
   const fallbackUmamiWebsiteId = import.meta.env.PUBLIC_UMAMI_WEBSITE_ID ?? null;
+  const normalizePath = (pathname) => {
+    const normalized = String(pathname || "/").replace(/\/+$/, "");
+    return normalized || "/";
+  };
+
   $: umamiWebsiteId = data?.umamiWebsiteId ?? fallbackUmamiWebsiteId;
-  $: isNavigating = Boolean($navigating);
+  $: fromPath = normalizePath($navigating?.from?.url?.pathname);
+  $: toPath = normalizePath($navigating?.to?.url?.pathname);
+  $: fromRouteId = $navigating?.from?.route?.id ?? null;
+  $: toRouteId = $navigating?.to?.route?.id ?? null;
+  $: shouldFadeForNavigation =
+    Boolean($navigating) && (fromPath !== toPath || fromRouteId !== toRouteId);
+  $: isNavigating = shouldFadeForNavigation;
 </script>
 
 <svelte:head>

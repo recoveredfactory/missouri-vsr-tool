@@ -1,5 +1,6 @@
 <script>
   import StickyHeader from "$lib/components/StickyHeader.svelte";
+  import HomeAgencyMetricTable from "$lib/components/HomeAgencyMetricTable.svelte";
   import * as m from "$lib/paraglide/messages";
   import { raceColors, raceTextColors, outcomeColors } from "$lib/colors.js";
   import { withDataBase } from "$lib/dataBase";
@@ -193,7 +194,7 @@
   </section>
 
   <!-- Highlights Grid -->
-  <section class="border-t border-slate-200 bg-slate-50 py-12">
+  <section id="findings" class="border-t border-slate-200 bg-slate-50 py-12">
     <div class="mx-auto max-w-6xl px-6">
       <h2 class="mb-8 text-center text-3xl font-bold text-slate-900">
         {m.home_highlights_heading()}
@@ -571,6 +572,8 @@
       </div>
     </div>
   </section>
+
+  <HomeAgencyMetricTable agencies={data.agencies} />
 
   <!-- Download Section -->
   <section id="download" class="border-t border-slate-200 bg-white py-12">
