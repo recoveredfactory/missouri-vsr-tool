@@ -28,16 +28,9 @@
     @apply bg-slate-50 font-sans text-slate-900 antialiased;
   }
 
-  html,
-  body {
+  html {
+    scroll-behavior: smooth;
     scroll-padding-top: var(--site-header-anchor-offset, 7rem);
-  }
-
-  #findings,
-  #agencies,
-  #download,
-  #about {
-    scroll-margin-top: var(--site-header-anchor-offset, 7rem);
   }
 
   a {
@@ -85,6 +78,12 @@
   :root {
     --site-header-height: 3.5rem;
     --site-header-anchor-offset: 7rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
   }
 }
 

@@ -17,11 +17,15 @@
   let searchTermTimeout;
   let lastTrackedSearchTerm = "";
   let headerHeight = 0;
+  let headerElement;
+  let headerResizeObserver;
   let prefillActive = false;
   let lastPrefillLabel = "";
   let localeBase = "/en";
+  let isHomeRoute = false;
   let searchContainer;
   const showLanguageSwitcher = false;
+  const HOME_ANCHOR_OFFSET_PX = 0;
 
   let currentLocale;
   // Re-evaluate locale when page changes (fixes language switcher not updating)
@@ -63,17 +67,20 @@
     selectedIndex = -1;
   }
 
-  $: if (headerHeight && typeof document !== "undefined") {
-    const measuredHeight = Math.ceil(headerHeight);
+  const updateHeaderCssVars = () => {
+    if (typeof document === "undefined" || !headerElement) return;
+    const measuredHeight = Math.ceil(headerElement.getBoundingClientRect().height);
+    if (!Number.isFinite(measuredHeight) || measuredHeight <= 0) return;
+    headerHeight = measuredHeight;
     document.documentElement.style.setProperty(
       "--site-header-height",
       `${measuredHeight}px`
     );
     document.documentElement.style.setProperty(
       "--site-header-anchor-offset",
-      `${measuredHeight + 24}px`
+      `${measuredHeight + HOME_ANCHOR_OFFSET_PX}px`
     );
-  }
+  };
 
   $: if (selectedAgencyLabel && selectedAgencyLabel !== lastPrefillLabel) {
     query = selectedAgencyLabel;
@@ -217,10 +224,25 @@
       selectedIndex = -1;
     };
     document.addEventListener("pointerdown", handlePointerDown);
+    updateHeaderCssVars();
+    if (typeof ResizeObserver !== "undefined" && headerElement) {
+      headerResizeObserver = new ResizeObserver(() => {
+        updateHeaderCssVars();
+      });
+      headerResizeObserver.observe(headerElement);
+    }
+    window.addEventListener("resize", updateHeaderCssVars);
     return () => {
       document.removeEventListener("pointerdown", handlePointerDown);
+      window.removeEventListener("resize", updateHeaderCssVars);
+      headerResizeObserver?.disconnect?.();
+      headerResizeObserver = null;
     };
   });
+
+  $: isHomeRoute = $page?.route?.id === "/";
+  const homeAnchorHref = (sectionId) =>
+    isHomeRoute ? `#${sectionId}` : `${localeBase}/#${sectionId}`;
 
   const closeMenu = (source = "unknown") => {
     if (!mobileMenuOpen) return;
@@ -313,7 +335,7 @@
 </script>
 
 <header
-  bind:clientHeight={headerHeight}
+  bind:this={headerElement}
   class="sticky top-0 z-50 border-b-6 border-b-[#1b613c] bg-white/95 backdrop-blur-sm shadow-sm"
 >
   <div class="mx-auto w-full max-w-7xl px-4 sm:px-6 md:w-[85%] md:px-0">
@@ -434,19 +456,19 @@
           {/if}
         </div>
         <nav class="hidden items-center justify-end gap-2.5 text-sm md:flex">
-          <a href={`${localeBase}/#findings`} class="font-semibold text-[#1b613c] no-underline hover:text-[#105430]">
+          <a href={homeAnchorHref("findings")} class="font-semibold text-[#1b613c] no-underline hover:text-[#105430]">
             Findings
           </a>
           <span class="text-slate-300">•</span>
-          <a href={`${localeBase}/#agencies`} class="font-semibold text-[#1b613c] no-underline hover:text-[#105430]">
+          <a href={homeAnchorHref("agencies")} class="font-semibold text-[#1b613c] no-underline hover:text-[#105430]">
             Agencies
           </a>
           <span class="text-slate-300">•</span>
-          <a href={`${localeBase}/#download`} class="font-semibold text-[#1b613c] no-underline hover:text-[#105430]">
+          <a href={homeAnchorHref("download")} class="font-semibold text-[#1b613c] no-underline hover:text-[#105430]">
             Download
           </a>
           <span class="text-slate-300">•</span>
-          <a href={`${localeBase}/#about`} class="font-semibold text-[#1b613c] no-underline hover:text-[#105430]">
+          <a href={homeAnchorHref("about")} class="font-semibold text-[#1b613c] no-underline hover:text-[#105430]">
             About
           </a>
         </nav>
@@ -475,28 +497,28 @@
         <p class="mt-8 text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">Explore</p>
         <nav class="mt-3 space-y-3">
           <a
-            href={`${localeBase}/#findings`}
+            href={homeAnchorHref("findings")}
             class="block text-3xl font-semibold leading-tight text-slate-900 no-underline"
             on:click={() => closeMenu("nav")}
           >
             Findings
           </a>
           <a
-            href={`${localeBase}/#agencies`}
+            href={homeAnchorHref("agencies")}
             class="block text-3xl font-semibold leading-tight text-slate-900 no-underline"
             on:click={() => closeMenu("nav")}
           >
             Agencies
           </a>
           <a
-            href={`${localeBase}/#download`}
+            href={homeAnchorHref("download")}
             class="block text-3xl font-semibold leading-tight text-slate-900 no-underline"
             on:click={() => closeMenu("nav")}
           >
             Download
           </a>
           <a
-            href={`${localeBase}/#about`}
+            href={homeAnchorHref("about")}
             class="block text-3xl font-semibold leading-tight text-slate-900 no-underline"
             on:click={() => closeMenu("nav")}
           >

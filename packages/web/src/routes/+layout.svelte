@@ -14,11 +14,7 @@
   $: umamiWebsiteId = data?.umamiWebsiteId ?? fallbackUmamiWebsiteId;
   $: fromPath = normalizePath($navigating?.from?.url?.pathname);
   $: toPath = normalizePath($navigating?.to?.url?.pathname);
-  $: fromRouteId = $navigating?.from?.route?.id ?? null;
-  $: toRouteId = $navigating?.to?.route?.id ?? null;
-  $: shouldFadeForNavigation =
-    Boolean($navigating) && (fromPath !== toPath || fromRouteId !== toRouteId);
-  $: isNavigating = shouldFadeForNavigation;
+  $: isNavigating = Boolean($navigating) && fromPath !== toPath;
 </script>
 
 <svelte:head>
