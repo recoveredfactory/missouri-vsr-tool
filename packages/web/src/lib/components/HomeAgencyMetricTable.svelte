@@ -884,6 +884,7 @@
 
   :global(.agency-metric-grid .gc-table td:not(:first-child)) {
     font-variant-numeric: tabular-nums;
+    font-family: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
     padding-left: 0.22rem;
     padding-right: 0.22rem;
   }
