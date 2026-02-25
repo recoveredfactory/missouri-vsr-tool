@@ -37,6 +37,8 @@
   let boundaryUrl = "";
   let lastBoundaryUrl = "";
   let lastBoundsKey = "";
+  let lastBoundaryRequestId = 0;
+  let isMounted = false;
   let pmtilesProtocol;
   let pmtilesReady = false;
   let pmtilesSourceUrl = "";
@@ -124,6 +126,7 @@
 
   onMount(async () => {
     if (!browser) return;
+    isMounted = true;
     const mod = await import("svelte-maplibre-gl");
     MapLibre = mod.MapLibre;
     Marker = mod.Marker;
@@ -176,6 +179,7 @@
   });
 
   onDestroy(() => {
+    isMounted = false;
     cleanupHoverHandlers();
     popup?.remove?.();
     popup = null;
@@ -201,16 +205,21 @@
     lastBoundaryUrl = "";
   }
 
-  $: if (!hasBoundaryOverride && browser && boundaryUrl && boundaryUrl !== lastBoundaryUrl) {
+  const loadBoundaryData = async (url) => {
+    const requestId = ++lastBoundaryRequestId;
+    try {
+      const response = await fetch(url);
+      if (requestId !== lastBoundaryRequestId) return;
+      boundaryData = response.ok ? await response.json() : null;
+    } catch {
+      if (requestId !== lastBoundaryRequestId) return;
+      boundaryData = null;
+    }
+  };
+
+  $: if (!hasBoundaryOverride && isMounted && boundaryUrl && boundaryUrl !== lastBoundaryUrl) {
     lastBoundaryUrl = boundaryUrl;
-    fetch(boundaryUrl)
-      .then((response) => (response.ok ? response.json() : null))
-      .then((data) => {
-        boundaryData = data;
-      })
-      .catch(() => {
-        boundaryData = null;
-      });
+    void loadBoundaryData(boundaryUrl);
   }
 
   const updateBoundaryBounds = () => {
