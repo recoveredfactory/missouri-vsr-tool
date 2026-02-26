@@ -6,6 +6,7 @@
   export let data;
 
   const fallbackUmamiWebsiteId = import.meta.env.PUBLIC_UMAMI_WEBSITE_ID ?? null;
+  const siteName = "Missouri Vehicle Stops";
   const normalizePath = (pathname) => {
     const normalized = String(pathname || "/").replace(/\/+$/, "");
     return normalized || "/";
@@ -18,6 +19,8 @@
 </script>
 
 <svelte:head>
+  <meta name="application-name" content={siteName} />
+  <meta name="apple-mobile-web-app-title" content={siteName} />
   {#if umamiWebsiteId}
     <script
       defer
