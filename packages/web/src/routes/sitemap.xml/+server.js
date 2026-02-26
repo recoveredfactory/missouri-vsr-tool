@@ -1,9 +1,10 @@
 const BASE_URL = import.meta.env.PUBLIC_SITE_URL || "https://vsr.recoveredfactory.net";
 
 function urlEntry(path) {
-  const en = `${BASE_URL}/en${path}`;
-  const es = `${BASE_URL}/es${path}`;
-  const xDefault = `${BASE_URL}${path}`;
+  const suffix = path === "/" ? "" : path;
+  const en = `${BASE_URL}/en${suffix}`;
+  const es = `${BASE_URL}/es${suffix}`;
+  const xDefault = en;
   return `  <url>
     <loc>${en}</loc>
     <xhtml:link rel="alternate" hreflang="en" href="${en}"/>

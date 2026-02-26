@@ -89,6 +89,7 @@
   let commentHeading = "";
   let noCommentText = "";
   const scatterExcludedAgencies = ["Missouri State Highway Patrol"];
+  const siteUrl = import.meta.env.PUBLIC_SITE_URL ?? "https://vsr.recoveredfactory.net";
 
   const trackEvent = (event, payload = {}) => {
     if (typeof window === "undefined") return;
@@ -144,6 +145,9 @@
     localeBase = `/${locale || "en"}`;
     basemapStyleUrl = `/map/style.${locale}.json`;
   }
+  $: canonicalAgencyUrl = `${siteUrl}${localeBase}/agency/${data.slug}`;
+  $: agencyHrefEn = `${siteUrl}/en/agency/${data.slug}`;
+  $: agencyHrefEs = `${siteUrl}/es/agency/${data.slug}`;
 
   $: years = Object.keys(rowsByYear).sort((a, b) => {
     const numA = Number(a);
@@ -427,7 +431,6 @@
   let stopVolumeSegmentSuffix = "";
   let stopVolumeRankClause = "";
   let stopVolumeStopsDisplay = "";
-  const siteUrl = import.meta.env.PUBLIC_SITE_URL ?? "https://vsr.recoveredfactory.net";
   let metaTitle = "";
   let metaDescription = "";
   const formatPhone = (value) => {
@@ -1051,9 +1054,13 @@
 
 <svelte:head>
   <title>{metaTitle}</title>
+  <link rel="canonical" href={canonicalAgencyUrl} />
+  <link rel="alternate" hreflang="en" href={agencyHrefEn} />
+  <link rel="alternate" hreflang="es" href={agencyHrefEs} />
+  <link rel="alternate" hreflang="x-default" href={agencyHrefEn} />
   <meta name="description" content={metaDescription} />
   <meta property="og:type" content="article" />
-  <meta property="og:url" content="{siteUrl}/agency/{data.slug}" />
+  <meta property="og:url" content={canonicalAgencyUrl} />
   <meta property="og:site_name" content="Missouri Vehicle Stops" />
   <meta property="og:title" content={metaTitle} />
   <meta property="og:description" content={metaDescription} />

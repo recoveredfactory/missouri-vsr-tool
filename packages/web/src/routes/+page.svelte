@@ -4,6 +4,7 @@
   import * as m from "$lib/paraglide/messages";
   import { raceColors, raceTextColors, outcomeColors } from "$lib/colors.js";
   import { withDataBase } from "$lib/dataBase";
+  import { getLocale } from "$lib/paraglide/runtime";
 
   export let data;
 
@@ -24,6 +25,19 @@
   };
 
   const siteUrl = import.meta.env.PUBLIC_SITE_URL ?? "https://vsr.recoveredfactory.net";
+  let locale = "en";
+  let localeBase = "/en";
+  $: {
+    try {
+      locale = getLocale() || "en";
+    } catch {
+      locale = "en";
+    }
+    localeBase = `/${locale}`;
+  }
+  $: canonicalUrl = `${siteUrl}${localeBase}`;
+  $: homeHrefEn = `${siteUrl}/en`;
+  $: homeHrefEs = `${siteUrl}/es`;
   const downloadManifest = data?.downloadManifest;
 
   const downloadGroupMeta = {
@@ -151,12 +165,16 @@
 
 <svelte:head>
   <title>Missouri Vehicle Stops</title>
+  <link rel="canonical" href={canonicalUrl} />
+  <link rel="alternate" hreflang="en" href={homeHrefEn} />
+  <link rel="alternate" hreflang="es" href={homeHrefEs} />
+  <link rel="alternate" hreflang="x-default" href={homeHrefEn} />
   <meta
     name="description"
     content="Who gets stopped? why? What happens next? This tool reveals how traffic enforcement varies across Missouri's agencies."
   />
   <meta property="og:type" content="website" />
-  <meta property="og:url" content="{siteUrl}/" />
+  <meta property="og:url" content={canonicalUrl} />
   <meta property="og:site_name" content="Missouri Vehicle Stops Report" />
   <meta property="og:title" content="Missouri Vehicle Stops" />
   <meta
