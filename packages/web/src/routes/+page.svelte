@@ -25,6 +25,7 @@
   };
 
   const siteUrl = import.meta.env.PUBLIC_SITE_URL ?? "https://vsr.recoveredfactory.net";
+  const siteName = "Missouri Vehicle Stops";
   let locale = "en";
   let localeBase = "/en";
   $: {
@@ -38,6 +39,14 @@
   $: canonicalUrl = `${siteUrl}${localeBase}`;
   $: homeHrefEn = `${siteUrl}/en`;
   $: homeHrefEs = `${siteUrl}/es`;
+  $: webSiteSchema = {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    name: siteName,
+    alternateName: "Missouri Vehicle Stops Report",
+    url: `${siteUrl}/`,
+    inLanguage: ["en", "es"]
+  };
   const downloadManifest = data?.downloadManifest;
 
   const downloadGroupMeta = {
@@ -164,7 +173,9 @@
 </script>
 
 <svelte:head>
-  <title>Missouri Vehicle Stops</title>
+  <title>{siteName}</title>
+  <meta name="application-name" content={siteName} />
+  <meta name="apple-mobile-web-app-title" content={siteName} />
   <link rel="canonical" href={canonicalUrl} />
   <link rel="alternate" hreflang="en" href={homeHrefEn} />
   <link rel="alternate" hreflang="es" href={homeHrefEs} />
@@ -175,8 +186,8 @@
   />
   <meta property="og:type" content="website" />
   <meta property="og:url" content={canonicalUrl} />
-  <meta property="og:site_name" content="Missouri Vehicle Stops Report" />
-  <meta property="og:title" content="Missouri Vehicle Stops" />
+  <meta property="og:site_name" content={siteName} />
+  <meta property="og:title" content={siteName} />
   <meta
     property="og:description"
     content="Who gets stopped? why? What happens next? This tool reveals how traffic enforcement varies across Missouri's agencies."
@@ -189,11 +200,14 @@
   <meta property="og:image:height" content="838" />
   <meta property="twitter:card" content="summary_large_image" />
   <meta property="twitter:image" content="{siteUrl}/social-meta.png" />
-  <meta property="twitter:title" content="Missouri Vehicle Stops" />
+  <meta property="twitter:title" content={siteName} />
   <meta
     property="twitter:description"
     content="Who gets stopped? why? What happens next? This tool reveals how traffic enforcement varies across Missouri's agencies."
   />
+  <script type="application/ld+json">
+    {JSON.stringify(webSiteSchema)}
+  </script>
 </svelte:head>
 
 <StickyHeader agencies={data.agencies} />
