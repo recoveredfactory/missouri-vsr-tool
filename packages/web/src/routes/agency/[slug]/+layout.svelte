@@ -1665,7 +1665,11 @@
                   </h4>
                   <dl class="mt-2 space-y-3 text-sm text-slate-800">
                     <div>
-                      <dt class="font-medium text-slate-600">Congressional district</dt>
+                      <dt class="font-medium text-slate-600">
+                        Congressional district{geocodioDemographics.congressionalDistricts.length > 1
+                          ? "s"
+                          : ""}
+                      </dt>
                       <dd class="mt-0.5">
                         {#if geocodioDemographics.congressionalDistricts.length}
                           {#each geocodioDemographics.congressionalDistricts as district, index}
@@ -1677,7 +1681,11 @@
                       </dd>
                     </div>
                     <div>
-                      <dt class="font-medium text-slate-600">State leg district(s)</dt>
+                      <dt class="font-medium text-slate-600">
+                        State legislative district{geocodioDemographics.stateLegislativeDistricts.length > 1
+                          ? "s"
+                          : ""}
+                      </dt>
                       <dd class="mt-0.5">
                         {#if geocodioDemographics.stateLegislativeDistricts.length}
                           {#each geocodioDemographics.stateLegislativeDistricts as district, index}
@@ -1715,33 +1723,39 @@
                                 </div>
                               </summary>
                               <div class="border-t border-slate-200 px-3 pb-3 pt-2">
-                                <div class="grid grid-cols-[minmax(0,1fr)_auto] gap-x-3 text-[0.68rem] font-semibold uppercase tracking-[0.08em] text-slate-600">
-                                  <span>Category</span>
-                                  <span class="text-right">Value</span>
-                                </div>
-                                <div class="mt-1 divide-y divide-slate-200">
-                                  {#each table.rows as row}
-                                    <div class="grid grid-cols-[minmax(0,1fr)_auto] gap-x-3 py-1.5 text-sm text-slate-800">
-                                      <span class="pr-2">{row.label}</span>
-                                      <div class="text-right">
-                                        <div class="font-mono tabular-nums text-slate-900">
-                                          {#if row.valueDisplay}
-                                            {row.valueDisplay}
-                                            {#if row.percentDisplay}
-                                              <span class="text-slate-700"> ({row.percentDisplay})</span>
-                                            {/if}
-                                          {:else}
+                                <div class="mt-1 overflow-x-auto">
+                                  <table class="min-w-full table-auto border-collapse">
+                                    <colgroup>
+                                      <col />
+                                      <col style="width: 7rem;" />
+                                      <col style="width: 5rem;" />
+                                      <col style="width: 6rem;" />
+                                    </colgroup>
+                                    <thead>
+                                      <tr class="text-[0.68rem] font-semibold uppercase tracking-[0.08em] text-slate-600">
+                                        <th class="py-1 text-left">Category</th>
+                                        <th class="py-1 text-right">Value</th>
+                                        <th class="py-1 text-right">Pct</th>
+                                        <th class="py-1 text-right">MOE</th>
+                                      </tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-slate-200">
+                                      {#each table.rows as row}
+                                        <tr class="text-sm text-slate-800">
+                                          <td class="py-1.5 pr-2">{row.label}</td>
+                                          <td class="py-1.5 text-right font-mono tabular-nums text-slate-900">
+                                            {row.valueDisplay || "—"}
+                                          </td>
+                                          <td class="py-1.5 text-right font-mono tabular-nums text-slate-900">
                                             {row.percentDisplay || "—"}
-                                          {/if}
-                                        </div>
-                                        {#if row.moeDisplay}
-                                          <div class="text-xs text-slate-500">
-                                            MOE ±{row.moeDisplay}
-                                          </div>
-                                        {/if}
-                                      </div>
-                                    </div>
-                                  {/each}
+                                          </td>
+                                          <td class="py-1.5 text-right font-mono tabular-nums text-slate-500">
+                                            {row.moeDisplay ? `±${row.moeDisplay}` : "—"}
+                                          </td>
+                                        </tr>
+                                      {/each}
+                                    </tbody>
+                                  </table>
                                 </div>
                               </div>
                             </details>
