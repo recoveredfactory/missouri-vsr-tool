@@ -117,7 +117,7 @@
     censusExpanded = next;
     trackEvent(next ? "agency_census_expand" : "agency_census_collapse", {
       agency: agencyData?.agency ?? data.slug,
-      sources: geocodioDemographicSections.length,
+      hasJurisdictionData: Boolean(geocodioDemographics),
     });
   };
 
@@ -516,7 +516,7 @@
       .filter(Boolean);
   };
 
-  const summarizeGeocodioResponse = (response, selectedIndexRaw, label) => {
+  const summarizeGeocodioResponse = (response, selectedIndexRaw) => {
     const selected = getSelectedGeocodeResult(response, selectedIndexRaw);
     if (!selected) return null;
 
@@ -553,8 +553,6 @@
     }
 
     return {
-      id: label.toLowerCase().replace(/\s+/g, "-"),
-      label,
       formattedAddress: cleanMetadataValue(selected?.formatted_address),
       tractCode: cleanMetadataValue(latestCensus?.tract_code),
       blockGroup: cleanMetadataValue(latestCensus?.block_group),
@@ -584,7 +582,7 @@
   let showJurisdictionCounty = false;
   let touchingAgencies = [];
   let containedAgencies = [];
-  let geocodioDemographicSections = [];
+  let geocodioDemographics = null;
   let boundaryData = null;
   let addressState = "";
   let stopVolumeLead = "";
@@ -699,19 +697,10 @@
     const props = boundaryData?.features?.[0]?.properties ?? {};
     return normalizeAgencies(props.contained_agencies);
   })();
-  $: geocodioDemographicSections = (() => {
-    const jurisdiction = summarizeGeocodioResponse(
-      geocodeJurisdictionResponse,
-      metadata?.geocode_jurisdiction_selected_index,
-      "Jurisdiction lookup"
-    );
-    const address = summarizeGeocodioResponse(
-      geocodeAddressResponse,
-      metadata?.geocode_address_selected_index,
-      "Address lookup"
-    );
-    return [jurisdiction, address].filter(Boolean);
-  })();
+  $: geocodioDemographics = summarizeGeocodioResponse(
+    geocodeJurisdictionResponse,
+    metadata?.geocode_jurisdiction_selected_index
+  );
   $: phoneDisplay = rawPhone ? formatPhone(rawPhone) : "";
 
   $: {
@@ -1478,7 +1467,7 @@
     </section>
   {/if}
 
-  {#if geocodioDemographicSections.length}
+  {#if geocodioDemographics}
     <section class="mb-10">
       <div class="rounded-2xl border border-slate-200 bg-white p-4">
         <button
@@ -1511,113 +1500,116 @@
           </span>
           <div>
             <h2 class="text-lg font-semibold text-slate-900 sm:text-xl">
-              Census demographics
+              Most recent Census demographics
             </h2>
-            <p class="mt-1 text-xs text-slate-500">
-              {geocodioDemographicSections.length} source{geocodioDemographicSections.length === 1
-                ? ""
-                : "s"} via Geocodio
-            </p>
           </div>
         </button>
         {#if censusExpanded}
           <div id="census-panel" class="mt-4 space-y-4 border-t border-slate-100 pt-4">
-            {#each geocodioDemographicSections as section}
-              <article class="rounded-xl border border-slate-200 bg-slate-50/40 p-4">
-                <div class="flex flex-wrap items-center justify-between gap-2">
-                  <h3 class="text-sm font-semibold uppercase tracking-[0.12em] text-slate-700">
-                    {section.label}
-                  </h3>
-                  {#if section.surveyYears}
-                    <p class="text-xs text-slate-500">
-                      ACS {section.surveyYears}{section.surveyDurationYears
-                        ? ` (${section.surveyDurationYears}-year)`
-                        : ""}
-                    </p>
-                  {/if}
-                </div>
-                {#if section.formattedAddress}
-                  <p class="mt-1 text-xs text-slate-500">{section.formattedAddress}</p>
+            <article class="rounded-xl border border-slate-200 bg-slate-50/40 p-4">
+              <div class="flex flex-wrap items-center justify-between gap-2">
+                <p class="text-xs text-slate-500">
+                  From Geocodio's jurisdiction lookup.
+                </p>
+                {#if geocodioDemographics.formattedAddress}
+                  <p class="text-xs text-slate-500">{geocodioDemographics.formattedAddress}</p>
                 {/if}
-                <dl class="mt-3 grid gap-x-5 gap-y-2 text-xs text-slate-600 sm:grid-cols-2">
-                  {#if section.censusYear}
-                    <div>
-                      <dt class="uppercase tracking-[0.12em] text-slate-400">Census year</dt>
-                      <dd class="mt-0.5 text-slate-700">{section.censusYear}</dd>
-                    </div>
-                  {/if}
-                  {#if section.tractCode}
-                    <div>
-                      <dt class="uppercase tracking-[0.12em] text-slate-400">Census tract</dt>
-                      <dd class="mt-0.5 text-slate-700">{section.tractCode}</dd>
-                    </div>
-                  {/if}
-                  {#if section.blockGroup}
-                    <div>
-                      <dt class="uppercase tracking-[0.12em] text-slate-400">Block group</dt>
-                      <dd class="mt-0.5 text-slate-700">{section.blockGroup}</dd>
-                    </div>
-                  {/if}
-                  {#if section.countyFips}
-                    <div>
-                      <dt class="uppercase tracking-[0.12em] text-slate-400">County FIPS</dt>
-                      <dd class="mt-0.5 text-slate-700">{section.countyFips}</dd>
-                    </div>
-                  {/if}
-                  {#if section.placeName}
-                    <div>
-                      <dt class="uppercase tracking-[0.12em] text-slate-400">Place</dt>
-                      <dd class="mt-0.5 text-slate-700">{section.placeName}</dd>
-                    </div>
-                  {/if}
-                  {#if section.countySubdivisionName}
-                    <div>
-                      <dt class="uppercase tracking-[0.12em] text-slate-400">
-                        County subdivision
-                      </dt>
-                      <dd class="mt-0.5 text-slate-700">{section.countySubdivisionName}</dd>
-                    </div>
-                  {/if}
-                  {#if section.metroAreaName}
-                    <div class="sm:col-span-2">
-                      <dt class="uppercase tracking-[0.12em] text-slate-400">Metro/micro area</dt>
-                      <dd class="mt-0.5 text-slate-700">{section.metroAreaName}</dd>
-                    </div>
-                  {/if}
-                </dl>
+              </div>
 
-                {#if section.summaryStats.length}
-                  <div class="mt-3 flex flex-wrap gap-2">
-                    {#each section.summaryStats as stat}
-                      <div class="rounded-md border border-slate-200 bg-white px-2.5 py-1.5 text-xs">
-                        <span class="text-slate-500">{stat.label}: </span>
-                        <span class="font-semibold text-slate-800">{stat.value}</span>
+              {#if geocodioDemographics.summaryStats.length}
+                <div class="mt-3 grid gap-2 sm:grid-cols-3">
+                  {#each geocodioDemographics.summaryStats as stat}
+                    <div class="rounded-lg border border-slate-200 bg-white p-3">
+                      <p class="text-[0.68rem] font-semibold uppercase tracking-[0.14em] text-slate-500">
+                        {stat.label}
+                      </p>
+                      <p class="mt-1 text-xl font-semibold text-slate-900 sm:text-2xl">
+                        {stat.value}
+                      </p>
+                    </div>
+                  {/each}
+                </div>
+              {/if}
+
+              {#if geocodioDemographics.raceRows.length}
+                <div class="mt-4">
+                  <h4 class="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">
+                    Race and ethnicity
+                  </h4>
+                  <div class="mt-2 grid gap-y-1.5 text-sm text-slate-700 sm:max-w-lg">
+                    {#each geocodioDemographics.raceRows as row}
+                      <div class="flex items-baseline justify-between gap-3">
+                        <span>{row.label}</span>
+                        <span class="font-mono tabular-nums">{row.display}</span>
                       </div>
                     {/each}
                   </div>
-                {/if}
+                </div>
+              {:else if !geocodioDemographics.hasAcs}
+                <p class="mt-4 text-xs text-slate-500">
+                  No ACS demographic estimates were returned for this jurisdiction.
+                </p>
+              {/if}
 
-                {#if section.raceRows.length}
-                  <div class="mt-4">
-                    <h4 class="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">
-                      Race and ethnicity (ACS)
-                    </h4>
-                    <div class="mt-2 grid gap-y-1.5 text-xs text-slate-700 sm:max-w-md">
-                      {#each section.raceRows as row}
-                        <div class="flex items-baseline justify-between gap-3">
-                          <span>{row.label}</span>
-                          <span class="font-mono tabular-nums">{row.display}</span>
-                        </div>
-                      {/each}
-                    </div>
+              <dl class="mt-4 grid gap-x-5 gap-y-2 text-xs text-slate-600 sm:grid-cols-2">
+                {#if geocodioDemographics.censusYear}
+                  <div>
+                    <dt class="uppercase tracking-[0.12em] text-slate-400">Census year</dt>
+                    <dd class="mt-0.5 text-slate-700">{geocodioDemographics.censusYear}</dd>
                   </div>
-                {:else if !section.hasAcs}
-                  <p class="mt-4 text-xs text-slate-500">
-                    No ACS demographic estimates were returned for this lookup.
-                  </p>
                 {/if}
-              </article>
-            {/each}
+                {#if geocodioDemographics.tractCode}
+                  <div>
+                    <dt class="uppercase tracking-[0.12em] text-slate-400">Census tract</dt>
+                    <dd class="mt-0.5 text-slate-700">{geocodioDemographics.tractCode}</dd>
+                  </div>
+                {/if}
+                {#if geocodioDemographics.blockGroup}
+                  <div>
+                    <dt class="uppercase tracking-[0.12em] text-slate-400">Block group</dt>
+                    <dd class="mt-0.5 text-slate-700">{geocodioDemographics.blockGroup}</dd>
+                  </div>
+                {/if}
+                {#if geocodioDemographics.countyFips}
+                  <div>
+                    <dt class="uppercase tracking-[0.12em] text-slate-400">County FIPS</dt>
+                    <dd class="mt-0.5 text-slate-700">{geocodioDemographics.countyFips}</dd>
+                  </div>
+                {/if}
+                {#if geocodioDemographics.placeName}
+                  <div>
+                    <dt class="uppercase tracking-[0.12em] text-slate-400">Place</dt>
+                    <dd class="mt-0.5 text-slate-700">{geocodioDemographics.placeName}</dd>
+                  </div>
+                {/if}
+                {#if geocodioDemographics.countySubdivisionName}
+                  <div>
+                    <dt class="uppercase tracking-[0.12em] text-slate-400">
+                      County subdivision
+                    </dt>
+                    <dd class="mt-0.5 text-slate-700">{geocodioDemographics.countySubdivisionName}</dd>
+                  </div>
+                {/if}
+                {#if geocodioDemographics.metroAreaName}
+                  <div class="sm:col-span-2">
+                    <dt class="uppercase tracking-[0.12em] text-slate-400">Metro/micro area</dt>
+                    <dd class="mt-0.5 text-slate-700">{geocodioDemographics.metroAreaName}</dd>
+                  </div>
+                {/if}
+              </dl>
+
+              <p class="mt-4 text-[0.7rem] leading-relaxed text-slate-500">
+                {#if geocodioDemographics.surveyYears}
+                  Population, age, income, and race values are ACS {geocodioDemographics.surveyYears}
+                  {geocodioDemographics.surveyDurationYears
+                    ? ` (${geocodioDemographics.surveyDurationYears}-year estimates)`
+                    : ""}.
+                {/if}
+                {#if geocodioDemographics.censusYear}
+                  Census geography identifiers reflect {geocodioDemographics.censusYear}.
+                {/if}
+              </p>
+            </article>
           </div>
         {/if}
       </div>
