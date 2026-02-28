@@ -594,6 +594,25 @@
       .filter(Boolean);
   };
 
+  const normalizeDistrictNames = (entries) => {
+    if (!Array.isArray(entries) || !entries.length) return [];
+    const seen = new Set();
+    return entries
+      .map((entry) => {
+        if (!entry || typeof entry !== "object") return "";
+        const name = cleanMetadataValue(entry?.name);
+        const districtNumber = cleanMetadataValue(entry?.district_number);
+        const fallback = districtNumber ? `District ${districtNumber}` : "";
+        return name || fallback;
+      })
+      .filter(Boolean)
+      .filter((name) => {
+        if (seen.has(name)) return false;
+        seen.add(name);
+        return true;
+      });
+  };
+
   const summarizeGeocodioResponse = (response, selectedIndexRaw) => {
     const selected = getSelectedGeocodeResult(response, selectedIndexRaw);
     if (!selected) return null;
@@ -610,6 +629,17 @@
     const medianIncome = toFiniteNumber(acs?.economics?.["Median household income"]?.Total?.value);
     const acsMeta = acs?.meta ?? {};
     const acsTableGroups = buildAcsTableGroups(acs);
+    const congressionalDistricts = normalizeDistrictNames(fields?.congressional_districts);
+    const stateLegislativeHouseDistricts = normalizeDistrictNames(
+      fields?.state_legislative_districts?.house
+    );
+    const stateLegislativeSenateDistricts = normalizeDistrictNames(
+      fields?.state_legislative_districts?.senate
+    );
+    const stateLegislativeDistricts = [
+      ...stateLegislativeHouseDistricts,
+      ...stateLegislativeSenateDistricts,
+    ];
 
     const summaryStats = [];
     if (population !== null) {
@@ -633,15 +663,12 @@
 
     return {
       formattedAddress: cleanMetadataValue(selected?.formatted_address),
-      tractCode: cleanMetadataValue(latestCensus?.tract_code),
-      blockGroup: cleanMetadataValue(latestCensus?.block_group),
-      countyFips: cleanMetadataValue(latestCensus?.county_fips),
-      placeName: cleanMetadataValue(latestCensus?.place?.name),
-      countySubdivisionName: cleanMetadataValue(latestCensus?.county_subdivision?.name),
       metroAreaName: cleanMetadataValue(latestCensus?.metro_micro_statistical_area?.name),
       censusYear: cleanMetadataValue(latestCensus?.census_year),
       surveyYears: cleanMetadataValue(acsMeta?.survey_years),
       surveyDurationYears: cleanMetadataValue(acsMeta?.survey_duration_years),
+      congressionalDistricts,
+      stateLegislativeDistricts,
       raceRows,
       acsTableGroups,
       summaryStats,
@@ -1325,7 +1352,7 @@
   selectedAgencyLabel={agencyData?.agency ?? data.data?.agency ?? data.slug}
 />
 
-<main id="main-content" class="mx-auto w-full max-w-5xl px-4 pb-16 pt-12 sm:px-6">
+<main id="main-content" class="mx-auto w-full max-w-5xl bg-slate-50 px-4 pb-16 pt-12 sm:px-6">
   <header class="mb-10">
     <h1 class="mt-3 text-3xl font-semibold tracking-tight text-slate-900 md:text-4xl">
       {agencyData?.agency ?? data.slug}
@@ -1469,7 +1496,7 @@
   </section>
 
   {#if touchingAgencies.length || containedAgencies.length}
-    <section class="mb-10">
+    <section class="mb-6">
       <div class="rounded-2xl border border-slate-200 bg-white p-4">
         <button
           type="button"
@@ -1611,26 +1638,68 @@
                 </div>
               {/if}
 
-              {#if geocodioDemographics.raceRows.length}
-                <div class="mt-4">
+              <div class="mt-5 grid gap-3 md:grid-cols-2 md:items-start">
+                <div class="rounded-lg border border-slate-300 bg-white p-3">
                   <h4 class="text-sm font-semibold uppercase tracking-[0.12em] text-slate-700">
                     Race and ethnicity
                   </h4>
-                  <div class="mt-2 grid gap-y-2 text-sm text-slate-800 sm:max-w-lg">
-                    {#each geocodioDemographics.raceRows as row}
-                      <div class="flex items-baseline justify-between gap-3">
-                        <span>{row.label}</span>
-                        <span class="font-mono tabular-nums text-slate-900">{row.display}</span>
-                      </div>
-                    {/each}
-                  </div>
+                  {#if geocodioDemographics.raceRows.length}
+                    <div class="mt-2 grid gap-y-2 text-sm text-slate-800">
+                      {#each geocodioDemographics.raceRows as row}
+                        <div class="flex items-baseline justify-between gap-3">
+                          <span>{row.label}</span>
+                          <span class="font-mono tabular-nums text-slate-900">{row.display}</span>
+                        </div>
+                      {/each}
+                    </div>
+                  {:else}
+                    <p class="mt-2 text-sm text-slate-700">
+                      No race/ethnicity estimates were returned for this jurisdiction.
+                    </p>
+                  {/if}
                 </div>
-              {/if}
+
+                <div class="rounded-lg border border-slate-300 bg-white p-3">
+                  <h4 class="text-sm font-semibold uppercase tracking-[0.12em] text-slate-700">
+                    Location
+                  </h4>
+                  <dl class="mt-2 space-y-3 text-sm text-slate-800">
+                    <div>
+                      <dt class="font-medium text-slate-600">Congressional district</dt>
+                      <dd class="mt-0.5">
+                        {#if geocodioDemographics.congressionalDistricts.length}
+                          {#each geocodioDemographics.congressionalDistricts as district, index}
+                            <span>{district}{index < geocodioDemographics.congressionalDistricts.length - 1 ? ", " : ""}</span>
+                          {/each}
+                        {:else}
+                          —
+                        {/if}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt class="font-medium text-slate-600">State leg district(s)</dt>
+                      <dd class="mt-0.5">
+                        {#if geocodioDemographics.stateLegislativeDistricts.length}
+                          {#each geocodioDemographics.stateLegislativeDistricts as district, index}
+                            <span>{district}{index < geocodioDemographics.stateLegislativeDistricts.length - 1 ? ", " : ""}</span>
+                          {/each}
+                        {:else}
+                          —
+                        {/if}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt class="font-medium text-slate-600">Metro area</dt>
+                      <dd class="mt-0.5">{geocodioDemographics.metroAreaName || "—"}</dd>
+                    </div>
+                  </dl>
+                </div>
+              </div>
 
               {#if geocodioDemographics.acsTableGroups.length}
                 <div class="mt-5">
                   <h4 class="text-sm font-semibold uppercase tracking-[0.12em] text-slate-700">
-                    Additional ACS tables
+                    Other ACS tables
                   </h4>
                   <div class="mt-2 space-y-3">
                     {#each geocodioDemographics.acsTableGroups as group}
@@ -1682,26 +1751,6 @@
                 </p>
               {/if}
 
-              <div class="mt-5">
-                <h4 class="text-sm font-semibold uppercase tracking-[0.12em] text-slate-700">
-                  Census geography
-                </h4>
-                <dl class="mt-2 grid gap-x-6 gap-y-2 text-sm text-slate-800 sm:grid-cols-2">
-                  {#if geocodioDemographics.placeName}
-                    <div>
-                      <dt class="font-medium text-slate-600">Place</dt>
-                      <dd class="mt-0.5">{geocodioDemographics.placeName}</dd>
-                    </div>
-                  {/if}
-                  {#if geocodioDemographics.metroAreaName}
-                    <div>
-                      <dt class="font-medium text-slate-600">Metro area</dt>
-                      <dd class="mt-0.5">{geocodioDemographics.metroAreaName}</dd>
-                    </div>
-                  {/if}
-                </dl>
-              </div>
-
               <p class="mt-4 text-xs leading-relaxed text-slate-600">
                 {#if geocodioDemographics.surveyYears}
                   Population, age, income, and race values are ACS {geocodioDemographics.surveyYears}
@@ -1710,7 +1759,7 @@
                     : ""}.
                 {/if}
                 {#if geocodioDemographics.censusYear}
-                  Census geography identifiers reflect {geocodioDemographics.censusYear}.
+                  District and metro geography reflect {geocodioDemographics.censusYear}.
                 {/if}
               </p>
             </article>
