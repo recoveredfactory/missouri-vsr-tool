@@ -516,6 +516,84 @@
       .filter(Boolean);
   };
 
+  const formatAcsNumber = (value) => {
+    if (!Number.isFinite(value)) return "";
+    if (Number.isInteger(value)) {
+      return stopCountFormatter.format(value);
+    }
+    return numberFormatter.format(value);
+  };
+
+  const formatAcsCell = (value, { currency = false } = {}) => {
+    if (!Number.isFinite(value)) return "";
+    if (currency) {
+      return currencyFormatter.format(value);
+    }
+    return formatAcsNumber(value);
+  };
+
+  const buildAcsTableGroups = (acs) => {
+    if (!acs || typeof acs !== "object") return [];
+    const sectionOrder = ["demographics", "economics", "housing", "social", "families"];
+    const sectionLabelMap = {
+      demographics: "Demographics",
+      economics: "Economics",
+      housing: "Housing",
+      social: "Social",
+      families: "Families",
+    };
+
+    return sectionOrder
+      .map((sectionKey) => {
+        const section = acs?.[sectionKey];
+        if (!section || typeof section !== "object") return null;
+
+        const tables = Object.entries(section)
+          .filter(([tableTitle]) => tableTitle !== "meta")
+          .filter(([tableTitle]) => !(sectionKey === "demographics" && tableTitle === "Race and ethnicity"))
+          .map(([tableTitle, tableData]) => {
+            if (!tableData || typeof tableData !== "object") return null;
+            const isCurrencyTable = /income|value/i.test(tableTitle);
+            const rows = Object.entries(tableData)
+              .filter(([label]) => label !== "meta")
+              .map(([label, rowData]) => {
+                if (!rowData || typeof rowData !== "object") return null;
+                const value = toFiniteNumber(rowData?.value);
+                const percentage = toFiniteNumber(rowData?.percentage);
+                const marginOfError = toFiniteNumber(rowData?.margin_of_error);
+                if (value === null && percentage === null && marginOfError === null) return null;
+                return {
+                  label,
+                  valueDisplay:
+                    value === null ? "" : formatAcsCell(value, { currency: isCurrencyTable }),
+                  percentDisplay: percentage === null ? "" : percentFormatter.format(percentage),
+                  moeDisplay:
+                    marginOfError === null
+                      ? ""
+                      : formatAcsCell(marginOfError, { currency: isCurrencyTable }),
+                };
+              })
+              .filter(Boolean);
+
+            if (!rows.length) return null;
+            return {
+              title: tableTitle,
+              rowCount: rows.length,
+              rows,
+            };
+          })
+          .filter(Boolean);
+
+        if (!tables.length) return null;
+        return {
+          id: sectionKey,
+          label: sectionLabelMap[sectionKey] ?? sectionKey,
+          tables,
+        };
+      })
+      .filter(Boolean);
+  };
+
   const summarizeGeocodioResponse = (response, selectedIndexRaw) => {
     const selected = getSelectedGeocodeResult(response, selectedIndexRaw);
     if (!selected) return null;
@@ -531,6 +609,7 @@
     const medianAge = toFiniteNumber(acs?.demographics?.["Median age"]?.Total?.value);
     const medianIncome = toFiniteNumber(acs?.economics?.["Median household income"]?.Total?.value);
     const acsMeta = acs?.meta ?? {};
+    const acsTableGroups = buildAcsTableGroups(acs);
 
     const summaryStats = [];
     if (population !== null) {
@@ -564,6 +643,7 @@
       surveyYears: cleanMetadataValue(acsMeta?.survey_years),
       surveyDurationYears: cleanMetadataValue(acsMeta?.survey_duration_years),
       raceRows,
+      acsTableGroups,
       summaryStats,
       hasAcs: Boolean(acs),
     };
@@ -1506,24 +1586,24 @@
         </button>
         {#if censusExpanded}
           <div id="census-panel" class="mt-4 space-y-4 border-t border-slate-100 pt-4">
-            <article class="rounded-xl border border-slate-200 bg-slate-50/40 p-4">
-              <div class="flex flex-wrap items-center justify-between gap-2">
-                <p class="text-xs text-slate-500">
+            <article class="rounded-xl border border-slate-300 bg-slate-50/50 p-4 sm:p-5">
+              <div class="flex flex-wrap items-start justify-between gap-2">
+                <p class="text-sm text-slate-700">
                   From Geocodio's jurisdiction lookup.
                 </p>
                 {#if geocodioDemographics.formattedAddress}
-                  <p class="text-xs text-slate-500">{geocodioDemographics.formattedAddress}</p>
+                  <p class="text-sm text-slate-600">{geocodioDemographics.formattedAddress}</p>
                 {/if}
               </div>
 
               {#if geocodioDemographics.summaryStats.length}
-                <div class="mt-3 grid gap-2 sm:grid-cols-3">
+                <div class="mt-4 grid gap-2 sm:grid-cols-3">
                   {#each geocodioDemographics.summaryStats as stat}
-                    <div class="rounded-lg border border-slate-200 bg-white p-3">
-                      <p class="text-[0.68rem] font-semibold uppercase tracking-[0.14em] text-slate-500">
+                    <div class="rounded-lg border border-slate-300 bg-white p-3">
+                      <p class="text-xs font-semibold uppercase tracking-[0.12em] text-slate-600">
                         {stat.label}
                       </p>
-                      <p class="mt-1 text-xl font-semibold text-slate-900 sm:text-2xl">
+                      <p class="mt-1 text-2xl font-semibold text-slate-900 sm:text-3xl">
                         {stat.value}
                       </p>
                     </div>
@@ -1533,72 +1613,96 @@
 
               {#if geocodioDemographics.raceRows.length}
                 <div class="mt-4">
-                  <h4 class="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">
+                  <h4 class="text-sm font-semibold uppercase tracking-[0.12em] text-slate-700">
                     Race and ethnicity
                   </h4>
-                  <div class="mt-2 grid gap-y-1.5 text-sm text-slate-700 sm:max-w-lg">
+                  <div class="mt-2 grid gap-y-2 text-sm text-slate-800 sm:max-w-lg">
                     {#each geocodioDemographics.raceRows as row}
                       <div class="flex items-baseline justify-between gap-3">
                         <span>{row.label}</span>
-                        <span class="font-mono tabular-nums">{row.display}</span>
+                        <span class="font-mono tabular-nums text-slate-900">{row.display}</span>
+                      </div>
+                    {/each}
+                  </div>
+                </div>
+              {/if}
+
+              {#if geocodioDemographics.acsTableGroups.length}
+                <div class="mt-5">
+                  <h4 class="text-sm font-semibold uppercase tracking-[0.12em] text-slate-700">
+                    Additional ACS tables
+                  </h4>
+                  <div class="mt-2 space-y-3">
+                    {#each geocodioDemographics.acsTableGroups as group}
+                      <div class="rounded-lg border border-slate-300 bg-white p-3">
+                        <h5 class="text-sm font-semibold text-slate-900">{group.label}</h5>
+                        <div class="mt-2 space-y-2">
+                          {#each group.tables as table}
+                            <details class="rounded-md border border-slate-200 bg-slate-50/70">
+                              <summary class="cursor-pointer list-none px-3 py-2.5">
+                                <div class="flex items-center justify-between gap-3">
+                                  <span class="text-sm font-medium text-slate-900">{table.title}</span>
+                                  <span class="shrink-0 text-xs text-slate-600">{table.rowCount} rows</span>
+                                </div>
+                              </summary>
+                              <div class="border-t border-slate-200 px-3 pb-3 pt-2">
+                                <div class="grid grid-cols-[minmax(0,1fr)_auto_auto_auto] gap-x-3 text-[0.68rem] font-semibold uppercase tracking-[0.08em] text-slate-600">
+                                  <span>Category</span>
+                                  <span class="text-right">Value</span>
+                                  <span class="text-right">%</span>
+                                  <span class="text-right">MOE</span>
+                                </div>
+                                <div class="mt-1 divide-y divide-slate-200">
+                                  {#each table.rows as row}
+                                    <div class="grid grid-cols-[minmax(0,1fr)_auto_auto_auto] gap-x-3 py-1.5 text-sm text-slate-800">
+                                      <span class="pr-2">{row.label}</span>
+                                      <span class="text-right font-mono tabular-nums text-slate-900">
+                                        {row.valueDisplay || "—"}
+                                      </span>
+                                      <span class="text-right font-mono tabular-nums text-slate-900">
+                                        {row.percentDisplay || "—"}
+                                      </span>
+                                      <span class="text-right font-mono tabular-nums text-slate-900">
+                                        {row.moeDisplay ? `±${row.moeDisplay}` : "—"}
+                                      </span>
+                                    </div>
+                                  {/each}
+                                </div>
+                              </div>
+                            </details>
+                          {/each}
+                        </div>
                       </div>
                     {/each}
                   </div>
                 </div>
               {:else if !geocodioDemographics.hasAcs}
-                <p class="mt-4 text-xs text-slate-500">
+                <p class="mt-4 text-sm text-slate-700">
                   No ACS demographic estimates were returned for this jurisdiction.
                 </p>
               {/if}
 
-              <dl class="mt-4 grid gap-x-5 gap-y-2 text-xs text-slate-600 sm:grid-cols-2">
-                {#if geocodioDemographics.censusYear}
-                  <div>
-                    <dt class="uppercase tracking-[0.12em] text-slate-400">Census year</dt>
-                    <dd class="mt-0.5 text-slate-700">{geocodioDemographics.censusYear}</dd>
-                  </div>
-                {/if}
-                {#if geocodioDemographics.tractCode}
-                  <div>
-                    <dt class="uppercase tracking-[0.12em] text-slate-400">Census tract</dt>
-                    <dd class="mt-0.5 text-slate-700">{geocodioDemographics.tractCode}</dd>
-                  </div>
-                {/if}
-                {#if geocodioDemographics.blockGroup}
-                  <div>
-                    <dt class="uppercase tracking-[0.12em] text-slate-400">Block group</dt>
-                    <dd class="mt-0.5 text-slate-700">{geocodioDemographics.blockGroup}</dd>
-                  </div>
-                {/if}
-                {#if geocodioDemographics.countyFips}
-                  <div>
-                    <dt class="uppercase tracking-[0.12em] text-slate-400">County FIPS</dt>
-                    <dd class="mt-0.5 text-slate-700">{geocodioDemographics.countyFips}</dd>
-                  </div>
-                {/if}
-                {#if geocodioDemographics.placeName}
-                  <div>
-                    <dt class="uppercase tracking-[0.12em] text-slate-400">Place</dt>
-                    <dd class="mt-0.5 text-slate-700">{geocodioDemographics.placeName}</dd>
-                  </div>
-                {/if}
-                {#if geocodioDemographics.countySubdivisionName}
-                  <div>
-                    <dt class="uppercase tracking-[0.12em] text-slate-400">
-                      County subdivision
-                    </dt>
-                    <dd class="mt-0.5 text-slate-700">{geocodioDemographics.countySubdivisionName}</dd>
-                  </div>
-                {/if}
-                {#if geocodioDemographics.metroAreaName}
-                  <div class="sm:col-span-2">
-                    <dt class="uppercase tracking-[0.12em] text-slate-400">Metro/micro area</dt>
-                    <dd class="mt-0.5 text-slate-700">{geocodioDemographics.metroAreaName}</dd>
-                  </div>
-                {/if}
-              </dl>
+              <div class="mt-5">
+                <h4 class="text-sm font-semibold uppercase tracking-[0.12em] text-slate-700">
+                  Census geography
+                </h4>
+                <dl class="mt-2 grid gap-x-6 gap-y-2 text-sm text-slate-800 sm:grid-cols-2">
+                  {#if geocodioDemographics.placeName}
+                    <div>
+                      <dt class="font-medium text-slate-600">Place</dt>
+                      <dd class="mt-0.5">{geocodioDemographics.placeName}</dd>
+                    </div>
+                  {/if}
+                  {#if geocodioDemographics.metroAreaName}
+                    <div>
+                      <dt class="font-medium text-slate-600">Metro area</dt>
+                      <dd class="mt-0.5">{geocodioDemographics.metroAreaName}</dd>
+                    </div>
+                  {/if}
+                </dl>
+              </div>
 
-              <p class="mt-4 text-[0.7rem] leading-relaxed text-slate-500">
+              <p class="mt-4 text-xs leading-relaxed text-slate-600">
                 {#if geocodioDemographics.surveyYears}
                   Population, age, income, and race values are ACS {geocodioDemographics.surveyYears}
                   {geocodioDemographics.surveyDurationYears
