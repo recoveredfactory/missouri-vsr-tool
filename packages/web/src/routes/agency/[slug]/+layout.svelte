@@ -553,7 +553,7 @@
           .filter(([tableTitle]) => !(sectionKey === "demographics" && tableTitle === "Race and ethnicity"))
           .map(([tableTitle, tableData]) => {
             if (!tableData || typeof tableData !== "object") return null;
-            const isCurrencyTable = /income|value/i.test(tableTitle);
+            const isCurrencyTable = /income/i.test(tableTitle);
             const rows = Object.entries(tableData)
               .filter(([label]) => label !== "meta")
               .map(([label, rowData]) => {
