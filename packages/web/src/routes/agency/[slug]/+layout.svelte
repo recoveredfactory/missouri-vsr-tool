@@ -48,6 +48,11 @@
     style: "percent",
     maximumFractionDigits: 1,
   });
+  const currencyFormatter = new Intl.NumberFormat(undefined, {
+    style: "currency",
+    currency: "USD",
+    maximumFractionDigits: 0,
+  });
   const formatPercentTick = (value, { isMax } = { isMax: false }) =>
     value === null || value === undefined || Number.isNaN(value)
       ? "—"
@@ -82,6 +87,7 @@
   let metricSearchTimeout;
   let lastTrackedMetricSearch = "";
   let neighborsExpanded = false;
+  let censusExpanded = false;
   let agencyComments = [];
   let selectedAgencyComment = null;
   let selectedCommentText = "";
@@ -103,6 +109,15 @@
       agency: agencyData?.agency ?? data.slug,
       touchingCount: touchingAgencies.length,
       containedCount: containedAgencies.length,
+    });
+  };
+
+  const toggleCensus = () => {
+    const next = !censusExpanded;
+    censusExpanded = next;
+    trackEvent(next ? "agency_census_expand" : "agency_census_collapse", {
+      agency: agencyData?.agency ?? data.slug,
+      sources: geocodioDemographicSections.length,
     });
   };
 
@@ -410,6 +425,152 @@
     return stringValue;
   };
 
+  const toFiniteNumber = (value) => {
+    if (typeof value === "number" && Number.isFinite(value)) return value;
+    if (typeof value === "string") {
+      const trimmed = value.trim();
+      if (!trimmed) return null;
+      const numeric = Number(trimmed);
+      return Number.isFinite(numeric) ? numeric : null;
+    }
+    return null;
+  };
+
+  const getSelectedGeocodeResult = (response, selectedIndexRaw) => {
+    const results = Array.isArray(response?.results) ? response.results : [];
+    if (!results.length) return null;
+    const selectedIndex = Number.isFinite(Number(selectedIndexRaw))
+      ? Number(selectedIndexRaw)
+      : 0;
+    if (selectedIndex >= 0 && selectedIndex < results.length) {
+      return results[selectedIndex];
+    }
+    return results[0];
+  };
+
+  const getLatestCensusRow = (censusByYear) => {
+    if (!censusByYear || typeof censusByYear !== "object") return null;
+    const entries = Object.values(censusByYear).filter((entry) => entry && typeof entry === "object");
+    if (!entries.length) return null;
+    entries.sort((a, b) => {
+      const aYear = Number(a?.census_year);
+      const bYear = Number(b?.census_year);
+      if (Number.isFinite(aYear) && Number.isFinite(bYear)) return bYear - aYear;
+      return 0;
+    });
+    return entries[0];
+  };
+
+  const readAcsRaceRows = (raceTable) => {
+    if (!raceTable || typeof raceTable !== "object") return [];
+    const raceConfig = [
+      {
+        label: race_white(),
+        keys: ["Not Hispanic or Latino: White alone", "White alone"],
+      },
+      {
+        label: race_black(),
+        keys: ["Not Hispanic or Latino: Black or African American alone", "Black or African American alone"],
+      },
+      {
+        label: race_hispanic(),
+        keys: ["Hispanic or Latino"],
+      },
+      {
+        label: race_native_american(),
+        keys: [
+          "Not Hispanic or Latino: American Indian and Alaska Native alone",
+          "American Indian and Alaska Native alone",
+        ],
+      },
+      {
+        label: race_asian(),
+        keys: ["Not Hispanic or Latino: Asian alone", "Asian alone"],
+      },
+      {
+        label: race_other(),
+        keys: [
+          "Not Hispanic or Latino: Native Hawaiian and Other Pacific Islander alone",
+          "Native Hawaiian and Other Pacific Islander alone",
+          "Not Hispanic or Latino: Some other race alone",
+          "Some other race alone",
+          "Not Hispanic or Latino: Two or more races",
+          "Two or more races",
+        ],
+      },
+    ];
+
+    return raceConfig
+      .map((entry) => {
+        for (const key of entry.keys) {
+          const percentage = toFiniteNumber(raceTable?.[key]?.percentage);
+          if (percentage === null) continue;
+          return {
+            label: entry.label,
+            value: percentage,
+            display: percentFormatter.format(percentage),
+          };
+        }
+        return null;
+      })
+      .filter(Boolean);
+  };
+
+  const summarizeGeocodioResponse = (response, selectedIndexRaw, label) => {
+    const selected = getSelectedGeocodeResult(response, selectedIndexRaw);
+    if (!selected) return null;
+
+    const fields = selected?.fields ?? {};
+    const latestCensus = getLatestCensusRow(fields?.census);
+    const acs = fields?.acs && typeof fields.acs === "object" ? fields.acs : null;
+    if (!latestCensus && !acs) return null;
+
+    const raceTable = acs?.demographics?.["Race and ethnicity"] ?? null;
+    const raceRows = readAcsRaceRows(raceTable);
+    const population = toFiniteNumber(raceTable?.Total?.value);
+    const medianAge = toFiniteNumber(acs?.demographics?.["Median age"]?.Total?.value);
+    const medianIncome = toFiniteNumber(acs?.economics?.["Median household income"]?.Total?.value);
+    const acsMeta = acs?.meta ?? {};
+
+    const summaryStats = [];
+    if (population !== null) {
+      summaryStats.push({
+        label: "Population",
+        value: stopCountFormatter.format(Math.round(population)),
+      });
+    }
+    if (medianAge !== null) {
+      summaryStats.push({
+        label: "Median age",
+        value: numberFormatter.format(medianAge),
+      });
+    }
+    if (medianIncome !== null) {
+      summaryStats.push({
+        label: "Median household income",
+        value: currencyFormatter.format(medianIncome),
+      });
+    }
+
+    return {
+      id: label.toLowerCase().replace(/\s+/g, "-"),
+      label,
+      formattedAddress: cleanMetadataValue(selected?.formatted_address),
+      tractCode: cleanMetadataValue(latestCensus?.tract_code),
+      blockGroup: cleanMetadataValue(latestCensus?.block_group),
+      countyFips: cleanMetadataValue(latestCensus?.county_fips),
+      placeName: cleanMetadataValue(latestCensus?.place?.name),
+      countySubdivisionName: cleanMetadataValue(latestCensus?.county_subdivision?.name),
+      metroAreaName: cleanMetadataValue(latestCensus?.metro_micro_statistical_area?.name),
+      censusYear: cleanMetadataValue(latestCensus?.census_year),
+      surveyYears: cleanMetadataValue(acsMeta?.survey_years),
+      surveyDurationYears: cleanMetadataValue(acsMeta?.survey_duration_years),
+      raceRows,
+      summaryStats,
+      hasAcs: Boolean(acs),
+    };
+  };
+
   let agencyType = "";
   let addressLine = "";
   let addressCityLine = "";
@@ -423,6 +584,7 @@
   let showJurisdictionCounty = false;
   let touchingAgencies = [];
   let containedAgencies = [];
+  let geocodioDemographicSections = [];
   let boundaryData = null;
   let addressState = "";
   let stopVolumeLead = "";
@@ -536,6 +698,19 @@
   $: containedAgencies = (() => {
     const props = boundaryData?.features?.[0]?.properties ?? {};
     return normalizeAgencies(props.contained_agencies);
+  })();
+  $: geocodioDemographicSections = (() => {
+    const jurisdiction = summarizeGeocodioResponse(
+      geocodeJurisdictionResponse,
+      metadata?.geocode_jurisdiction_selected_index,
+      "Jurisdiction lookup"
+    );
+    const address = summarizeGeocodioResponse(
+      geocodeAddressResponse,
+      metadata?.geocode_address_selected_index,
+      "Address lookup"
+    );
+    return [jurisdiction, address].filter(Boolean);
   })();
   $: phoneDisplay = rawPhone ? formatPhone(rawPhone) : "";
 
@@ -1297,6 +1472,152 @@
                 </div>
               </div>
             {/if}
+          </div>
+        {/if}
+      </div>
+    </section>
+  {/if}
+
+  {#if geocodioDemographicSections.length}
+    <section class="mb-10">
+      <div class="rounded-2xl border border-slate-200 bg-white p-4">
+        <button
+          type="button"
+          class="flex w-full items-center gap-4 text-left"
+          aria-expanded={censusExpanded}
+          aria-controls="census-panel"
+          on:click={toggleCensus}
+        >
+          <span
+            class={`inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-slate-200 text-slate-500 transition ${
+              censusExpanded ? "rotate-180 bg-slate-100" : "bg-white"
+            }`}
+          >
+            <svg
+              aria-hidden="true"
+              class="h-4 w-4"
+              viewBox="0 0 20 20"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path d="M6 8l4 4 4-4" />
+            </svg>
+            <span class="sr-only">
+              {censusExpanded ? "Hide" : "Show"}
+            </span>
+          </span>
+          <div>
+            <h2 class="text-lg font-semibold text-slate-900 sm:text-xl">
+              Census demographics
+            </h2>
+            <p class="mt-1 text-xs text-slate-500">
+              {geocodioDemographicSections.length} source{geocodioDemographicSections.length === 1
+                ? ""
+                : "s"} via Geocodio
+            </p>
+          </div>
+        </button>
+        {#if censusExpanded}
+          <div id="census-panel" class="mt-4 space-y-4 border-t border-slate-100 pt-4">
+            {#each geocodioDemographicSections as section}
+              <article class="rounded-xl border border-slate-200 bg-slate-50/40 p-4">
+                <div class="flex flex-wrap items-center justify-between gap-2">
+                  <h3 class="text-sm font-semibold uppercase tracking-[0.12em] text-slate-700">
+                    {section.label}
+                  </h3>
+                  {#if section.surveyYears}
+                    <p class="text-xs text-slate-500">
+                      ACS {section.surveyYears}{section.surveyDurationYears
+                        ? ` (${section.surveyDurationYears}-year)`
+                        : ""}
+                    </p>
+                  {/if}
+                </div>
+                {#if section.formattedAddress}
+                  <p class="mt-1 text-xs text-slate-500">{section.formattedAddress}</p>
+                {/if}
+                <dl class="mt-3 grid gap-x-5 gap-y-2 text-xs text-slate-600 sm:grid-cols-2">
+                  {#if section.censusYear}
+                    <div>
+                      <dt class="uppercase tracking-[0.12em] text-slate-400">Census year</dt>
+                      <dd class="mt-0.5 text-slate-700">{section.censusYear}</dd>
+                    </div>
+                  {/if}
+                  {#if section.tractCode}
+                    <div>
+                      <dt class="uppercase tracking-[0.12em] text-slate-400">Census tract</dt>
+                      <dd class="mt-0.5 text-slate-700">{section.tractCode}</dd>
+                    </div>
+                  {/if}
+                  {#if section.blockGroup}
+                    <div>
+                      <dt class="uppercase tracking-[0.12em] text-slate-400">Block group</dt>
+                      <dd class="mt-0.5 text-slate-700">{section.blockGroup}</dd>
+                    </div>
+                  {/if}
+                  {#if section.countyFips}
+                    <div>
+                      <dt class="uppercase tracking-[0.12em] text-slate-400">County FIPS</dt>
+                      <dd class="mt-0.5 text-slate-700">{section.countyFips}</dd>
+                    </div>
+                  {/if}
+                  {#if section.placeName}
+                    <div>
+                      <dt class="uppercase tracking-[0.12em] text-slate-400">Place</dt>
+                      <dd class="mt-0.5 text-slate-700">{section.placeName}</dd>
+                    </div>
+                  {/if}
+                  {#if section.countySubdivisionName}
+                    <div>
+                      <dt class="uppercase tracking-[0.12em] text-slate-400">
+                        County subdivision
+                      </dt>
+                      <dd class="mt-0.5 text-slate-700">{section.countySubdivisionName}</dd>
+                    </div>
+                  {/if}
+                  {#if section.metroAreaName}
+                    <div class="sm:col-span-2">
+                      <dt class="uppercase tracking-[0.12em] text-slate-400">Metro/micro area</dt>
+                      <dd class="mt-0.5 text-slate-700">{section.metroAreaName}</dd>
+                    </div>
+                  {/if}
+                </dl>
+
+                {#if section.summaryStats.length}
+                  <div class="mt-3 flex flex-wrap gap-2">
+                    {#each section.summaryStats as stat}
+                      <div class="rounded-md border border-slate-200 bg-white px-2.5 py-1.5 text-xs">
+                        <span class="text-slate-500">{stat.label}: </span>
+                        <span class="font-semibold text-slate-800">{stat.value}</span>
+                      </div>
+                    {/each}
+                  </div>
+                {/if}
+
+                {#if section.raceRows.length}
+                  <div class="mt-4">
+                    <h4 class="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">
+                      Race and ethnicity (ACS)
+                    </h4>
+                    <div class="mt-2 grid gap-y-1.5 text-xs text-slate-700 sm:max-w-md">
+                      {#each section.raceRows as row}
+                        <div class="flex items-baseline justify-between gap-3">
+                          <span>{row.label}</span>
+                          <span class="font-mono tabular-nums">{row.display}</span>
+                        </div>
+                      {/each}
+                    </div>
+                  </div>
+                {:else if !section.hasAcs}
+                  <p class="mt-4 text-xs text-slate-500">
+                    No ACS demographic estimates were returned for this lookup.
+                  </p>
+                {/if}
+              </article>
+            {/each}
           </div>
         {/if}
       </div>
