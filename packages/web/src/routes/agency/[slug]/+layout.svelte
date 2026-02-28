@@ -1607,7 +1607,7 @@
           </span>
           <div>
             <h2 class="text-lg font-semibold text-slate-900 sm:text-xl">
-              Most recent Census demographics
+              Census data
             </h2>
           </div>
         </button>
@@ -1715,25 +1715,31 @@
                                 </div>
                               </summary>
                               <div class="border-t border-slate-200 px-3 pb-3 pt-2">
-                                <div class="grid grid-cols-[minmax(0,1fr)_auto_auto_auto] gap-x-3 text-[0.68rem] font-semibold uppercase tracking-[0.08em] text-slate-600">
+                                <div class="grid grid-cols-[minmax(0,1fr)_auto] gap-x-3 text-[0.68rem] font-semibold uppercase tracking-[0.08em] text-slate-600">
                                   <span>Category</span>
                                   <span class="text-right">Value</span>
-                                  <span class="text-right">%</span>
-                                  <span class="text-right">MOE</span>
                                 </div>
                                 <div class="mt-1 divide-y divide-slate-200">
                                   {#each table.rows as row}
-                                    <div class="grid grid-cols-[minmax(0,1fr)_auto_auto_auto] gap-x-3 py-1.5 text-sm text-slate-800">
+                                    <div class="grid grid-cols-[minmax(0,1fr)_auto] gap-x-3 py-1.5 text-sm text-slate-800">
                                       <span class="pr-2">{row.label}</span>
-                                      <span class="text-right font-mono tabular-nums text-slate-900">
-                                        {row.valueDisplay || "—"}
-                                      </span>
-                                      <span class="text-right font-mono tabular-nums text-slate-900">
-                                        {row.percentDisplay || "—"}
-                                      </span>
-                                      <span class="text-right font-mono tabular-nums text-slate-900">
-                                        {row.moeDisplay ? `±${row.moeDisplay}` : "—"}
-                                      </span>
+                                      <div class="text-right">
+                                        <div class="font-mono tabular-nums text-slate-900">
+                                          {#if row.valueDisplay}
+                                            {row.valueDisplay}
+                                            {#if row.percentDisplay}
+                                              <span class="text-slate-700"> ({row.percentDisplay})</span>
+                                            {/if}
+                                          {:else}
+                                            {row.percentDisplay || "—"}
+                                          {/if}
+                                        </div>
+                                        {#if row.moeDisplay}
+                                          <div class="text-xs text-slate-500">
+                                            MOE ±{row.moeDisplay}
+                                          </div>
+                                        {/if}
+                                      </div>
                                     </div>
                                   {/each}
                                 </div>
