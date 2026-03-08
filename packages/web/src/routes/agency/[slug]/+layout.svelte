@@ -1938,7 +1938,7 @@
                     </button>
                   {/each}
                 </div>
-                <div class="mt-4 space-y-4">
+                <div class="relative left-1/2 mt-4 w-screen -translate-x-1/2 space-y-4 px-4 sm:px-6">
                   <div class="grid gap-7 lg:gap-8 lg:grid-cols-3">
                     <AgencyRateScatter
                       selectedYear={selectedYear}
