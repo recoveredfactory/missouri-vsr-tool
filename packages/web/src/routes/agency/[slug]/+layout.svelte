@@ -31,6 +31,31 @@
     race_other,
     race_total,
     race_white,
+    census_heading,
+    census_toggle_hide,
+    census_toggle_show,
+    census_source_attribution,
+    census_stat_population,
+    census_stat_median_age,
+    census_stat_median_income,
+    census_race_heading,
+    census_no_race_data,
+    census_location_heading,
+    census_congressional_district,
+    census_congressional_districts,
+    census_state_legislative_district,
+    census_state_legislative_districts,
+    census_metro_area_label,
+    census_acs_tables_heading,
+    census_acs_table_row_count,
+    census_acs_col_category,
+    census_acs_col_value,
+    census_acs_col_pct,
+    census_acs_col_moe,
+    census_no_acs_data,
+    census_acs_survey_note_full,
+    census_acs_survey_note_brief,
+    census_geography_note,
   } from "$lib/paraglide/messages";
 
   /** @type {import('./$types').LayoutData} */
@@ -524,11 +549,8 @@
     return numberFormatter.format(value);
   };
 
-  const formatAcsCell = (value, { currency = false } = {}) => {
+  const formatAcsCell = (value) => {
     if (!Number.isFinite(value)) return "";
-    if (currency) {
-      return currencyFormatter.format(value);
-    }
     return formatAcsNumber(value);
   };
 
@@ -553,7 +575,7 @@
           .filter(([tableTitle]) => !(sectionKey === "demographics" && tableTitle === "Race and ethnicity"))
           .map(([tableTitle, tableData]) => {
             if (!tableData || typeof tableData !== "object") return null;
-            const isCurrencyTable = /income/i.test(tableTitle);
+            const isCurrencyTable = /median.*income|per capita income/i.test(tableTitle);
             const rows = Object.entries(tableData)
               .filter(([label]) => label !== "meta")
               .map(([label, rowData]) => {
@@ -564,13 +586,9 @@
                 if (value === null && percentage === null && marginOfError === null) return null;
                 return {
                   label,
-                  valueDisplay:
-                    value === null ? "" : formatAcsCell(value, { currency: isCurrencyTable }),
+                  valueDisplay: value === null ? "" : isCurrencyTable ? currencyFormatter.format(Math.round(value)) : formatAcsCell(value),
                   percentDisplay: percentage === null ? "" : percentFormatter.format(percentage),
-                  moeDisplay:
-                    marginOfError === null
-                      ? ""
-                      : formatAcsCell(marginOfError, { currency: isCurrencyTable }),
+                  moeDisplay: marginOfError === null ? "" : isCurrencyTable ? currencyFormatter.format(Math.round(marginOfError)) : formatAcsCell(marginOfError),
                 };
               })
               .filter(Boolean);
@@ -644,20 +662,20 @@
     const summaryStats = [];
     if (population !== null) {
       summaryStats.push({
-        label: "Population",
+        label: census_stat_population(),
         value: stopCountFormatter.format(Math.round(population)),
       });
     }
     if (medianAge !== null) {
       summaryStats.push({
-        label: "Median age",
+        label: census_stat_median_age(),
         value: numberFormatter.format(medianAge),
       });
     }
     if (medianIncome !== null) {
       summaryStats.push({
-        label: "Median household income",
-        value: currencyFormatter.format(medianIncome),
+        label: census_stat_median_income(),
+        value: currencyFormatter.format(Math.round(medianIncome)),
       });
     }
 
@@ -1602,12 +1620,12 @@
               <path d="M6 8l4 4 4-4" />
             </svg>
             <span class="sr-only">
-              {censusExpanded ? "Hide" : "Show"}
+              {censusExpanded ? census_toggle_hide() : census_toggle_show()}
             </span>
           </span>
           <div>
             <h2 class="text-lg font-semibold text-slate-900 sm:text-xl">
-              Census data
+              {census_heading()}
             </h2>
           </div>
         </button>
@@ -1616,7 +1634,7 @@
             <article class="rounded-xl border border-slate-300 bg-slate-50/50 p-4 sm:p-5">
               <div class="flex flex-wrap items-start justify-between gap-2">
                 <p class="text-sm text-slate-700">
-                  From Geocodio's jurisdiction lookup.
+                  {census_source_attribution()}
                 </p>
                 {#if geocodioDemographics.formattedAddress}
                   <p class="text-sm text-slate-600">{geocodioDemographics.formattedAddress}</p>
@@ -1641,7 +1659,7 @@
               <div class="mt-5 grid gap-3 md:grid-cols-2 md:items-start">
                 <div class="rounded-lg border border-slate-300 bg-white p-3">
                   <h4 class="text-sm font-semibold uppercase tracking-[0.12em] text-slate-700">
-                    Race and ethnicity
+                    {census_race_heading()}
                   </h4>
                   {#if geocodioDemographics.raceRows.length}
                     <div class="mt-2 grid gap-y-2 text-sm text-slate-800">
@@ -1654,21 +1672,21 @@
                     </div>
                   {:else}
                     <p class="mt-2 text-sm text-slate-700">
-                      No race/ethnicity estimates were returned for this jurisdiction.
+                      {census_no_race_data()}
                     </p>
                   {/if}
                 </div>
 
                 <div class="rounded-lg border border-slate-300 bg-white p-3">
                   <h4 class="text-sm font-semibold uppercase tracking-[0.12em] text-slate-700">
-                    Location
+                    {census_location_heading()}
                   </h4>
                   <dl class="mt-2 space-y-3 text-sm text-slate-800">
                     <div>
                       <dt class="font-medium text-slate-600">
-                        Congressional district{geocodioDemographics.congressionalDistricts.length > 1
-                          ? "s"
-                          : ""}
+                        {geocodioDemographics.congressionalDistricts.length > 1
+                          ? census_congressional_districts()
+                          : census_congressional_district()}
                       </dt>
                       <dd class="mt-0.5">
                         {#if geocodioDemographics.congressionalDistricts.length}
@@ -1682,9 +1700,9 @@
                     </div>
                     <div>
                       <dt class="font-medium text-slate-600">
-                        State legislative district{geocodioDemographics.stateLegislativeDistricts.length > 1
-                          ? "s"
-                          : ""}
+                        {geocodioDemographics.stateLegislativeDistricts.length > 1
+                          ? census_state_legislative_districts()
+                          : census_state_legislative_district()}
                       </dt>
                       <dd class="mt-0.5">
                         {#if geocodioDemographics.stateLegislativeDistricts.length}
@@ -1697,7 +1715,7 @@
                       </dd>
                     </div>
                     <div>
-                      <dt class="font-medium text-slate-600">Metro area</dt>
+                      <dt class="font-medium text-slate-600">{census_metro_area_label()}</dt>
                       <dd class="mt-0.5">{geocodioDemographics.metroAreaName || "—"}</dd>
                     </div>
                   </dl>
@@ -1707,7 +1725,7 @@
               {#if geocodioDemographics.acsTableGroups.length}
                 <div class="mt-5">
                   <h4 class="text-sm font-semibold uppercase tracking-[0.12em] text-slate-700">
-                    Other ACS tables
+                    {census_acs_tables_heading()}
                   </h4>
                   <div class="mt-2 space-y-3">
                     {#each geocodioDemographics.acsTableGroups as group}
@@ -1719,7 +1737,7 @@
                               <summary class="cursor-pointer list-none px-3 py-2.5">
                                 <div class="flex items-center justify-between gap-3">
                                   <span class="text-sm font-medium text-slate-900">{table.title}</span>
-                                  <span class="shrink-0 text-xs text-slate-600">{table.rowCount} rows</span>
+                                  <span class="shrink-0 text-xs text-slate-600">{census_acs_table_row_count({ count: table.rowCount })}</span>
                                 </div>
                               </summary>
                               <div class="border-t border-slate-200 px-3 pb-3 pt-2">
@@ -1733,10 +1751,10 @@
                                     </colgroup>
                                     <thead>
                                       <tr class="text-[0.68rem] font-semibold uppercase tracking-[0.08em] text-slate-600">
-                                        <th class="py-1 text-left">Category</th>
-                                        <th class="py-1 text-right">Value</th>
-                                        <th class="py-1 text-right">Pct</th>
-                                        <th class="py-1 text-right">MOE</th>
+                                        <th class="py-1 text-left">{census_acs_col_category()}</th>
+                                        <th class="py-1 text-right">{census_acs_col_value()}</th>
+                                        <th class="py-1 text-right">{census_acs_col_pct()}</th>
+                                        <th class="py-1 text-right">{census_acs_col_moe()}</th>
                                       </tr>
                                     </thead>
                                     <tbody class="divide-y divide-slate-200">
@@ -1767,19 +1785,18 @@
                 </div>
               {:else if !geocodioDemographics.hasAcs}
                 <p class="mt-4 text-sm text-slate-700">
-                  No ACS demographic estimates were returned for this jurisdiction.
+                  {census_no_acs_data()}
                 </p>
               {/if}
 
               <p class="mt-4 text-xs leading-relaxed text-slate-600">
                 {#if geocodioDemographics.surveyYears}
-                  Population, age, income, and race values are ACS {geocodioDemographics.surveyYears}
                   {geocodioDemographics.surveyDurationYears
-                    ? ` (${geocodioDemographics.surveyDurationYears}-year estimates)`
-                    : ""}.
+                    ? census_acs_survey_note_full({ years: geocodioDemographics.surveyYears, duration: geocodioDemographics.surveyDurationYears })
+                    : census_acs_survey_note_brief({ years: geocodioDemographics.surveyYears })}
                 {/if}
                 {#if geocodioDemographics.censusYear}
-                  District and metro geography reflect {geocodioDemographics.censusYear}.
+                  {census_geography_note({ year: geocodioDemographics.censusYear })}
                 {/if}
               </p>
             </article>
