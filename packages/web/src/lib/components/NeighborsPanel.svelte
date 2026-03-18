@@ -3,6 +3,9 @@
     agency_neighbors_heading,
     agency_neighbors_touching_label,
     agency_neighbors_contained_label,
+    agency_neighbors_count,
+    census_toggle_hide,
+    census_toggle_show,
   } from "$lib/paraglide/messages";
 
   /** @type {{ slug: string, label: string }[]} */
@@ -59,7 +62,7 @@
             <path d="M6 8l4 4 4-4" />
           </svg>
           <span class="sr-only">
-            {expanded ? "Hide" : "Show"}
+            {expanded ? census_toggle_hide() : census_toggle_show()}
           </span>
         </span>
         <div>
@@ -67,7 +70,7 @@
             {agency_neighbors_heading()}
           </h2>
           <p class="mt-1 text-xs text-slate-500">
-            {touchingAgencies.length} touching • {containedAgencies.length} contained
+            {agency_neighbors_count({ touching: touchingAgencies.length, contained: containedAgencies.length })}
           </p>
         </div>
       </button>

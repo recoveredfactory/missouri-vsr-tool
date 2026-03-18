@@ -303,5 +303,17 @@
   "agency_scatter_min_citations_note": "Requires at least 50 citations to display.",
   "agency_scatter_min_citations_note_small": "Requires at least 25 citations to display.",
   "agency_scatter_mean_label": "Mean {label}",
-  "agency_scatter_search_rate_outlier_note": "Removes {count} depts with search rates over 50% while we investigate."
+  "agency_scatter_search_rate_outlier_note": "Removes {count} depts with search rates over 50% while we investigate.",
+  "agency_scatter_total_stops_vs_citations_title": "Total stops vs citations",
+  "agency_scatter_nonwhite_stops_vs_citations_title": "Non-white stops vs citations",
+  "agency_scatter_white_stops_vs_citations_title": "White stops vs citations",
+  "agency_annual_stops_heading": "Annual vehicle stops statistics",
+  "agency_comment_heading": "Agency comment",
+  "agency_comment_heading_year": "Agency comment ({year})",
+  "agency_comment_none": "No comments submitted.",
+  "agency_comment_none_year": "No comments submitted for {year}.",
+  "agency_comment_source_pdf": "Source PDF",
+  "agency_rankings_ties_note": "Rankings can include ties.",
+  "agency_reporting_count": "{count} agencies reporting in {year}.",
+  "agency_neighbors_count": "{touching} touching • {contained} contained"
 }

@@ -36,6 +36,23 @@
     census_stat_population,
     census_stat_median_age,
     census_stat_median_income,
+    agency_annual_stops_heading,
+    agency_comment_heading,
+    agency_comment_heading_year,
+    agency_comment_none,
+    agency_comment_none_year,
+    agency_comment_source_pdf,
+    agency_rankings_ties_note,
+    agency_reporting_count,
+    agency_county_label,
+    agency_download_data_for,
+    agency_download_all_data,
+    agency_metric_search_label,
+    agency_stop_volume_lead,
+    agency_stop_volume_segment_sentence,
+    agency_stop_volume_rank_clause_highest,
+    agency_stop_volume_rank_clause,
+    agency_stop_volume_rank_clause_simple,
   } from "$lib/paraglide/messages";
 
   /** @type {import('./$types').LayoutData} */
@@ -176,11 +193,11 @@
         .filter(Boolean)
     : [];
   $: commentHeading = selectedYear
-    ? `Agency comment (${selectedYear})`
-    : "Agency comment";
+    ? agency_comment_heading_year({ year: selectedYear })
+    : agency_comment_heading();
   $: noCommentText = selectedYear
-    ? `No comments submitted for ${selectedYear}.`
-    : "No comments submitted.";
+    ? agency_comment_none_year({ year: selectedYear })
+    : agency_comment_none();
   $: metricGroups = getMetricGroups(selectedEntries);
   $: {
     const priorityGroups = [
@@ -834,11 +851,7 @@
         const agencyName = agencyData?.agency ?? data.slug;
         const totalStops = stopCountFormatter.format(totalNumeric);
         stopVolumeStopsDisplay = totalStops;
-        const leadFn = m?.agency_stop_volume_lead;
-        const leadRaw =
-          typeof leadFn === "function"
-            ? leadFn({ agency: agencyName, stops: totalStops, year: latestYear })
-            : `${agencyName} had ${totalStops} stops in ${latestYear}`;
+        const leadRaw = agency_stop_volume_lead({ agency: agencyName, stops: totalStops, year: latestYear });
         const lead = leadRaw.replace(/[.!?]+$/, "").trim();
         stopVolumeLead = lead;
 
@@ -853,11 +866,7 @@
             ? Math.max(1, Math.round(100 - percentileNumeric))
             : Math.max(1, Math.round(percentileNumeric));
           segmentLabel = isTopHalf ? `top ${percentValue}%` : `bottom ${percentValue}%`;
-          const segmentFn = m?.agency_stop_volume_segment_sentence;
-          segmentSentence =
-            typeof segmentFn === "function"
-              ? segmentFn({ segment: segmentLabel })
-              : `putting it in the ${segmentLabel} of agencies by stop volume`;
+          segmentSentence = agency_stop_volume_segment_sentence({ segment: segmentLabel });
         }
         segmentSentence = segmentSentence.replace(/[.!?]+$/, "").trim();
         const rankValue =
@@ -867,11 +876,7 @@
         if (Number.isFinite(rankNumeric)) {
           const rankRounded = Math.round(rankNumeric);
           if (rankRounded === 1) {
-            const rankHighestFn = m?.agency_stop_volume_rank_clause_highest;
-            rankClause =
-              typeof rankHighestFn === "function"
-                ? rankHighestFn()
-                : "the highest volume agency in the state";
+            rankClause = agency_stop_volume_rank_clause_highest();
           } else {
             const rankDisplay = stopCountFormatter.format(rankRounded);
             const rankCountRaw = totalEntry?.rank_count;
@@ -884,18 +889,10 @@
                 : Number.isFinite(agencyCount) && agencyCount > 0
                 ? stopCountFormatter.format(agencyCount)
                 : "";
-            const rankFn = m?.agency_stop_volume_rank_clause;
-            const rankSimpleFn = m?.agency_stop_volume_rank_clause_simple;
             if (totalDisplay) {
-              rankClause =
-                typeof rankFn === "function"
-                  ? rankFn({ rank: rankDisplay, total: totalDisplay })
-                  : `ranked #${rankDisplay} out of ${totalDisplay} agencies, ties included`;
+              rankClause = agency_stop_volume_rank_clause({ rank: rankDisplay, total: totalDisplay });
             } else {
-              rankClause =
-                typeof rankSimpleFn === "function"
-                  ? rankSimpleFn({ rank: rankDisplay })
-                  : `ranked #${rankDisplay}, ties included`;
+              rankClause = agency_stop_volume_rank_clause_simple({ rank: rankDisplay });
             }
           }
         }
@@ -1372,7 +1369,7 @@
         {#if showJurisdictionCounty}
           <div class="grid gap-1 py-1.5 grid-cols-[110px_1fr] items-start">
             <dt class="text-[11px] uppercase tracking-[0.2em] text-slate-400">
-              {m?.agency_county_label?.() ?? "County"}
+              {agency_county_label()}
             </dt>
             <dd class="text-sm font-medium text-slate-700">
               {jurisdictionCountyDisplay || "—"}
@@ -1441,15 +1438,14 @@
             download
           >
             <span aria-hidden="true">↓</span>
-            {m?.agency_download_data_for?.({ agency: agencyData?.agency ?? data.slug }) ??
-              `Download data for ${agencyData?.agency ?? data.slug}`}
+            {agency_download_data_for({ agency: agencyData?.agency ?? data.slug })}
           </a>
           <a
             class="inline-flex items-center gap-1 underline"
             href={`${localeBase}/#download`}
           >
             <span aria-hidden="true">↓</span>
-            {m?.agency_download_all_data?.() ?? "Download all data"}
+            {agency_download_all_data()}
           </a>
         </div>
       </div>
@@ -1496,7 +1492,7 @@
           <div class="mb-6 max-w-full overflow-visible">
             <div class="mt-4">
               <div class="text-2xl font-semibold text-slate-900 sm:text-3xl">
-                Annual vehicle stops statistics
+                {agency_annual_stops_heading()}
               </div>
               <div
                 role="tablist"
@@ -1536,7 +1532,7 @@
                       target="_blank"
                       rel="noreferrer"
                     >
-                      Source PDF
+                      {agency_comment_source_pdf()}
                     </a>
                   {/if}
                 {:else}
@@ -1549,7 +1545,7 @@
                 type="search"
                 class="h-10 w-full rounded-md border border-slate-400 bg-white px-2.5 text-sm text-slate-700 placeholder:text-slate-500 focus:border-slate-500 focus:outline-none sm:w-80 md:w-96"
                 placeholder={'Search for a metric ("citation", "contraband")'}
-                aria-label={m?.agency_metric_search_label?.() ?? "Search metrics"}
+                aria-label={agency_metric_search_label()}
                 bind:value={metricSearch}
                 on:input={(event) => scheduleMetricSearch(event.currentTarget.value)}
                 on:blur={flushMetricSearch}
@@ -1588,9 +1584,9 @@
               />
             </div>
             <p class="mt-3 text-xs text-slate-500">
-              Rankings can include ties.
+              {agency_rankings_ties_note()}
               {#if reportingAgencyCount && selectedYear}
-                {` ${stopCountFormatter.format(reportingAgencyCount)} agencies reporting in ${selectedYear}.`}
+                {" "}{agency_reporting_count({ count: stopCountFormatter.format(reportingAgencyCount), year: selectedYear })}
               {/if}
             </p>
             <ScatterSection
