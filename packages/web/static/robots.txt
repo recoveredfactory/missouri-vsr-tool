@@ -1,5 +1,5 @@
 # robots.txt for Missouri Vehicle Stop Report (VSR) Tool
-# https://vsr.grupovisual.org
+# https://vsr.recoveredfactory.net
 # Last updated: 2025
 #
 # This file controls how search engines and other bots crawl this site.
@@ -148,104 +148,65 @@ User-agent: TelegramBot
 Allow: /
 
 # =============================================================================
-# AI/LLM CRAWLERS - Block AI training data collection
+# AI/LLM CRAWLERS - Allow all (public interest data, training welcome)
 # =============================================================================
 
-# OpenAI / ChatGPT
 User-agent: GPTBot
-Disallow: /
+Allow: /
 
 User-agent: ChatGPT-User
-Disallow: /
+Allow: /
 
-# Google AI (Bard/Gemini training)
+User-agent: OAI-SearchBot
+Allow: /
+
 User-agent: Google-Extended
-Disallow: /
+Allow: /
 
-# Common Crawl (used for AI training datasets)
 User-agent: CCBot
-Disallow: /
+Allow: /
 
-# Anthropic
 User-agent: anthropic-ai
-Disallow: /
+Allow: /
 
 User-agent: Claude-Web
-Disallow: /
+Allow: /
 
-# Cohere
 User-agent: cohere-ai
-Disallow: /
+Allow: /
 
-# Meta AI
 User-agent: FacebookBot
-Disallow: /
+Allow: /
 
-# Perplexity AI
 User-agent: PerplexityBot
-Disallow: /
+Allow: /
 
-# ByteDance / TikTok AI
 User-agent: Bytespider
-Disallow: /
+Allow: /
 
-# Apple AI (Applebot-Extended for AI training)
 User-agent: Applebot-Extended
-Disallow: /
+Allow: /
 
-# Amazon AI
 User-agent: Amazonbot
-Disallow: /
+Allow: /
 
-# Omgili / Webz.io (data mining)
 User-agent: omgili
-Disallow: /
+Allow: /
 
 User-agent: omgilibot
-Disallow: /
-
-# Diffbot (AI data extraction)
-User-agent: Diffbot
-Disallow: /
-
-# YouChat / You.com
-User-agent: YouBot
-Disallow: /
-
-# Neeva AI (now part of Snowflake)
-User-agent: NeevaBot
-Disallow: /
-
-# Siri/Apple Knowledge
-User-agent: Applebot
 Allow: /
-# But block extended AI training
-User-agent: Applebot-Extended
-Disallow: /
 
-# AI21 Labs
+User-agent: Diffbot
+Allow: /
+
+User-agent: YouBot
+Allow: /
+
 User-agent: AI2Bot
-Disallow: /
+Allow: /
 
-# Hugging Face dataset collection
 User-agent: HuggingFaceBot
-Disallow: /
-
-# Writesonic / other AI writing tools
-User-agent: Writesonicbot
-Disallow: /
-
-# Jasper AI
-User-agent: JasperBot
-Disallow: /
-
-# Copy.ai
-User-agent: CopyaiBot
-Disallow: /
-
-# Scrapy-based AI scrapers (generic)
-User-agent: Scrapy
-Disallow: /
+Allow: /
 
 # =============================================================================
 # SEO/RESEARCH CRAWLERS - Allow with restrictions
@@ -490,13 +451,13 @@ Allow: /
 # SITEMAP
 # =============================================================================
 
-Sitemap: https://vsr.grupovisual.org/sitemap.xml
+Sitemap: https://vsr.recoveredfactory.net/sitemap.xml
 
 # =============================================================================
 # HOST DIRECTIVE (for Yandex and others)
 # =============================================================================
 
-Host: https://vsr.grupovisual.org
+Host: https://vsr.recoveredfactory.net
 
 # =============================================================================
 # CRAWL RATE LIMITS
@@ -540,12 +501,12 @@ Clean-param: fbclid&gclid&msclkid&ref&source
 # - /map/*.pmtiles (map vector tiles)
 # - /_app/* (SvelteKit build assets)
 #
-# For questions: https://github.com/eads/missouri-vsr-tool
+# For questions: https://github.com/recoveredfactory/missouri-vsr-tool
 #
 # =============================================================================
 # CONTACT
 # =============================================================================
 #
 # If you're a legitimate crawler being blocked incorrectly, please open
-# an issue at: https://github.com/eads/missouri-vsr-tool/issues
+# an issue at: https://github.com/recoveredfactory/missouri-vsr-tool/issues
 #
