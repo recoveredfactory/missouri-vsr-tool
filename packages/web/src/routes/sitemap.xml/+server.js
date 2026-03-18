@@ -3,13 +3,8 @@ const BASE_URL = import.meta.env.PUBLIC_SITE_URL || "https://vsr.recoveredfactor
 function urlEntry(path) {
   const suffix = path === "/" ? "" : path;
   const en = `${BASE_URL}/en${suffix}`;
-  const es = `${BASE_URL}/es${suffix}`;
-  const xDefault = en;
   return `  <url>
     <loc>${en}</loc>
-    <xhtml:link rel="alternate" hreflang="en" href="${en}"/>
-    <xhtml:link rel="alternate" hreflang="es" href="${es}"/>
-    <xhtml:link rel="alternate" hreflang="x-default" href="${xDefault}"/>
   </url>`;
 }
 
@@ -26,8 +21,7 @@ export async function GET({ fetch }) {
   }
 
   const xml = `<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
-        xmlns:xhtml="http://www.w3.org/1999/xhtml">
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
 ${urls.join("\n")}
 </urlset>
 `;
