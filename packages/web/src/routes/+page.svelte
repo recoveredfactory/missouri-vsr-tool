@@ -175,7 +175,7 @@
 </script>
 
 <svelte:head>
-  <title>{siteName}</title>
+  <title>Missouri Vehicle Stops — Traffic Stop Data 2020–2024</title>
   <meta name="application-name" content={siteName} />
   <meta name="apple-mobile-web-app-title" content={siteName} />
   <link rel="canonical" href={canonicalUrl} />

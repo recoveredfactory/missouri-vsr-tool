@@ -922,7 +922,7 @@
 
   $: {
     const agencyName = agencyData?.agency ?? data.slug;
-    metaTitle = `Missouri Vehicle Stops - ${agencyName}`;
+    metaTitle = `${agencyName} — Missouri Traffic Stop Data 2020–2024`;
     if (agencyName && stopVolumeStopsDisplay && stopVolumeSegmentLabel) {
       metaDescription = `${agencyName} made ${stopVolumeStopsDisplay} traffic stops, ranking in the ${stopVolumeSegmentLabel} of Missouri agencies. View stop demographics, search rates, and arrest outcomes.`;
     } else {
