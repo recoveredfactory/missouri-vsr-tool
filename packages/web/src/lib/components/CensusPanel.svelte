@@ -112,9 +112,9 @@
 
             <div class="mt-5 grid gap-3 md:grid-cols-2 md:items-start">
               <div class="rounded-lg border border-slate-300 bg-white p-3">
-                <h4 class="text-sm font-semibold uppercase tracking-[0.12em] text-slate-700">
+                <h3 class="text-sm font-semibold uppercase tracking-[0.12em] text-slate-700">
                   {census_race_heading()}
-                </h4>
+                </h3>
                 {#if geocodioDemographics.raceRows.length}
                   <div class="mt-2 grid gap-y-2 text-sm text-slate-800">
                     {#each geocodioDemographics.raceRows as row}
@@ -132,9 +132,9 @@
               </div>
 
               <div class="rounded-lg border border-slate-300 bg-white p-3">
-                <h4 class="text-sm font-semibold uppercase tracking-[0.12em] text-slate-700">
+                <h3 class="text-sm font-semibold uppercase tracking-[0.12em] text-slate-700">
                   {census_location_heading()}
-                </h4>
+                </h3>
                 <dl class="mt-2 space-y-3 text-sm text-slate-800">
                   <div>
                     <dt class="font-medium text-slate-600">
@@ -178,13 +178,13 @@
 
             {#if geocodioDemographics.acsTableGroups.length}
               <div class="mt-5">
-                <h4 class="text-sm font-semibold uppercase tracking-[0.12em] text-slate-700">
+                <h3 class="text-sm font-semibold uppercase tracking-[0.12em] text-slate-700">
                   {census_acs_tables_heading()}
-                </h4>
+                </h3>
                 <div class="mt-2 space-y-3">
                   {#each geocodioDemographics.acsTableGroups as group}
                     <div class="rounded-lg border border-slate-300 bg-white p-3">
-                      <h5 class="text-sm font-semibold text-slate-900">{group.label}</h5>
+                      <h4 class="text-sm font-semibold text-slate-900">{group.label}</h4>
                       <div class="mt-2 space-y-2">
                         {#each group.tables as table}
                           <details class="rounded-md border border-slate-200 bg-slate-50/70">
