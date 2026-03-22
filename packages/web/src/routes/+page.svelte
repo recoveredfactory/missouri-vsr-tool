@@ -144,6 +144,8 @@
     });
   }
 
+  const homeDescription = "Explore traffic stop data from over 400 Missouri police agencies (2020–2024). Compare stops, arrests, search rates, and racial disparities by department.";
+
   // For axis labels: whole numbers (123K, 1M)
   const formatStopsAxis = (value) => {
     const numeric = typeof value === "string" ? Number(value) : value;
@@ -173,7 +175,7 @@
 </script>
 
 <svelte:head>
-  <title>{siteName}</title>
+  <title>Missouri Vehicle Stops — Traffic Stop Data 2020–2024</title>
   <meta name="application-name" content={siteName} />
   <meta name="apple-mobile-web-app-title" content={siteName} />
   <link rel="canonical" href={canonicalUrl} />
@@ -182,7 +184,7 @@
   <link rel="alternate" hreflang="x-default" href={homeHrefEn} />
   <meta
     name="description"
-    content="Who gets stopped? why? What happens next? This tool reveals how traffic enforcement varies across Missouri's agencies."
+    content={homeDescription}
   />
   <meta property="og:type" content="website" />
   <meta property="og:url" content={canonicalUrl} />
@@ -190,7 +192,7 @@
   <meta property="og:title" content={siteName} />
   <meta
     property="og:description"
-    content="Who gets stopped? why? What happens next? This tool reveals how traffic enforcement varies across Missouri's agencies."
+    content={homeDescription}
   />
   <meta property="og:image" content="{siteUrl}/social-meta.png" />
   <meta property="og:image:secure_url" content="{siteUrl}/social-meta.png" />
@@ -203,7 +205,7 @@
   <meta property="twitter:title" content={siteName} />
   <meta
     property="twitter:description"
-    content="Who gets stopped? why? What happens next? This tool reveals how traffic enforcement varies across Missouri's agencies."
+    content={homeDescription}
   />
   <script type="application/ld+json">
     {JSON.stringify(webSiteSchema)}

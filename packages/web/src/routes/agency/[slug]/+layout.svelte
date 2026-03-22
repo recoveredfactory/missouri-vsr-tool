@@ -922,11 +922,11 @@
 
   $: {
     const agencyName = agencyData?.agency ?? data.slug;
-    metaTitle = `Missouri Vehicle Stops - ${agencyName}`;
+    metaTitle = `${agencyName} — Missouri Traffic Stop Data 2020–2024`;
     if (agencyName && stopVolumeStopsDisplay && stopVolumeSegmentLabel) {
-      metaDescription = `${agencyName} had ${stopVolumeStopsDisplay} stops, putting it in the ${stopVolumeSegmentLabel} of agencies in Missouri. Learn more about who got stopped and why.`;
+      metaDescription = `${agencyName} made ${stopVolumeStopsDisplay} traffic stops, ranking in the ${stopVolumeSegmentLabel} of Missouri agencies. View stop demographics, search rates, and arrest outcomes.`;
     } else {
-      metaDescription = `${agencyName} traffic stops data. Learn more about who got stopped and why.`;
+      metaDescription = `${agencyName} traffic stop data for Missouri. View stop demographics, search rates, and arrest outcomes by year.`;
     }
   }
 
