@@ -3,7 +3,21 @@
   import { onMount } from "svelte";
   import { getLocale } from "$lib/paraglide/runtime.js";
   import { withDataBase } from "$lib/dataBase";
-  import * as m from "$lib/paraglide/messages.js";
+  import {
+    home_metric_table_label,
+    home_metric_table_heading,
+    home_metric_select_label,
+    home_metric_table_showing,
+    home_metric_min_stops_label,
+    home_metric_search_placeholder,
+    home_metric_search_aria_label,
+    home_metric_year_selector_label,
+    home_metric_no_rows,
+    home_metric_loading,
+    home_metric_hidden_over_100,
+    home_metric_col_agency,
+    home_metric_col_total_stops,
+  } from "$lib/paraglide/messages.js";
   import GridAgencyLinkCell from "$lib/components/grid/GridAgencyLinkCell.svelte";
 
   type AgencyIndexEntry = {
@@ -436,7 +450,7 @@
   $: gridColumns = [
     {
       key: "agency",
-      title: "Agency",
+      title: home_metric_col_agency(),
       width: agencyColumnWidth,
       sortable: true,
       accessor: (row: TableRow) => row.agency,
@@ -445,7 +459,7 @@
     },
     {
       key: "total_stops",
-      title: "Total stops",
+      title: home_metric_col_total_stops(),
       width: totalStopsColumnWidth,
       sortable: true,
       accessor: (row: TableRow) => row.total_stops,
@@ -625,14 +639,14 @@
   });
 </script>
 
-<section id="agencies" class="border-t border-slate-200 bg-white py-12" aria-label="Agency metric table">
+<section id="agencies" class="border-t border-slate-200 bg-white py-12" aria-label={home_metric_table_label()}>
   <div class="mx-auto max-w-6xl px-6">
-    <h2 class="mb-5 text-3xl font-bold text-slate-900">How Agencies Compare</h2>
+    <h2 class="mb-5 text-3xl font-bold text-slate-900">{home_metric_table_heading()}</h2>
 
     <div class="mb-5 grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(360px,440px)] lg:items-start">
       <div class="min-w-0">
         <label class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500" for="home-metric-select">
-          Metric
+          {home_metric_select_label()}
         </label>
         <select
           id="home-metric-select"
@@ -646,13 +660,13 @@
           {/each}
         </select>
         <p class="mt-2 pl-1 text-[0.72rem] font-medium text-slate-500 sm:text-xs">
-          Showing {filteredRows.length.toLocaleString()} agencies (out of {rateFilteredRows.length.toLocaleString()}).
+          {home_metric_table_showing({ visible: filteredRows.length.toLocaleString(), total: rateFilteredRows.length.toLocaleString() })}
         </p>
       </div>
 
       <div class="min-w-0">
         <label class="text-[0.65rem] font-semibold uppercase tracking-[0.12em] text-slate-500" for="home-min-stops">
-          Min total stops
+          {home_metric_min_stops_label()}
         </label>
         <input
           id="home-min-stops"
@@ -688,14 +702,14 @@
       <input
         type="search"
         class="h-10 w-full rounded-md border border-slate-400 bg-white px-2.5 text-sm text-slate-700 placeholder:text-slate-500 focus:border-slate-500 focus:outline-none sm:w-80 md:w-96"
-        placeholder='Search table for an agency ("St. Louis", "Springfield")'
-        aria-label="Search agencies"
+        placeholder={home_metric_search_placeholder()}
+        aria-label={home_metric_search_aria_label()}
         bind:value={agencySearch}
       />
     </div>
 
     {#if yearOptions.length}
-      <div role="tablist" aria-label="Year selector" class="mb-5 mt-2 flex flex-wrap items-center gap-2">
+      <div role="tablist" aria-label={home_metric_year_selector_label()} class="mb-5 mt-2 flex flex-wrap items-center gap-2">
         {#each yearOptions as year}
           <button
             type="button"
@@ -732,12 +746,12 @@
           bind:sortOrder={gridSortOrder}
         />
       {:else if !isLoading}
-        <div class="agency-metric-grid__empty">No rows found for this metric/year.</div>
+        <div class="agency-metric-grid__empty">{home_metric_no_rows()}</div>
       {/if}
 
       {#if isLoading}
         <div class="agency-metric-grid__overlay">
-          <span>Loading metric data...</span>
+          <span>{home_metric_loading()}</span>
         </div>
       {/if}
     </div>
@@ -745,7 +759,7 @@
     {#if excludedAgencyLinks.length}
       <div class="mt-2 text-[0.72rem] leading-relaxed text-slate-500 sm:text-xs">
         <p>
-          Hidden for values over 100%:
+          {home_metric_hidden_over_100()}
           {#each excludedAgencyLinks as agency, index}
             <a
               class="text-slate-600 no-underline transition-colors hover:text-slate-800 hover:underline"

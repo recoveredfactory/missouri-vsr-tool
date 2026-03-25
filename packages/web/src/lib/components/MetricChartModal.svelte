@@ -22,7 +22,6 @@
     race_total,
     race_white,
   } from "$lib/paraglide/messages";
-  import * as m from "$lib/paraglide/messages";
   import { raceColors as importedRaceColors } from "$lib/colors.js";
 
   export let open = false;

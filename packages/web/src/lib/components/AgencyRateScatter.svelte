@@ -1,6 +1,14 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import * as m from "$lib/paraglide/messages";
+  import {
+    agency_scatter_hit_rate_label,
+    agency_scatter_search_rate_label,
+    agency_scatter_heading,
+    agency_scatter_loading,
+    agency_scatter_no_data,
+    agency_scatter_chart_unavailable,
+    agency_scatter_chart_loading,
+  } from "$lib/paraglide/messages";
   import { withDataBase } from "$lib/dataBase";
   import { scatterDomainGroupStore, type ScatterDomainRange } from "$lib/stores/scatter";
 
@@ -629,10 +637,8 @@
     yearPoints.length > 0
       ? `Hiding ${excludeAboveXCount === 1 ? "one agency" : `${formatCount(excludeAboveXCount)} agencies`} with a search rate above 50% while we investigate.`
       : "";
-  $: resolvedXLabel =
-    (xLabel || m?.agency_scatter_hit_rate_label?.()) ?? "Hit rate";
-  $: resolvedYLabel =
-    (yLabel || m?.agency_scatter_search_rate_label?.()) ?? "Search rate";
+  $: resolvedXLabel = xLabel || agency_scatter_hit_rate_label();
+  $: resolvedYLabel = yLabel || agency_scatter_search_rate_label();
   $: meanXLabel = showMeanLines ? "Mean" : "";
   $: meanYLabel = "";
   $: shownAgencyCount = yearPoints.length;
@@ -694,7 +700,7 @@
     <div class="flex items-center justify-between gap-3 sm:items-start">
       <div class="min-w-0">
         <div class="text-xs font-semibold uppercase tracking-[0.04em] text-slate-100">
-          {(title || m?.agency_scatter_heading?.()) ?? "Search rate vs contraband hit rate"}
+          {title || agency_scatter_heading()}
         </div>
         {#if summaryNote}
           <div class="mt-1 hidden text-[11px] text-slate-200 sm:block">{summaryNote}</div>
@@ -742,7 +748,7 @@
   <div class="p-2.5 sm:p-4">
     {#if isLoading}
       <div class="text-xs text-slate-500">
-        {m?.agency_scatter_loading?.() ?? "Loading rate comparison…"}
+        {agency_scatter_loading()}
       </div>
     {:else if loadError}
       <div class="text-xs text-rose-600">{loadError}</div>
@@ -750,11 +756,11 @@
       <div class="text-xs text-rose-600">{minCountError}</div>
     {:else if yearPoints.length === 0}
       <div class="text-xs text-slate-500">
-        {m?.agency_scatter_no_data?.() ?? "No rate data available for this year."}
+        {agency_scatter_no_data()}
       </div>
     {:else if chartLoadError}
       <div class="text-xs text-slate-500">
-        {m?.agency_scatter_chart_unavailable?.() ?? "Chart unavailable."}
+        {agency_scatter_chart_unavailable()}
       </div>
       {:else if ChartComponent}
         <div class="aspect-[1.15/1] w-full min-h-[240px] 2xl:mx-auto 2xl:max-w-[520px]">
@@ -785,7 +791,7 @@
         </div>
     {:else}
       <div class="text-xs text-slate-500">
-        {m?.agency_scatter_chart_loading?.() ?? "Loading chart…"}
+        {agency_scatter_chart_loading()}
       </div>
     {/if}
   </div>
