@@ -533,13 +533,6 @@
   const buildAcsTableGroups = (acs) => {
     if (!acs || typeof acs !== "object") return [];
     const sectionOrder = ["demographics", "economics", "housing", "social", "families"];
-    const sectionLabelMap = {
-      demographics: "Demographics",
-      economics: "Economics",
-      housing: "Housing",
-      social: "Social",
-      families: "Families",
-    };
 
     return sectionOrder
       .map((sectionKey) => {
@@ -581,7 +574,7 @@
         if (!tables.length) return null;
         return {
           id: sectionKey,
-          label: sectionLabelMap[sectionKey] ?? sectionKey,
+          label: sectionLabelForId(sectionKey) || sectionKey,
           tables,
         };
       })
@@ -991,10 +984,8 @@
   const tableLabelForId = (id) => labelForId("table", id);
   const sectionLabelForId = (id) => labelForId("section", id);
 
-  const sectionLabel = () =>
-    typeof m.agency_section_label === "function" ? m.agency_section_label() : "Section";
-  const tableLabel = () =>
-    typeof m.agency_table_label === "function" ? m.agency_table_label() : "Table";
+  const sectionLabel = () => m.agency_section_label();
+  const tableLabel = () => m.agency_table_label();
 
   const raceLabel = (key) => {
     switch (key) {

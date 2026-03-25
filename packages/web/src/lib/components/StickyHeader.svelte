@@ -1,5 +1,22 @@
 <script>
-  import * as m from "$lib/paraglide/messages";
+  import {
+    home_donate_button,
+    home_header_title,
+    nav_open_menu,
+    nav_close_menu,
+    nav_findings,
+    nav_agencies,
+    nav_download,
+    nav_about,
+    nav_menu_label,
+    nav_close_button,
+    nav_explore_label,
+    search_aria_label,
+    search_placeholder,
+    search_result_stops,
+    search_results_count_one,
+    search_results_count,
+  } from "$lib/paraglide/messages";
   import { goto } from "$app/navigation";
   import { page } from "$app/stores";
   import { QuickScore } from "quick-score";
@@ -346,7 +363,7 @@
             href="/"
             class="min-w-0 font-bold text-[#1b613c] no-underline text-[clamp(0.95rem,4vw,1.45rem)] leading-tight"
           >
-            {m.home_header_title()}
+            {home_header_title()}
           </a>
         </div>
 
@@ -380,14 +397,14 @@
             href={donateUrl}
             class="inline-flex h-9 items-center rounded-lg bg-[#1b613c] px-4 text-sm font-semibold text-white no-underline transition-colors hover:bg-[#105430]"
           >
-            {m.home_donate_button()}
+            {home_donate_button()}
           </a>
           <button
             type="button"
             class="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 text-slate-600 md:hidden"
             aria-controls="mobile-site-menu"
             aria-expanded={mobileMenuOpen}
-            aria-label={mobileMenuOpen ? "Close menu" : "Open menu"}
+            aria-label={mobileMenuOpen ? nav_close_menu() : nav_open_menu()}
             on:click={toggleMenu}
           >
             <svg
@@ -410,18 +427,18 @@
         <div class="relative w-full" bind:this={searchContainer}>
           <input
             type="search"
-            placeholder={m.search_placeholder()}
+            placeholder={search_placeholder()}
             bind:value={query}
             on:input={scheduleSearchTerm}
             on:focus={clearPrefill}
             on:keydown={handleKeydown}
-            aria-label={m.search_aria_label()}
+            aria-label={search_aria_label()}
             autocomplete="off"
             class="w-full rounded-lg border border-[#1b613c]/70 bg-white px-4 py-2.5 text-[1.05rem] shadow-[0_8px_24px_-14px_rgba(15,23,42,0.55)] focus:border-[#1b613c] focus:outline-none focus:ring-2 focus:ring-[#1b613c] focus:ring-offset-1"
           />
           <div class="sr-only" aria-live="polite" aria-atomic="true">
             {#if results.length}
-              {results.length} {results.length === 1 ? 'result' : 'results'} found
+              {results.length === 1 ? search_results_count_one() : search_results_count({ count: results.length })}
             {/if}
           </div>
           {#if results.length}
@@ -441,7 +458,7 @@
                     {#if stops || toSubLabel(result.item)}
                       <span class="flex items-center gap-2 text-xs text-slate-500">
                         {#if stops}
-                          <span class="font-semibold text-slate-800">{stops} stops</span>
+                          <span class="font-semibold text-slate-800">{search_result_stops({ stops })}</span>
                         {/if}
                         {#if toSubLabel(result.item)}
                           <span class="opacity-60">•</span>
@@ -457,19 +474,19 @@
         </div>
         <nav class="hidden items-center justify-end gap-2.5 text-sm md:flex">
           <a href={homeAnchorHref("findings")} class="font-semibold text-[#1b613c] no-underline hover:text-[#105430]">
-            Findings
+            {nav_findings()}
           </a>
           <span class="text-slate-300">•</span>
           <a href={homeAnchorHref("agencies")} class="font-semibold text-[#1b613c] no-underline hover:text-[#105430]">
-            Agencies
+            {nav_agencies()}
           </a>
           <span class="text-slate-300">•</span>
           <a href={homeAnchorHref("download")} class="font-semibold text-[#1b613c] no-underline hover:text-[#105430]">
-            Download
+            {nav_download()}
           </a>
           <span class="text-slate-300">•</span>
           <a href={homeAnchorHref("about")} class="font-semibold text-[#1b613c] no-underline hover:text-[#105430]">
-            About
+            {nav_about()}
           </a>
         </nav>
       </div>
@@ -484,45 +501,45 @@
     >
       <div class="flex min-h-full flex-col px-6 py-6">
         <div class="flex items-center justify-between">
-          <p class="text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">Menu</p>
+          <p class="text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">{nav_menu_label()}</p>
           <button
             type="button"
             class="inline-flex h-9 items-center justify-center rounded-lg border border-slate-200 px-3 text-xs font-semibold uppercase tracking-wide text-slate-600"
             on:click={() => closeMenu("close_button")}
           >
-            Close
+            {nav_close_button()}
           </button>
         </div>
 
-        <p class="mt-8 text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">Explore</p>
+        <p class="mt-8 text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">{nav_explore_label()}</p>
         <nav class="mt-3 space-y-3">
           <a
             href={homeAnchorHref("findings")}
             class="block text-3xl font-semibold leading-tight text-slate-900 no-underline"
             on:click={() => closeMenu("nav")}
           >
-            Findings
+            {nav_findings()}
           </a>
           <a
             href={homeAnchorHref("agencies")}
             class="block text-3xl font-semibold leading-tight text-slate-900 no-underline"
             on:click={() => closeMenu("nav")}
           >
-            Agencies
+            {nav_agencies()}
           </a>
           <a
             href={homeAnchorHref("download")}
             class="block text-3xl font-semibold leading-tight text-slate-900 no-underline"
             on:click={() => closeMenu("nav")}
           >
-            Download
+            {nav_download()}
           </a>
           <a
             href={homeAnchorHref("about")}
             class="block text-3xl font-semibold leading-tight text-slate-900 no-underline"
             on:click={() => closeMenu("nav")}
           >
-            About
+            {nav_about()}
           </a>
         </nav>
 
@@ -553,7 +570,7 @@
             class="inline-flex w-full items-center justify-center rounded-lg bg-[#1b613c] px-4 py-3 text-base font-semibold text-white no-underline transition-colors hover:bg-[#105430]"
             on:click={() => closeMenu("donate")}
           >
-            {m.home_donate_button()}
+            {home_donate_button()}
           </a>
         </div>
       </div>

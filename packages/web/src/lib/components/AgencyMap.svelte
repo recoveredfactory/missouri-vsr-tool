@@ -2,6 +2,7 @@
   import { onDestroy, onMount } from "svelte";
   import { goto } from "$app/navigation";
   import { getLocale } from "$lib/paraglide/runtime";
+  import { map_stops_count } from "$lib/paraglide/messages";
   import { browser } from "$app/environment";
   import { withDataBase } from "$lib/dataBase";
 
@@ -338,7 +339,7 @@
         className: "agency-map-popup",
       });
     }
-    const subtitle = stopsValue ? `${stopsValue} stops` : null;
+    const subtitle = stopsValue ? map_stops_count({ stops: stopsValue }) : null;
     const html = `
       <div style="font-size:12px;font-weight:600;color:#0f172a;">${name}</div>
       ${subtitle ? `<div style="margin-top:2px;font-size:11px;color:#475569;">${subtitle}</div>` : ""}

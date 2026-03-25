@@ -1,7 +1,45 @@
 <script>
   import StickyHeader from "$lib/components/StickyHeader.svelte";
   import HomeAgencyMetricTable from "$lib/components/HomeAgencyMetricTable.svelte";
-  import * as m from "$lib/paraglide/messages";
+  import {
+    home_highlights_heading,
+    home_toc_download,
+    home_footer_cta,
+    home_footer_contact,
+    home_hero_headline,
+    home_why_text,
+    home_chart_total_stops_heading,
+    home_chart_total_stops_subheading,
+    home_chart_total_stops_aria_label,
+    home_chart_point_total_stops_label,
+    home_chart_point_stops_tooltip,
+    home_chart_consent_heading,
+    home_chart_consent_subheading,
+    home_chart_consent_aria_label,
+    home_chart_point_consent_label,
+    home_chart_race_heading,
+    home_chart_race_subheading,
+    home_chart_race_aria_label,
+    home_chart_population_label,
+    home_chart_traffic_stops_label,
+    home_chart_outcomes_heading,
+    home_chart_outcomes_subheading,
+    home_outcome_warnings,
+    home_outcome_citations,
+    home_outcome_arrests,
+    home_outcome_no_action,
+    home_download_description,
+    home_download_format_fallback,
+    home_download_loading,
+    home_download_csv_description,
+    home_download_parquet_description,
+    home_download_json_description,
+    home_download_label_agency_list,
+    home_download_label_agency_comments,
+    home_download_label_raw_stops,
+    home_download_label_all_combined,
+    home_download_label_vsr_statistics,
+  } from "$lib/paraglide/messages";
   import { raceColors, raceTextColors, outcomeColors } from "$lib/colors.js";
   import { withDataBase } from "$lib/dataBase";
   import { getLocale } from "$lib/paraglide/runtime";
@@ -49,37 +87,32 @@
   };
   const downloadManifest = data?.downloadManifest;
 
-  const downloadGroupMeta = {
+  $: downloadGroupMeta = {
     csv: {
       title: "CSV",
-      description:
-        "Spreadsheet-compatible. Works with Excel, Google Sheets, etc."
+      description: home_download_csv_description()
     },
     parquet: {
       title: "Parquet",
-      description: "Efficient columnar format. Best for Python, R, or SQL analysis."
+      description: home_download_parquet_description()
     },
     json: {
       title: "JSON",
-      description: "Structured format. Ideal for web apps and APIs."
+      description: home_download_json_description()
     }
   };
 
-  const downloadLabelMatchers = [
-    { test: /agency_index/i, label: "Agency list" },
-    { test: /agency_comments/i, label: "Agency comments by year" },
-    { test: /downloads/i, label: "Raw stop-level data" }
-  ];
-
   function getDownloadLabel(file) {
     if (file.group === "json" && /downloads\.json$/i.test(file.path)) {
-      return "All datasets combined";
+      return home_download_label_all_combined();
     }
     if (/vsr_statistics/i.test(file.path)) {
-      return "Vehicle stops report statistics by agency";
+      return home_download_label_vsr_statistics();
     }
-    const match = downloadLabelMatchers.find((entry) => entry.test.test(file.path));
-    return match ? match.label : file.path;
+    if (/agency_index/i.test(file.path)) return home_download_label_agency_list();
+    if (/agency_comments/i.test(file.path)) return home_download_label_agency_comments();
+    if (/downloads/i.test(file.path)) return home_download_label_raw_stops();
+    return file.path;
   }
 
   function formatBytes(bytes) {
@@ -217,10 +250,10 @@
   <section class="bg-white px-6 py-12">
     <div class="mx-auto max-w-3xl text-center">
       <h1 class="text-4xl font-bold text-slate-900 md:text-5xl">
-        {m.home_hero_headline()}
+        {home_hero_headline()}
       </h1>
       <p class="mt-4 text-lg leading-relaxed text-slate-700">
-        {m.home_why_text()}
+        {home_why_text()}
       </p>
     </div>
   </section>
@@ -229,7 +262,7 @@
   <section id="findings" class="border-t border-slate-200 bg-slate-50 py-12">
     <div class="mx-auto max-w-6xl px-6">
       <h2 class="mb-8 text-center text-3xl font-bold text-slate-900">
-        {m.home_highlights_heading()}
+        {home_highlights_heading()}
       </h2>
 
       <div class="flex flex-col gap-6">
@@ -239,10 +272,10 @@
           <div class="rounded-lg border border-slate-200 bg-white p-4 sm:p-6 flex flex-col">
             <div class="mb-3 sm:mb-4 text-center">
               <h3 class="text-lg sm:text-xl font-bold text-slate-900">
-                Missouri law enforcement made 1.28 million traffic stops in 2024
+                {home_chart_total_stops_heading()}
               </h3>
               <p class="mt-1 sm:mt-2 text-xs sm:text-sm leading-relaxed text-slate-600">
-                Vehicle stops climbed slightly since the pandemic, with an average of 1.26 million per year
+                {home_chart_total_stops_subheading()}
               </p>
             </div>
 
@@ -258,7 +291,7 @@
               <div class="sr-only">
                 Data summary: From {years[0]} to {years[years.length - 1]}, total stops ranged from {formatStops(Math.min(...stops))} to {formatStops(Math.max(...stops))}.
               </div>
-              <div class="flex flex-col" role="img" aria-label="Line chart showing total stops from 2020 to 2024">
+              <div class="flex flex-col" role="img" aria-label={home_chart_total_stops_aria_label()}>
                 <svg viewBox="0 0 {width + padding.left + padding.right} {height + padding.top + padding.bottom}" class="w-full h-[220px] sm:h-[260px] md:h-[280px]">
                   <!-- Grid lines -->
                   {#each [0, 0.25, 0.5, 0.75, 1] as tick}
@@ -290,10 +323,10 @@
                       class="cursor-pointer"
                       tabindex="0"
                       role="button"
-                      aria-label="{years[i]}: {formatStops(v)} total stops"
-                      on:mouseenter={(e) => showTooltip(e, `${years[i]}: ${formatStops(v)} stops`)}
+                      aria-label={home_chart_point_total_stops_label({ year: years[i], stops: formatStops(v) })}
+                      on:mouseenter={(e) => showTooltip(e, home_chart_point_stops_tooltip({ year: years[i], stops: formatStops(v) }))}
                       on:mouseleave={hideTooltip}
-                      on:focus={(e) => showTooltip(e, `${years[i]}: ${formatStops(v)} stops`)}
+                      on:focus={(e) => showTooltip(e, home_chart_point_stops_tooltip({ year: years[i], stops: formatStops(v) }))}
                       on:blur={hideTooltip}
                     >
                       <circle cx={padding.left + (i / (years.length - 1)) * width} cy={padding.top + (1 - v / stopsMax) * height} r="8" fill="transparent" />
@@ -309,10 +342,10 @@
           <div class="rounded-lg border border-slate-200 bg-white p-4 sm:p-6 flex flex-col">
             <div class="mb-3 sm:mb-4 text-center">
               <h3 class="text-lg sm:text-xl font-bold text-slate-900">
-                Consent searches dropped 32% since 2020
+                {home_chart_consent_heading()}
               </h3>
               <p class="mt-1 sm:mt-2 text-xs sm:text-sm leading-relaxed text-slate-600">
-                Law enforcement officers are carrying out discretionary searches less often
+                {home_chart_consent_subheading()}
               </p>
             </div>
 
@@ -328,7 +361,7 @@
               <div class="sr-only">
                 Data summary: Consent searches dropped from {formatStops(consent[0])} in {years[0]} to {formatStops(consent[consent.length - 1])} in {years[years.length - 1]}, a {Math.round((1 - consent[consent.length - 1] / consent[0]) * 100)}% decline.
               </div>
-              <div class="flex flex-col" role="img" aria-label="Line chart showing consent searches declining from 2020 to 2024">
+              <div class="flex flex-col" role="img" aria-label={home_chart_consent_aria_label()}>
                 <svg viewBox="0 0 {width + padding.left + padding.right} {height + padding.top + padding.bottom}" class="w-full h-[220px] sm:h-[260px] md:h-[280px]">
                   <!-- Grid lines -->
                   {#each [0, 0.25, 0.5, 0.75, 1] as tick}
@@ -360,10 +393,10 @@
                       class="cursor-pointer"
                       tabindex="0"
                       role="button"
-                      aria-label="{years[i]}: {formatStops(v)} consent searches"
-                      on:mouseenter={(e) => showTooltip(e, `${years[i]}: ${formatStops(v)} consent searches`)}
+                      aria-label={home_chart_point_consent_label({ year: years[i], searches: formatStops(v) })}
+                      on:mouseenter={(e) => showTooltip(e, home_chart_point_consent_label({ year: years[i], searches: formatStops(v) }))}
                       on:mouseleave={hideTooltip}
-                      on:focus={(e) => showTooltip(e, `${years[i]}: ${formatStops(v)} consent searches`)}
+                      on:focus={(e) => showTooltip(e, home_chart_point_consent_label({ year: years[i], searches: formatStops(v) }))}
                       on:blur={hideTooltip}
                     >
                       <circle cx={padding.left + (i / (years.length - 1)) * width} cy={padding.top + (1 - v / consentMax) * height} r="8" fill="transparent" />
@@ -382,10 +415,10 @@
           <div class="rounded-lg border border-slate-200 bg-white p-4 sm:p-6 flex flex-col">
             <div class="mb-3 sm:mb-4 text-center">
               <h3 class="text-lg sm:text-xl font-bold text-slate-900">
-                Black drivers were involved in 17% of stops, but represent less than 11% of Missouri's population
+                {home_chart_race_heading()}
               </h3>
               <p class="mt-1 sm:mt-2 text-xs sm:text-sm leading-relaxed text-slate-600">
-                Black drivers have the largest disparity in stops vs. percentage of the state population
+                {home_chart_race_subheading()}
               </p>
             </div>
 
@@ -414,7 +447,7 @@
           <div class="sr-only">
             Data summary: Population vs traffic stops by race. White: {population.White}% population, {stopsData2.White.toFixed(1)}% stops. Black: {population.Black}% population, {stopsData2.Black.toFixed(1)}% stops. Hispanic: {population.Hispanic}% population, {stopsData2.Hispanic.toFixed(1)}% stops. Other: {population.Other}% population, {stopsData2.Other.toFixed(1)}% stops.
           </div>
-          <div class="flex flex-col" role="img" aria-label="Grouped bar chart comparing population percentage to traffic stops percentage by race">
+          <div class="flex flex-col" role="img" aria-label={home_chart_race_aria_label()}>
             <svg viewBox="0 0 {width2 + padding2.left + padding2.right} {height2 + padding2.top + padding2.bottom}" class="w-full h-[220px] sm:h-[260px] md:h-[280px]">
               <!-- Grid lines -->
               {#each [0, 0.25, 0.5, 0.75, 1] as tick}
@@ -498,11 +531,11 @@
             <div class="flex justify-center gap-5 mt-1">
               <span class="flex items-center gap-1.5">
                 <span class="w-3 h-3 rounded-sm" style="background-color: {popColor}"></span>
-                <span class="text-xs font-medium" style="color: {popColor}">Population</span>
+                <span class="text-xs font-medium" style="color: {popColor}">{home_chart_population_label()}</span>
               </span>
               <span class="flex items-center gap-1.5">
                 <span class="w-3 h-3 rounded-sm" style="background-color: {stopsColor2}"></span>
-                <span class="text-xs font-medium" style="color: {stopsColor2}">Traffic Stops</span>
+                <span class="text-xs font-medium" style="color: {stopsColor2}">{home_chart_traffic_stops_label()}</span>
               </span>
             </div>
 
@@ -514,15 +547,15 @@
           <div class="rounded-lg border border-slate-200 bg-white p-4 sm:p-6 flex flex-col">
             <div class="mb-3 sm:mb-4 text-center">
               <h3 class="text-lg sm:text-xl font-bold text-slate-900">
-                Law enforcement issues citations in 41% of stops
+                {home_chart_outcomes_heading()}
               </h3>
               <p class="mt-1 sm:mt-2 text-xs sm:text-sm leading-relaxed text-slate-600">
-                Outcome rates are computed against total stops. A single stop may have multiple outcomes
+                {home_chart_outcomes_subheading()}
               </p>
             </div>
 
             {#if historicalOutcomes}
-              {@const outcomeLabels = { warnings: "Warnings", citations: "Citations", arrests: "Arrests", noAction: "No Action" }}
+              {@const outcomeLabels = { warnings: home_outcome_warnings(), citations: home_outcome_citations(), arrests: home_outcome_arrests(), noAction: home_outcome_no_action() }}
               {@const seriesKeys = ["warnings", "citations", "arrests", "noAction"]}
               {@const years3 = historicalOutcomes.years}
               {@const padding3 = { top: 12, right: 12, bottom: 35, left: 35 }}
@@ -611,10 +644,10 @@
   <section id="download" class="border-t border-slate-200 bg-white py-12">
     <div class="mx-auto max-w-4xl px-6">
       <h2 class="mb-6 text-center text-3xl font-bold text-slate-900">
-        {m.home_toc_download()}
+        {home_toc_download()}
       </h2>
       <p class="mb-8 text-center text-lg text-slate-700">
-        Download the complete Missouri Vehicle Stop Report dataset for your own analysis.
+        {home_download_description()}
       </p>
 
       {#if downloadGroups.length}
@@ -625,8 +658,7 @@
                 {downloadGroupMeta[downloadGroup.group]?.title ?? downloadGroup.group.toUpperCase()}
               </h3>
               <p class="mb-4 min-h-[72px] text-sm text-slate-600">
-                {downloadGroupMeta[downloadGroup.group]?.description ??
-                  "Download data in this format."}
+                {downloadGroupMeta[downloadGroup.group]?.description ?? home_download_format_fallback()}
               </p>
               {#each downloadGroup.files as file, index (file.path)}
                 <a
@@ -650,7 +682,7 @@
         </div>
       {:else}
         <div class="flex h-[180px] items-center justify-center rounded-lg border-2 border-slate-200 bg-slate-50">
-          <span class="text-sm text-slate-500">Download links are loading…</span>
+          <span class="text-sm text-slate-500">{home_download_loading()}</span>
         </div>
       {/if}
 
@@ -664,14 +696,14 @@
   <section class="border-t border-slate-200 bg-white py-8 sm:py-10">
     <div class="mx-auto max-w-4xl px-6 text-center">
       <p class="mb-4 text-lg font-semibold text-slate-900">
-        {m.home_footer_cta()}
+        {home_footer_cta()}
       </p>
       <a
         href="mailto:davideads@recoveredfactory.net"
         class="inline-block rounded-lg bg-[#1b613c] px-6 py-3 font-semibold text-white no-underline transition-colors hover:bg-[#105430] focus:outline-none focus:ring-2 focus:ring-[#1b613c] focus:ring-offset-2"
         aria-label="Send email to get in touch about hiring us"
       >
-        {m.home_footer_contact()}
+        {home_footer_contact()}
       </a>
     </div>
   </section>
