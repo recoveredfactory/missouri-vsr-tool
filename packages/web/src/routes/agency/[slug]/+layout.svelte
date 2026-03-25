@@ -1322,6 +1322,32 @@
   <meta property="twitter:image" content="{siteUrl}/social-meta.png" />
   <meta property="twitter:title" content={metaTitle} />
   <meta property="twitter:description" content={metaDescription} />
+  {@html `<script type="application/ld+json">${JSON.stringify({
+    "@context": "https://schema.org",
+    "@type": "Dataset",
+    name: `${agencyData?.agency ?? data.slug} — Traffic Stop Data`,
+    description: metaDescription,
+    url: canonicalAgencyUrl,
+    license: "https://www.missouri.gov/",
+    temporalCoverage: "2020/2024",
+    spatialCoverage: {
+      "@type": "Place",
+      name: [agencyData?.agency, jurisdictionDisplay, "Missouri"].filter(Boolean).join(", ")
+    },
+    publisher: {
+      "@type": "Organization",
+      name: "Recovered Factory",
+      url: "https://recoveredfactory.net"
+    },
+    isBasedOn: {
+      "@type": "CreativeWork",
+      name: "Missouri Vehicle Stops Report",
+      creator: {
+        "@type": "GovernmentOrganization",
+        name: "Missouri Attorney General"
+      }
+    }
+  })}</script>`}
 </svelte:head>
 
 <StickyHeader
