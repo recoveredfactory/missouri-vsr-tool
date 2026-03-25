@@ -1,6 +1,5 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import * as m from "$lib/paraglide/messages";
   import { withDataBase } from "$lib/dataBase";
   import { scatterDomainGroupStore, type ScatterDomainRange } from "$lib/stores/scatter";
 
