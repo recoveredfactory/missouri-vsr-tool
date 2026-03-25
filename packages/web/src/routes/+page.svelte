@@ -238,9 +238,7 @@
     property="twitter:description"
     content="Who gets stopped? why? What happens next? This tool reveals how traffic enforcement varies across Missouri's agencies."
   />
-  <script type="application/ld+json">
-    {JSON.stringify(webSiteSchema)}
-  </script>
+  {@html `<script type="application/ld+json">${JSON.stringify(webSiteSchema)}</script>`}
 </svelte:head>
 
 <StickyHeader agencies={data.agencies} />
