@@ -152,7 +152,7 @@
     }));
   }
 
-  const downloadGroups = buildDownloadGroups(downloadManifest);
+  $: downloadGroups = buildDownloadGroups(downloadManifest);
 
   function showTooltip(event, content) {
     const el = event.currentTarget || event.target;
