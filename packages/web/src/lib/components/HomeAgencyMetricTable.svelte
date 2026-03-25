@@ -18,6 +18,7 @@
     home_metric_col_agency,
     home_metric_col_total_stops,
   } from "$lib/paraglide/messages.js";
+  import * as m from "$lib/paraglide/messages.js";
   import GridAgencyLinkCell from "$lib/components/grid/GridAgencyLinkCell.svelte";
 
   type AgencyIndexEntry = {
