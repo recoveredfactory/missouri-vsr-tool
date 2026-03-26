@@ -27,6 +27,25 @@ Report dimension labels use ID-based keys:
 These are generated from `packages/web/static/data/report_dimensions.json` and
 stored in `packages/web/messages/en.json` and `packages/web/messages/es.json`.
 
+## Paraglide / i18n rules
+
+- **Named imports** are preferred: `import { my_key } from "$lib/paraglide/messages"`.
+- **Wildcard import** (`import * as m`) is required in files that do dynamic
+  `m[key]` bracket lookups (e.g. `MetricChartModal.svelte`,
+  `HomeAgencyMetricTable.svelte`, `+layout.svelte`). Never remove it from those
+  files — the build won't catch it but the runtime will crash.
+- When auditing translation usage, grep for `m[` (bracket notation) in addition
+  to `m.` and `m?.` — optional chaining also hides from naive greps.
+
+## Svelte / SvelteKit gotchas
+
+- `{expressions}` inside `<script type="application/ld+json">` (or any `<script>`
+  tag) in a Svelte template are **not evaluated** — they render as literal text.
+  Use `{@html \`<script ...>${JSON.stringify(data)}</script>\`}` instead.
+- In SSR, `$:` reactive declarations run **after** all `const`/`let` statements.
+  If a `const` depends on a `$:` variable it will see `undefined`. Make dependent
+  assignments reactive too.
+
 ## Git workflow
 
 - Create feature branches as `XXXX-short-description` (example: `0046-nav-header-edits`).
