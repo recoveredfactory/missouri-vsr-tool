@@ -1,3 +1,5 @@
+export const trailingSlash = "ignore";
+
 import { env } from "$env/dynamic/public";
 import { withDataBase } from "$lib/dataBase";
 
