@@ -18,6 +18,7 @@
     search_results_count,
     nav_language_label,
   } from "$lib/paraglide/messages";
+  import { localizeUrl } from "$lib/paraglide/runtime";
   import { goto } from "$app/navigation";
   import { page } from "$app/stores";
   import { QuickScore } from "quick-score";
@@ -332,6 +333,8 @@
     });
     currentLocale = nextLocale;
     setLocale(nextLocale);
+    const target = localizeUrl($page.url, { locale: nextLocale });
+    goto(target.pathname, { replaceState: false });
   };
 
   const handleLocaleChange = (event) => {
