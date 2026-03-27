@@ -18,7 +18,6 @@
     search_results_count,
     nav_language_label,
   } from "$lib/paraglide/messages";
-  import { localizeUrl } from "$lib/paraglide/runtime";
   import { goto } from "$app/navigation";
   import { page } from "$app/stores";
   import { QuickScore } from "quick-score";
@@ -326,15 +325,12 @@
   };
 
   const switchLocale = (nextLocale) => {
-    if (!nextLocale || nextLocale === currentLocale) return;
+    if (!nextLocale || nextLocale === getLocale()) return;
     trackEvent("language_switch", {
       from: currentLocale,
       to: nextLocale,
     });
-    currentLocale = nextLocale;
     setLocale(nextLocale);
-    const target = localizeUrl($page.url, { locale: nextLocale });
-    goto(target.pathname, { replaceState: false });
   };
 
   const handleLocaleChange = (event) => {
@@ -375,7 +371,7 @@
           {#if showLanguageSwitcher}
             <div class="relative hidden md:block">
               <select
-                bind:value={currentLocale}
+                value={currentLocale}
                 on:change={handleLocaleChange}
                 class="h-9 appearance-none rounded-lg border border-slate-200 bg-white pl-2.5 pr-7 text-sm font-semibold uppercase tracking-wide text-slate-700 shadow-sm transition-colors hover:border-[#105430] focus:border-[#1b613c] focus:outline-none"
               >
