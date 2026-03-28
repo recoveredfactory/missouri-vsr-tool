@@ -378,5 +378,12 @@
   "section_economics": "Economics",
   "section_housing": "Housing",
   "section_social": "Social",
-  "section_families": "Families"
+  "section_families": "Families",
+  "home_download_about_note": "See the {link} section for usage details, methodology, and more downloads.",
+  "home_about_link": "About the Data",
+  "footer_project_of": "A project of",
+  "footer_developed_by": "Developed by",
+  "footer_conjunction": "and",
+  "footer_copyright": "Code, design, and text copyright © {year} Recovered Factory.",
+  "footer_data_disclaimer": "Data is compiled from public records and may contain errors or omissions."
 }

@@ -18,7 +18,6 @@
     home_metric_col_agency,
     home_metric_col_total_stops,
   } from "$lib/paraglide/messages.js";
-  import * as m from "$lib/paraglide/messages.js";
   import GridAgencyLinkCell from "$lib/components/grid/GridAgencyLinkCell.svelte";
 
   type AgencyIndexEntry = {
@@ -137,26 +136,9 @@
       .map((token) => titleToken(token))
       .join(" ");
 
-  const translationKeyForId = (prefix: string, id: string) =>
-    `${prefix}_${id}`
-      .replace(/[^a-z0-9]/gi, "_")
-      .replace(/_+/g, "_")
-      .replace(/^_|_$/g, "")
-      .toLowerCase();
-
-  const labelForId = (prefix: string, id: string) => {
-    if (!id) return "";
-    const key = translationKeyForId(prefix, id);
-    const labelFn = (m as Record<string, (() => string) | undefined>)[key];
-    return typeof labelFn === "function" ? labelFn() : humanizeId(id);
-  };
-
   const metricLabelForRowKey = (rowKey: string) => {
     const [tableId = "", sectionId = "", metricId = ""] = rowKey.split("--");
-    const tableLabel = labelForId("table", tableId) || humanizeId(tableId);
-    const sectionLabel = labelForId("section", sectionId) || humanizeId(sectionId);
-    const metricLabel = labelForId("metric", metricId) || humanizeId(metricId);
-    return `${tableLabel}: ${sectionLabel}: ${metricLabel}`;
+    return `${humanizeId(tableId)}: ${humanizeId(sectionId)}: ${humanizeId(metricId)}`;
   };
 
   const toDisplayValue = (value: number | null | undefined) => {

@@ -1,9 +1,19 @@
 <script>
-  import * as m from "$lib/paraglide/messages";
+  import {
+    home_header_title,
+    home_donate_button,
+    footer_project_of,
+    footer_developed_by,
+    footer_conjunction,
+    footer_copyright,
+    footer_data_disclaimer,
+  } from "$lib/paraglide/messages";
 
   const donateUrl =
     import.meta.env.PUBLIC_DONATE_URL ??
     "https://buy.stripe.com/6oU9AU1KEa7Z6gcdr6fAc03";
+
+  $: copyrightYear = new Date().getFullYear() === 2026 ? "2026" : `2026\u2013${new Date().getFullYear()}`;
 </script>
 
 <footer class="border-t-6 border-t-[#1b613c] bg-white">
@@ -12,13 +22,13 @@
       <div class="space-y-4 text-center md:text-left">
         <div>
           <a href="/" class="text-lg font-bold text-[#1b613c] no-underline hover:text-[#105430]">
-            {m.home_header_title()}
+            {home_header_title()}
           </a>
         </div>
 
         <div class="space-y-2 text-sm text-slate-600">
           <p>
-            A project of <a
+            {footer_project_of()} <a
               href="https://recoveredfactory.net/en#signup"
               target="_blank"
               rel="noopener noreferrer"
@@ -26,14 +36,14 @@
             >Recovered Factory</a>
           </p>
           <p>
-            Developed by
+            {footer_developed_by()}
             <a
               href="https://davideads.com/en"
               target="_blank"
               rel="noopener noreferrer"
               class="font-medium text-slate-700 underline decoration-slate-400 underline-offset-2 hover:text-[#105430] hover:decoration-[#105430]"
             >David Eads</a>
-            and
+            {footer_conjunction()}
             <a
               href="https://www.tlysik.com/"
               target="_blank"
@@ -43,10 +53,10 @@
           </p>
         </div>
         <p class="text-xs text-slate-500">
-          Code, design, and text copyright © {new Date().getFullYear() === 2026 ? 2026 : `2026 - ${new Date().getFullYear()}` } Recovered Factory.
+          {footer_copyright({ year: copyrightYear })}
         </p>
         <p class="text-xs text-slate-500">
-          Data is compiled from public records and may contain errors or omissions.
+          {footer_data_disclaimer()}
         </p>
       </div>
 
@@ -55,7 +65,7 @@
           href={donateUrl}
           class="inline-flex items-center rounded-lg bg-[#1b613c] px-6 py-2.5 text-sm font-semibold text-white no-underline transition-colors hover:bg-[#105430]"
         >
-          {m.home_donate_button()}
+          {home_donate_button()}
         </a>
       </div>
     </div>
