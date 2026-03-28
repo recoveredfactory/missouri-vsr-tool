@@ -39,6 +39,8 @@
     home_download_label_raw_stops,
     home_download_label_all_combined,
     home_download_label_vsr_statistics,
+    home_download_about_note,
+    home_about_link,
   } from "$lib/paraglide/messages";
   import { raceColors, raceTextColors, outcomeColors } from "$lib/colors.js";
   import { withDataBase } from "$lib/dataBase";
@@ -685,7 +687,7 @@
       {/if}
 
       <p class="mt-8 text-center text-sm text-slate-600">
-        See the <a href="#about" class="text-[#1b613c] underline hover:text-[#105430]">About the Data</a> section for usage details, methodology, and more downloads.
+        {@html home_download_about_note({ link: `<a href="#about" class="text-[#1b613c] underline hover:text-[#105430]">${home_about_link()}</a>` })}
       </p>
     </div>
   </section>

@@ -29,6 +29,7 @@ stored in `packages/web/messages/en.json` and `packages/web/messages/es.json`.
 
 ## Paraglide / i18n rules
 
+- **`setLocale(locale)` does a full page reload** — this is intentional with the URL strategy. Never add `goto()` on top of it; they conflict. Just call `setLocale()` and let Paraglide handle navigation.
 - **Named imports** are preferred: `import { my_key } from "$lib/paraglide/messages"`.
 - **Wildcard import** (`import * as m`) is required in files that do dynamic
   `m[key]` bracket lookups (e.g. `MetricChartModal.svelte`,
