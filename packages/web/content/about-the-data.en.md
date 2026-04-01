@@ -786,6 +786,7 @@ The agency index is an aggregation of agency metadata and the VSR names. Notable
 - `agency_slug` — slugified canonical name (apostrophes removed, punctuation collapsed)
 - `names` — **array of known names** for the agency (canonical, crosswalked, and VSR variants)
 - `city`, `zip`, `phone`, `county` — from the agency reference database
+- `census_geoid` — US Census GEOID for the agency's jurisdiction
 - `rates-by-race--totals--all-stops` and `all_stops_total` — the most recent total stops, for weighting/search
 
 **CSV quirk:** `names` is serialized as a JSON array string in CSV (e.g. `"[\"Agency A\", \"Agency A PD\"]"`).

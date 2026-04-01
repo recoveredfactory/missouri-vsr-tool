@@ -788,6 +788,7 @@ El índice de agencias es una agregación de metadatos de agencias y los nombres
 - `agency_slug` — nombre canónico en formato slug (apóstrofes eliminados, puntuación colapsada)
 - `names` — **arreglo de nombres conocidos** para la agencia (canónico, puente de conexión y variantes del VSR)
 - `city`, `zip`, `phone`, `county` — de la base de datos de referencia de agencias
+- `census_geoid` — identificador geográfico del Censo de EE. UU. (GEOID) para la jurisdicción de la agencia
 - `rates-by-race--totals--all-stops` y `all_stops_total` — las paradas totales más recientes, para ponderación/búsqueda
 
 **Peculiaridad del CSV:** `names` se serializa como una cadena de arreglo JSON en CSV (p. ej., `"[\"Agency A\", \"Agency A PD\"]"`).
