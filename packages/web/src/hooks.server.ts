@@ -1,8 +1,10 @@
 import { redirect } from "@sveltejs/kit";
+import { extractLocaleFromHeader } from "$lib/paraglide/runtime";
 
 export const handle = async ({ event, resolve }) => {
   if (event.url.pathname === "/") {
-    throw redirect(308, "/en");
+    const locale = extractLocaleFromHeader(event.request) ?? "en";
+    throw redirect(307, `/${locale}`);
   }
 
   return resolve(event);

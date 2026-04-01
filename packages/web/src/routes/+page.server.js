@@ -1,5 +1,6 @@
 import { compile } from "mdsvex";
-import aboutMarkdown from "../../content/about-the-data.md?raw";
+import aboutMarkdownEn from "../../content/about-the-data.en.md?raw";
+import aboutMarkdownEs from "../../content/about-the-data.es.md?raw";
 import { withDataBase } from "$lib/dataBase";
 
 const unwrapHtmlBlocks = (html) =>
@@ -11,9 +12,13 @@ const wrapTables = (html) =>
     (_match, inner) => `<div class="table-wrapper"><table${inner}</table></div>`
   );
 
-const aboutDataHtmlPromise = compile(aboutMarkdown).then((compiled) =>
-  wrapTables(unwrapHtmlBlocks(compiled.code)),
-);
+const compileMarkdown = (md) =>
+  compile(md).then((compiled) => wrapTables(unwrapHtmlBlocks(compiled.code)));
+
+const aboutDataHtmlByLocale = {
+  en: compileMarkdown(aboutMarkdownEn),
+  es: compileMarkdown(aboutMarkdownEs),
+};
 
 const isStructuredSums = (data) =>
   data && !Array.isArray(data) && Array.isArray(data.years);
@@ -141,7 +146,8 @@ const fetchJson = async (fetch, path, dataBaseUrl) => {
   }
 };
 
-export async function load({ fetch }) {
+export async function load({ fetch, url }) {
+  const locale = url.pathname.split("/")[1] === "es" ? "es" : "en";
   const dataBaseUrl = import.meta.env.PUBLIC_DATA_BASE_URL;
   const [statsData, statewideYearSums, downloadManifest] = await Promise.all([
     fetchJson(fetch, "/dist/homepage_2024_stats.json", dataBaseUrl),
@@ -156,7 +162,7 @@ export async function load({ fetch }) {
   const { historicalData, historicalOutcomes } = buildHistoricalData(statewideYearSums);
 
   return {
-    aboutDataHtml: await aboutDataHtmlPromise,
+    aboutDataHtml: await aboutDataHtmlByLocale[locale],
     downloadManifest,
     statsData,
     historicalData,

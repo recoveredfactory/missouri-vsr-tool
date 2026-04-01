@@ -137,26 +137,16 @@
       .map((token) => titleToken(token))
       .join(" ");
 
-  const translationKeyForId = (prefix: string, id: string) =>
-    `${prefix}_${id}`
-      .replace(/[^a-z0-9]/gi, "_")
-      .replace(/_+/g, "_")
-      .replace(/^_|_$/g, "")
-      .toLowerCase();
-
   const labelForId = (prefix: string, id: string) => {
     if (!id) return "";
-    const key = translationKeyForId(prefix, id);
-    const labelFn = (m as Record<string, (() => string) | undefined>)[key];
-    return typeof labelFn === "function" ? labelFn() : humanizeId(id);
+    const key = `${prefix}_${id}`;
+    const fn = (m as Record<string, unknown>)[key];
+    return typeof fn === "function" ? (fn as () => string)() : humanizeId(id);
   };
 
   const metricLabelForRowKey = (rowKey: string) => {
     const [tableId = "", sectionId = "", metricId = ""] = rowKey.split("--");
-    const tableLabel = labelForId("table", tableId) || humanizeId(tableId);
-    const sectionLabel = labelForId("section", sectionId) || humanizeId(sectionId);
-    const metricLabel = labelForId("metric", metricId) || humanizeId(metricId);
-    return `${tableLabel}: ${sectionLabel}: ${metricLabel}`;
+    return `${humanizeId(tableId)}: ${humanizeId(sectionId)}: ${humanizeId(metricId)}`;
   };
 
   const toDisplayValue = (value: number | null | undefined) => {

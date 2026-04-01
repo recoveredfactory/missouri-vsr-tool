@@ -16,6 +16,7 @@
     search_result_stops,
     search_results_count_one,
     search_results_count,
+    nav_language_label,
   } from "$lib/paraglide/messages";
   import { goto } from "$app/navigation";
   import { page } from "$app/stores";
@@ -41,7 +42,7 @@
   let localeBase = "/en";
   let isHomeRoute = false;
   let searchContainer;
-  const showLanguageSwitcher = false;
+  const showLanguageSwitcher = true;
   const HOME_ANCHOR_OFFSET_PX = 0;
 
   let currentLocale;
@@ -324,12 +325,11 @@
   };
 
   const switchLocale = (nextLocale) => {
-    if (!nextLocale || nextLocale === currentLocale) return;
+    if (!nextLocale || nextLocale === getLocale()) return;
     trackEvent("language_switch", {
       from: currentLocale,
       to: nextLocale,
     });
-    currentLocale = nextLocale;
     setLocale(nextLocale);
   };
 
@@ -371,7 +371,7 @@
           {#if showLanguageSwitcher}
             <div class="relative hidden md:block">
               <select
-                bind:value={currentLocale}
+                value={currentLocale}
                 on:change={handleLocaleChange}
                 class="h-9 appearance-none rounded-lg border border-slate-200 bg-white pl-2.5 pr-7 text-sm font-semibold uppercase tracking-wide text-slate-700 shadow-sm transition-colors hover:border-[#105430] focus:border-[#1b613c] focus:outline-none"
               >
@@ -545,7 +545,7 @@
 
         {#if showLanguageSwitcher}
           <div class="mt-10">
-            <p class="text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">Language</p>
+            <p class="text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">{nav_language_label()}</p>
             <div class="mt-3 grid grid-cols-2 gap-2">
               {#each locales as locale}
                 <button
