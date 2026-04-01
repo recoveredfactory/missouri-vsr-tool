@@ -18,6 +18,7 @@
     home_metric_col_agency,
     home_metric_col_total_stops,
   } from "$lib/paraglide/messages.js";
+  import * as m from "$lib/paraglide/messages.js";
   import GridAgencyLinkCell from "$lib/components/grid/GridAgencyLinkCell.svelte";
 
   type AgencyIndexEntry = {
@@ -135,6 +136,13 @@
       .filter(Boolean)
       .map((token) => titleToken(token))
       .join(" ");
+
+  const labelForId = (prefix: string, id: string) => {
+    if (!id) return "";
+    const key = `${prefix}_${id}`;
+    const fn = (m as Record<string, unknown>)[key];
+    return typeof fn === "function" ? (fn as () => string)() : humanizeId(id);
+  };
 
   const metricLabelForRowKey = (rowKey: string) => {
     const [tableId = "", sectionId = "", metricId = ""] = rowKey.split("--");

@@ -1,146 +1,148 @@
-# About the data
+# Sobre los datos
 
-## What’s in here
+## Qué contiene
 
-Missouri requires police agencies to report data on every traffic stop to the state Attorney General: who got stopped, why, what happened, and whether a search occurred. We extract that data from yearly PDF reports published by the AG’s office.
+Missouri requiere que las agencias policiales reporten datos sobre cada parada de tráfico al Fiscal General del estado: quién fue detenido, por qué, qué ocurrió y si se realizó una búsqueda. Extraemos esos datos de los informes anuales en PDF publicados por la oficina del Fiscal General.
 
-This dataset includes counts and rates, broken down by the race of the driver. The metrics tracked include:
+> **Nota sobre los nombres de las métricas:** Los nombres de tablas, secciones y métricas se mantienen en inglés en toda la herramienta para preservar la fidelidad con los datos fuente y evitar ambigüedades en la traducción de términos técnicos o legales.
 
-- **Stops**: total stops, resident stops, non‑resident stops
-- **Outcomes**: arrests, citations, searches, and contraband found
-- **Rates**: arrest rate, citation rate, search rate, contraband hit rate, stop rate, resident stop rate
-- **Arrest reason** (e.g., drug violation)
-- **Citation/warning reason** (e.g., moving violation)
-- **Driver age** (17 and under, 18–29, 30–39, 40–64, 65+)
-- **Driver gender** (male, female)
-- **Location of stop** (city street, county road, interstate, etc.)
-- **Officer assignment** (dedicated traffic, general parol, special assignment)
-- **Reason for stop** (investigative, moving, equipment, etc.)
-- **Stop outcome** (arrest, citation, warning, no action, etc.)
-- **Type of contraband found** (drugs, weapons, etc.)
-- **Type of search / probable cause** (consent, incident to arrest, etc.)
+Este conjunto de datos incluye conteos y tasas, desglosados por la raza del conductor. Las métricas rastreadas incluyen:
+
+- **Stops**: paradas totales, paradas de residentes, paradas de no residentes
+- **Outcomes**: arrestos, citaciones, búsquedas y contrabando encontrado
+- **Rates**: tasa de arresto, tasa de citación, tasa de búsqueda, tasa de aciertos de contrabando, tasa de parada, tasa de parada de residentes
+- **Arrest reason** (p. ej., infracción de drogas)
+- **Citation/warning reason** (p. ej., infracción de tránsito)
+- **Driver age** (17 y menores, 18–29, 30–39, 40–64, 65+)
+- **Driver gender** (masculino, femenino)
+- **Location of stop** (calle de la ciudad, carretera del condado, autopista interestatal, etc.)
+- **Officer assignment** (tráfico dedicado, patrulla general, asignación especial)
+- **Reason for stop** (investigativo, en movimiento, equipo, etc.)
+- **Stop outcome** (arresto, citación, advertencia, sin acción, etc.)
+- **Type of contraband found** (drogas, armas, etc.)
+- **Type of search / probable cause** (consentimiento, incidente de arresto, etc.)
 - **Search duration** (0–15 min, 16–30 min, 31+ min)
-- **What was searched** (vehicle property, driver, driver property)
-- **Population estimates** from the Decennial Census and the American Community Survey (ACS)
+- **What was searched** (propiedad del vehículo, conductor, propiedad del conductor)
+- **Population estimates** del Censo Decenal y de la Encuesta sobre la Comunidad Estadounidense (ACS)
 
-## Where it came from
+## De dónde vino
 
-The Missouri Attorney General is [required by statute](http://revisor.mo.gov/main/OneSection.aspx?section=590.650&bid=30357&hl=) to compile and publish the Vehicle Stops Report.
+El Fiscal General de Missouri tiene la [obligación legal](http://revisor.mo.gov/main/OneSection.aspx?section=590.650&bid=30357&hl=) de compilar y publicar el Informe de Paradas de Vehículos.
 
-Each report typically includes an executive summary, statewide aggregates, agency‑specific reports, and a separate document of agency comments (if submitted). We extract structured data from the agency‑specific reports and from the agency responses, which are later joined together.
+Cada informe típicamente incluye un resumen ejecutivo, totales estatales, informes por agencia y un documento separado de comentarios de las agencias (si fueron enviados). Extraemos datos estructurados de los informes por agencia y de las respuestas de las agencias, que luego se combinan.
 
-Source reports and comments are available from the AG’s office:
+Los informes fuente y los comentarios están disponibles en la oficina del Fiscal General:
 
-- [Vehicle Stops Report landing page](https://ago.mo.gov/get-help/vehicle-stops-report/)
-- Agency‑specific report PDFs:
+- [Página de inicio del Informe de Paradas de Vehículos](https://ago.mo.gov/get-help/vehicle-stops-report/)
+- PDFs de informes por agencia:
   - 2024: https://ago.mo.gov/wp-content/uploads/2024-VSR-Agency-Specific-Reports.pdf
   - 2023: https://ago.mo.gov/wp-content/uploads/VSRreport2023.pdf
   - 2022: https://ago.mo.gov/wp-content/uploads/vsrreport2022.pdf
   - 2021: https://ago.mo.gov/wp-content/uploads/2021-VSR-Agency-Specific-Report.pdf
   - 2020: https://ago.mo.gov/wp-content/uploads/2020-VSR-Agency-Specific-Report.pdf
-- Agency response PDFs:
+- PDFs de respuestas de agencias:
   - 2024: https://ago.mo.gov/wp-content/uploads/2024-Agency-Responses-1.pdf
   - 2023: https://ago.mo.gov/wp-content/uploads/VSRagencynotes2023.pdf
   - 2022: https://ago.mo.gov/wp-content/uploads/2022-agency-comments-ago.pdf
   - 2021: https://ago.mo.gov/wp-content/uploads/2021-VSR-Agency-Comments.pdf
   - 2020: https://ago.mo.gov/wp-content/uploads/2020-VSR-Agency-Comments.pdf
 
-Currently, we extract data for reports **2020–2024** (published 2021–2025).
+Actualmente, extraemos datos de los informes de **2020–2024** (publicados entre 2021 y 2025).
 
-Agency metadata (names, addresses, contact info) comes from a 2025 copy of the Missouri law enforcement agencies database provided by Jesse Bogan at The Marshall Project. The latest version of this data is [available via data.mo.gov](https://data.mo.gov/Public-Safety/Missouri-Law-Enforcement-Agencies/cgbu-k38b/about_data) and will be integrated after the 2025 VSR is released (spring 2026).
+Los metadatos de las agencias (nombres, direcciones, información de contacto) provienen de una copia de 2025 de la base de datos de agencias de orden público de Missouri proporcionada por Jesse Bogan de The Marshall Project. La versión más reciente de estos datos está [disponible a través de data.mo.gov](https://data.mo.gov/Public-Safety/Missouri-Law-Enforcement-Agencies/cgbu-k38b/about_data) y se integrará después de que se publique el VSR 2025 (primavera de 2026).
 
-Because agency names vary between the agencies database and the VSR, we built a crosswalk to join their information.
+Dado que los nombres de las agencias varían entre la base de datos de agencias y el VSR, creamos un puente de conexión para unir su información.
 
-The address from the agency data is run through Geocod.io to attach geographic identifiers for each jurisdiction and to geocode the agency address. These identifiers are joined with [Census cartographic boundary files](https://www.census.gov/geographies/mapping-files/time-series/geo/cartographic-boundary.html) to display jurisdiction maps and spatial relationships.
+La dirección de los datos de las agencias se procesa a través de Geocod.io para adjuntar identificadores geográficos a cada jurisdicción y geocodificar la dirección de la agencia. Estos identificadores se combinan con [archivos de límites cartográficos del Censo](https://www.census.gov/geographies/mapping-files/time-series/geo/cartographic-boundary.html) para mostrar mapas de jurisdicción y relaciones espaciales.
 
-The processing pipeline is an [open source Python/Dagster project](https://github.com/eads/missouri-vsr-processing) originally developed at The Marshall Project.
+El proceso de procesamiento es un [proyecto de código abierto Python/Dagster](https://github.com/eads/missouri-vsr-processing) desarrollado originalmente en The Marshall Project.
 
-## How the data is structured
+## Cómo están estructurados los datos
 
-### Row model (the core table)
+### Modelo de filas (la tabla central)
 
-The central dataset is a row‑based table where each row represents one metric for one agency and one year. Key fields:
+El conjunto de datos central es una tabla basada en filas donde cada fila representa una métrica para una agencia y un año. Campos clave:
 
-- `agency` — the agency name as it appears in the report
-- `year` — report year
-- `table`, `section`, `metric` — human‑readable labels
-- `table_id`, `section_id`, `metric_id` — slugified identifiers
-- `row_key` — `table_id--section_id--metric_id` (stable across table renumbering)
-- `row_id` — `year-agency-row_key` (globally unique)
-- Race columns: `Total`, `White`, `Black`, `Hispanic`, `Native American`, `Asian`, `Other`
+- `agency` — el nombre de la agencia tal como aparece en el informe
+- `year` — año del informe
+- `table`, `section`, `metric` — etiquetas legibles para humanos
+- `table_id`, `section_id`, `metric_id` — identificadores en formato slug
+- `row_key` — `table_id--section_id--metric_id` (estable ante cambios de numeración de tablas)
+- `row_id` — `year-agency-row_key` (globalmente único)
+- Columnas de raza: `Total`, `White`, `Black`, `Hispanic`, `Native American`, `Asian`, `Other`
 
-All values are numeric or null (`.` in the PDF becomes `null`).
+Todos los valores son numéricos o nulos (`.` en el PDF se convierte en `null`).
 
-### Rate rows and normalization
+### Filas de tasas y normalización
 
-Rates in the reports (e.g., “search rate”) are captured as provided. However:
+Las tasas en los informes (p. ej., "search rate") se capturan tal como se proporcionan. Sin embargo:
 
-- **Statewide rates** are **recomputed** from totals for consistency; we do not sum rate rows.
-- `YYYY ACS pop` fields are normalized to `acs-pop` so population variables are comparable across years.
-- In early years (2020–2021), population rows that look like `YYYY-pop` are also mapped to `acs-pop`.
+- Las **tasas estatales** se **recomputan** a partir de los totales para mayor consistencia; no sumamos filas de tasas.
+- Los campos `YYYY ACS pop` se normalizan a `acs-pop` para que las variables de población sean comparables entre años.
+- En los primeros años (2020–2021), las filas de población con formato `YYYY-pop` también se mapean a `acs-pop`.
 
-### Agency comments
+### Comentarios de las agencias
 
-Agency comments are parsed from the separate response PDFs and attached downstream. Each comment entry has:
+Los comentarios de las agencias se extraen de los PDFs de respuesta separados y se adjuntan al conjunto de datos. Cada entrada de comentario tiene:
 
 - `agency`
 - `year`
-- `comment` (string, with paragraph breaks preserved as `\n\n`)
+- `comment` (cadena de texto, con saltos de párrafo preservados como `\n\n`)
 - `has_comment`
 - `source_url`
 
-Line breaks inside paragraphs are collapsed to a single space. Paragraph breaks are preserved.
+Los saltos de línea dentro de los párrafos se colapsan en un solo espacio. Los saltos de párrafo se preservan.
 
-## Downloads and file formats
+## Descargas y formatos de archivo
 
-All public downloads live under:
+Todas las descargas públicas están en:
 
 `https://data.vsr.recoveredfactory.net/`
 
-### Combined JSON (all datasets)
+### JSON combinado (todos los conjuntos de datos)
 
-This file contains **all** datasets in one JSON object with keys:
+Este archivo contiene **todos** los conjuntos de datos en un objeto JSON con claves:
 
 - `vsr_statistics`
 - `agency_index`
 - `agency_comments`
 
-Download:
+Descarga:
 
 - https://data.vsr.recoveredfactory.net/downloads/missouri_vsr_2020_2024_downloads.json
 
-### Per‑dataset CSV + Parquet
+### CSV + Parquet por conjunto de datos
 
-For analysis in pandas/R/SQL, each dataset is also provided as CSV and Parquet:
+Para análisis en pandas/R/SQL, cada conjunto de datos también está disponible como CSV y Parquet:
 
-**VSR statistics (with rank/percentile/percentage rows)**
+**Estadísticas VSR (con filas de rango/percentil/porcentaje)**
 
 - https://data.vsr.recoveredfactory.net/downloads/missouri_vsr_2020_2024_vsr_statistics.csv
 - https://data.vsr.recoveredfactory.net/downloads/missouri_vsr_2020_2024_vsr_statistics.parquet
 
-**Agency index (names + metadata)**
+**Índice de agencias (nombres + metadatos)**
 
 - https://data.vsr.recoveredfactory.net/downloads/missouri_vsr_2020_2024_agency_index.csv
 - https://data.vsr.recoveredfactory.net/downloads/missouri_vsr_2020_2024_agency_index.parquet
 
-**Agency comments**
+**Comentarios de agencias**
 
 - https://data.vsr.recoveredfactory.net/downloads/missouri_vsr_2020_2024_agency_comments.csv
 - https://data.vsr.recoveredfactory.net/downloads/missouri_vsr_2020_2024_agency_comments.parquet
 
-### Download manifest
+### Manifiesto de descargas
 
-The manifest includes file sizes for dynamic download UIs:
+El manifiesto incluye tamaños de archivo para interfaces de descarga dinámicas:
 
 - https://data.vsr.recoveredfactory.net/downloads/missouri_vsr_2020_2024_downloads_manifest.json
 
-### Statewide sums (subset)
+### Totales estatales (subconjunto)
 
-A slim statewide summary used for homepage charts:
+Un resumen estatal simplificado utilizado para los gráficos de la página principal:
 
 - https://data.vsr.recoveredfactory.net/statewide_year_sums_subset.json
 
-Included row_keys:
+Row_keys incluidos:
 - rates-by-race--totals--all-stops
 - search-statistics--probable-cause--consent
 - number-of-stops-by-race--stop-outcome--arrests
@@ -148,19 +150,19 @@ Included row_keys:
 - number-of-stops-by-race--stop-outcome--warning
 - number-of-stops-by-race--stop-outcome--no-action
 
-### Per‑agency downloads (convenience)
+### Descargas por agencia (conveniencia)
 
-These files are convenient for single‑agency use, but the **primary** way to get the data is still the combined downloads above.
+Estos archivos son convenientes para uso de una sola agencia, pero la forma **principal** de obtener los datos sigue siendo las descargas combinadas anteriores.
 
-| Resource | URL pattern | Notes |
+| Recurso | Patrón de URL | Notas |
 |---|---|---|
-| Agency year JSON | https://data.vsr.recoveredfactory.net/agency_year/{agency_slug}.json | All rows, metadata, and comments for one agency |
-| Agency boundary GeoJSON | https://data.vsr.recoveredfactory.net/agency_boundaries/{agency_id}.geojson | Single FeatureCollection with boundary + neighbors |
-| Agency boundary index | https://data.vsr.recoveredfactory.net/dist/agency_boundaries_index.json | Lists which boundary files exist (by slug) |
+| JSON de agencia por año | https://data.vsr.recoveredfactory.net/agency_year/{agency_slug}.json | Todas las filas, metadatos y comentarios de una agencia |
+| GeoJSON del límite de agencia | https://data.vsr.recoveredfactory.net/agency_boundaries/{agency_id}.geojson | FeatureCollection único con límite + vecinos |
+| Índice de límites de agencia | https://data.vsr.recoveredfactory.net/dist/agency_boundaries_index.json | Lista qué archivos de límites existen (por slug) |
 
-### Agency year files (index)
+### Archivos de agencia por año (índice)
 
-Each link points to that agency’s full JSON file.
+Cada enlace apunta al archivo JSON completo de esa agencia.
 <!-- AGENCY_SLUGS_START -->
 | Agency slug | URL |
 |---|---|
@@ -777,60 +779,60 @@ Each link points to that agency’s full JSON file.
 | wright-city-police-dept | https://data.vsr.recoveredfactory.net/agency_year/wright-city-police-dept.json |
 | wright-county-sheriffs-dept | https://data.vsr.recoveredfactory.net/agency_year/wright-county-sheriffs-dept.json |
 <!-- AGENCY_SLUGS_END -->
-## Format quirks and implementation notes
+## Peculiaridades de formato y notas de implementación
 
-### Agency index (`agency_index`)
+### Índice de agencias (`agency_index`)
 
-The agency index is an aggregation of agency metadata and the VSR names. Notable fields:
+El índice de agencias es una agregación de metadatos de agencias y los nombres del VSR. Campos destacados:
 
-- `agency_slug` — slugified canonical name (apostrophes removed, punctuation collapsed)
-- `names` — **array of known names** for the agency (canonical, crosswalked, and VSR variants)
-- `city`, `zip`, `phone`, `county` — from the agency reference database
-- `rates-by-race--totals--all-stops` and `all_stops_total` — the most recent total stops, for weighting/search
+- `agency_slug` — nombre canónico en formato slug (apóstrofes eliminados, puntuación colapsada)
+- `names` — **arreglo de nombres conocidos** para la agencia (canónico, puente de conexión y variantes del VSR)
+- `city`, `zip`, `phone`, `county` — de la base de datos de referencia de agencias
+- `rates-by-race--totals--all-stops` y `all_stops_total` — las paradas totales más recientes, para ponderación/búsqueda
 
-**CSV quirk:** `names` is serialized as a JSON array string in CSV (e.g. `"[\"Agency A\", \"Agency A PD\"]"`).
-In Parquet and JSON, it is a native list.
+**Peculiaridad del CSV:** `names` se serializa como una cadena de arreglo JSON en CSV (p. ej., `"[\"Agency A\", \"Agency A PD\"]"`).
+En Parquet y JSON, es una lista nativa.
 
-### Agency comments (`agency_comments`)
+### Comentarios de agencias (`agency_comments`)
 
-- `comment` preserves paragraph breaks as `\n\n`.
-- Line breaks within a paragraph are collapsed to spaces.
-- Text is minimally cleaned; odd characters present in the source PDFs are preserved.
+- `comment` preserva los saltos de párrafo como `\n\n`.
+- Los saltos de línea dentro de un párrafo se colapsan en espacios.
+- El texto está mínimamente limpio; los caracteres extraños presentes en los PDFs fuente se preservan.
 
-### Statewide sums (`statewide_year_sums`)
+### Totales estatales (`statewide_year_sums`)
 
-- Rows ending in `-rate` are **excluded from summation**; statewide rates are **recomputed** from totals.
-- `no-mshp--*` excludes the Missouri State Highway Patrol.
-- `avg-no-mshp--*` is an average across agencies (after excluding MSHP), not a sum.
+- Las filas que terminan en `-rate` están **excluidas de la suma**; las tasas estatales se **recomputan** a partir de los totales.
+- `no-mshp--*` excluye a la Patrulla de Carreteras del Estado de Missouri.
+- `avg-no-mshp--*` es un promedio entre agencias (excluyendo MSHP), no una suma.
 
-### VSR statistics (`reports_with_rank_percentile`)
+### Estadísticas VSR (`reports_with_rank_percentile`)
 
-Derived rows are added per metric:
+Se agregan filas derivadas por métrica:
 
-- `-rank` (dense rank, 1 = highest)
-- `-percentile` (0–1 scale)
-- `-percentage` for non‑rate metrics (race ÷ total)
+- `-rank` (rango denso, 1 = más alto)
+- `-percentile` (escala 0–1)
+- `-percentage` para métricas que no son tasas (raza ÷ total)
 
-## Metric definitions (rates)
+## Definiciones de métricas (tasas)
 
-Rates are defined according to the VSR documentation:
+Las tasas se definen según la documentación del VSR:
 
-- **Stop rate**: (stops / previous year ACS population) × 100
-- **Resident stop rate**: (resident stops / previous year ACS population) × 100
-- **Search rate**: (searches / stops) × 100
-- **Contraband hit rate**: (searches with contraband found / total searches) × 100
-- **Arrest rate**: (arrests / stops) × 100
-- **Citation rate**: (citations / stops) × 100
+- **Stop rate**: (paradas / población ACS del año anterior) × 100
+- **Resident stop rate**: (paradas de residentes / población ACS del año anterior) × 100
+- **Search rate**: (búsquedas / paradas) × 100
+- **Contraband hit rate**: (búsquedas con contrabando encontrado / total de búsquedas) × 100
+- **Arrest rate**: (arrestos / paradas) × 100
+- **Citation rate**: (citaciones / paradas) × 100
 
-## Metrics tracked (row_key list)
+## Métricas rastreadas (lista de row_key)
 
-Some metrics appear only in certain years (e.g., disparity index was discontinued after 2022). Misspellings from the original reports are preserved (e.g., “parol”, “equpiment”).
+Algunas métricas aparecen solo en ciertos años (p. ej., el índice de disparidad se descontinuó después de 2022). Los errores ortográficos de los informes originales se preservan (p. ej., "parol", "equpiment").
 
-For convenience, each row key has a per‑metric JSON file at:
+Por conveniencia, cada clave de fila tiene un archivo JSON por métrica en:
 `https://data.vsr.recoveredfactory.net/metric_year/{row_key}.json`
-These are handy for single‑metric use, but the combined downloads are the primary interface.
+Son útiles para uso de una sola métrica, pero las descargas combinadas son la interfaz principal.
 
-**All row_keys currently present:**
+**Todos los row_keys actualmente presentes:**
 
 | Category | Row key | Metric file |
 |---|---|---|
