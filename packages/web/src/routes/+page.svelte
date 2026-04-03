@@ -250,7 +250,7 @@
   <section class="bg-white px-6 py-12">
     <div class="mx-auto max-w-3xl flex flex-col md:flex-row md:items-center gap-8">
       <div class="flex-1 text-center md:text-left">
-        <h1 class="text-4xl font-bold text-slate-900 md:text-5xl">
+        <h1 class="text-4xl font-bold text-slate-900 md:text-5xl leading-tight">
           {home_hero_headline()}
         </h1>
         <p class="mt-4 text-lg leading-relaxed text-slate-700">
