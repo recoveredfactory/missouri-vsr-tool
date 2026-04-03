@@ -17,6 +17,7 @@
     search_results_count_one,
     search_results_count,
     nav_language_label,
+    nav_map,
   } from "$lib/paraglide/messages";
   import { goto } from "$app/navigation";
   import { page } from "$app/stores";
@@ -488,6 +489,10 @@
           <a href={homeAnchorHref("about")} class="font-semibold text-[#1b613c] no-underline hover:text-[#105430]">
             {nav_about()}
           </a>
+          <span class="text-slate-300">•</span>
+          <a href="{localeBase}/map" class="font-semibold text-[#1b613c] no-underline hover:text-[#105430]">
+            {nav_map()}
+          </a>
         </nav>
       </div>
     </div>
@@ -540,6 +545,13 @@
             on:click={() => closeMenu("nav")}
           >
             {nav_about()}
+          </a>
+          <a
+            href="{localeBase}/map"
+            class="block text-3xl font-semibold leading-tight text-slate-900 no-underline"
+            on:click={() => closeMenu("nav")}
+          >
+            {nav_map()}
           </a>
         </nav>
 
