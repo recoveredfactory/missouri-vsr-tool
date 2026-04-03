@@ -248,13 +248,27 @@
 <main id="main-content" class="min-h-screen bg-white overflow-x-hidden">
   <!-- Hero Section -->
   <section class="bg-white px-6 py-12">
-    <div class="mx-auto max-w-3xl text-center">
-      <h1 class="text-4xl font-bold text-slate-900 md:text-5xl">
-        {home_hero_headline()}
-      </h1>
-      <p class="mt-4 text-lg leading-relaxed text-slate-700">
-        {home_why_text()}
-      </p>
+    <div class="mx-auto max-w-4xl flex flex-col md:flex-row md:items-center gap-8">
+      <div class="flex-1 text-center md:text-left">
+        <h1 class="text-4xl font-bold text-slate-900 md:text-5xl">
+          {home_hero_headline()}
+        </h1>
+        <p class="mt-4 text-lg leading-relaxed text-slate-700">
+          {home_why_text()}
+        </p>
+      </div>
+      {#if locale === 'en'}
+        <div class="flex justify-center md:justify-end md:flex-shrink-0">
+          <iframe
+            class="w-[70vw] md:w-44 rounded-lg"
+            style="aspect-ratio: 9/16"
+            src="https://www.youtube.com/embed/Oboc38ZD6hY"
+            title="Missouri Vehicle Stops Report video"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+            allowfullscreen
+          ></iframe>
+        </div>
+      {/if}
     </div>
   </section>
 
