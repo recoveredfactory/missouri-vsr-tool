@@ -2,7 +2,7 @@
   import { onMount, onDestroy, createEventDispatcher } from "svelte";
   import { withDataBase } from "$lib/dataBase";
 
-  // featureStateData: Map<agency_slug, normalizedValue 0..1>
+  // featureStateData: Map<agency_id, normalizedValue 0..1>
   export let featureStateData = new Map();
   export let basemapStyleUrl = "/map/style.en.json";
 
@@ -12,8 +12,8 @@
     "/data/dist/tiles/mo_jurisdictions_2024_500k.pmtiles"
   );
 
-  // Blue choropleth ramp: no-data gray → light → dark blue
-  const choroplethFillColor = [
+  // Blue bubble ramp: no-data gray → light → dark blue
+  const bubbleColor = [
     "case",
     [">=", ["coalesce", ["feature-state", "value"], -1], 0],
     [
@@ -25,41 +25,68 @@
       0.75, "#1d4ed8",
       1,    "#1e3a8a",
     ],
-    "#e2e8f0",
+    "#cbd5e1",
   ];
 
-  const choroplethFillOpacity = [
+  const bubbleRadius = [
+    "case",
+    [">=", ["coalesce", ["feature-state", "value"], -1], 0],
+    [
+      "interpolate", ["linear"],
+      ["coalesce", ["feature-state", "value"], 0],
+      0, 4,
+      1, 22,
+    ],
+    3,
+  ];
+
+  const bubbleOpacity = [
     "case",
     ["boolean", ["feature-state", "hovered"], false],
-    0.92,
+    0.95,
     [">=", ["coalesce", ["feature-state", "value"], -1], 0],
-    0.72,
-    0.25,
+    0.78,
+    0.35,
   ];
 
-  const lineColor = "#64748b";
-  const lineWidth = ["interpolate", ["linear"], ["zoom"], 4, 0.3, 8, 0.8, 12, 1.2];
+  const bubbleStrokeWidth = [
+    "case",
+    ["boolean", ["feature-state", "hovered"], false],
+    2,
+    0.5,
+  ];
+
+  const bubbleStrokeColor = [
+    "case",
+    ["boolean", ["feature-state", "hovered"], false],
+    "#1e3a8a",
+    "#ffffff",
+  ];
+
+  const lineColor = "#94a3b8";
+  const lineWidth = ["interpolate", ["linear"], ["zoom"], 4, 0.2, 8, 0.5, 12, 1.0];
 
   let container;
   let map = null;
   let mapLoaded = false;
   let pendingFeatureStateData = null;
-  let hoveredSlug = null;
-  let hoveredSourceLayer = null;
+  let hoveredId = null;
 
   const SOURCE_ID = "mo-jurisdictions";
-  const SOURCE_LAYERS = ["counties", "places"];
+  const POLY_LAYERS = ["counties", "places"];
+  const CENTROID_LAYER = "centroids";
+  const ALL_STATE_LAYERS = [...POLY_LAYERS, CENTROID_LAYER];
 
   const applyFeatureStates = (data) => {
     if (!map || !mapLoaded) {
       pendingFeatureStateData = data;
       return;
     }
-    // Clear all existing choropleth values
-    map.removeFeatureState({ source: SOURCE_ID });
-
+    for (const sourceLayer of ALL_STATE_LAYERS) {
+      map.removeFeatureState({ source: SOURCE_ID, sourceLayer });
+    }
     for (const [slug, value] of data) {
-      for (const sourceLayer of SOURCE_LAYERS) {
+      for (const sourceLayer of ALL_STATE_LAYERS) {
         map.setFeatureState(
           { source: SOURCE_ID, sourceLayer, id: slug },
           { value }
@@ -68,23 +95,21 @@
     }
   };
 
-  const setHovered = (slug, sourceLayer) => {
-    if (hoveredSlug === slug && hoveredSourceLayer === sourceLayer) return;
+  const setHovered = (id) => {
+    if (hoveredId === id) return;
 
-    // Clear previous hover
-    if (hoveredSlug) {
+    if (hoveredId) {
       map?.setFeatureState(
-        { source: SOURCE_ID, sourceLayer: hoveredSourceLayer, id: hoveredSlug },
+        { source: SOURCE_ID, sourceLayer: CENTROID_LAYER, id: hoveredId },
         { hovered: false }
       );
     }
 
-    hoveredSlug = slug;
-    hoveredSourceLayer = sourceLayer;
+    hoveredId = id;
 
-    if (slug) {
+    if (id) {
       map?.setFeatureState(
-        { source: SOURCE_ID, sourceLayer, id: slug },
+        { source: SOURCE_ID, sourceLayer: CENTROID_LAYER, id },
         { hovered: true }
       );
     }
@@ -102,7 +127,6 @@
     const maplibregl = maplibreModule.default ?? maplibreModule;
     const { Protocol } = pmtilesModule;
 
-    // Register pmtiles protocol (idempotent-ish — guard against double-register)
     try {
       const protocol = new Protocol();
       maplibregl.addProtocol("pmtiles", protocol.tile.bind(protocol));
@@ -130,63 +154,75 @@
     map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "bottom-right");
 
     map.on("load", () => {
-      // Add jurisdiction vector source with promoteId for feature-state
       map.addSource(SOURCE_ID, {
         type: "vector",
         url: `pmtiles://${jurisdictionPmtilesUrl}`,
-        promoteId: "agency_slug",
+        promoteId: "agency_id",
       });
 
-      for (const sourceLayer of SOURCE_LAYERS) {
-        const suffix = sourceLayer;
-
+      // Subtle polygon context layers (no data-driven color)
+      for (const sourceLayer of POLY_LAYERS) {
         map.addLayer({
-          id: `choropleth-fill-${suffix}`,
+          id: `context-fill-${sourceLayer}`,
           type: "fill",
           source: SOURCE_ID,
           "source-layer": sourceLayer,
           paint: {
-            "fill-color": choroplethFillColor,
-            "fill-opacity": choroplethFillOpacity,
+            "fill-color": "#e2e8f0",
+            "fill-opacity": 0.25,
           },
         });
 
         map.addLayer({
-          id: `choropleth-line-${suffix}`,
+          id: `context-line-${sourceLayer}`,
           type: "line",
           source: SOURCE_ID,
           "source-layer": sourceLayer,
           paint: {
             "line-color": lineColor,
             "line-width": lineWidth,
-            "line-opacity": 0.5,
+            "line-opacity": 0.4,
           },
         });
-
-        // Hover & click listeners per layer
-        map.on("mousemove", `choropleth-fill-${suffix}`, (e) => {
-          const feature = e.features?.[0];
-          if (!feature) return;
-          const props = feature.properties ?? {};
-          const slug = props.agency_slug ?? props.agency_id ?? null;
-          map.getCanvas().style.cursor = slug ? "pointer" : "";
-          setHovered(slug, sourceLayer);
-          dispatch("hover", { slug, props, x: e.point.x, y: e.point.y });
-        });
-
-        map.on("mouseleave", `choropleth-fill-${suffix}`, () => {
-          map.getCanvas().style.cursor = "";
-          setHovered(null, null);
-          dispatch("leave");
-        });
-
-        map.on("click", `choropleth-fill-${suffix}`, (e) => {
-          const feature = e.features?.[0];
-          if (!feature) return;
-          const slug = feature.properties?.agency_slug ?? feature.properties?.agency_id;
-          if (slug) dispatch("click", { slug });
-        });
       }
+
+      // Bubble layer from centroids
+      map.addLayer({
+        id: "bubble-centroids",
+        type: "circle",
+        source: SOURCE_ID,
+        "source-layer": CENTROID_LAYER,
+        paint: {
+          "circle-color": bubbleColor,
+          "circle-radius": bubbleRadius,
+          "circle-opacity": bubbleOpacity,
+          "circle-stroke-width": bubbleStrokeWidth,
+          "circle-stroke-color": bubbleStrokeColor,
+        },
+      });
+
+      map.on("mousemove", "bubble-centroids", (e) => {
+        const feature = e.features?.[0];
+        if (!feature) return;
+        const props = feature.properties ?? {};
+        const slug = props.agency_id ?? null;
+        map.getCanvas().style.cursor = slug ? "pointer" : "";
+        setHovered(slug);
+        dispatch("hover", { slug, props, x: e.point.x, y: e.point.y });
+      });
+
+      map.on("mouseleave", "bubble-centroids", () => {
+        map.getCanvas().style.cursor = "";
+        setHovered(null);
+        dispatch("leave");
+      });
+
+      map.on("click", "bubble-centroids", (e) => {
+        const feature = e.features?.[0];
+        if (!feature) return;
+        const slug = feature.properties?.agency_id;
+        if (slug) dispatch("click", { slug });
+      });
 
       mapLoaded = true;
 
@@ -203,4 +239,4 @@
   });
 </script>
 
-<div bind:this={container} class="h-full w-full" />
+<div bind:this={container} class="h-full w-full"></div>

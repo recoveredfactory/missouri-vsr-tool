@@ -11,9 +11,6 @@
     map_panel_year_label,
     map_panel_min_stops_label,
     map_panel_agency_type_label,
-    map_panel_agency_type_placeholder,
-    map_panel_controls_open,
-    map_panel_controls_close,
     map_panel_loading,
     map_panel_error,
     map_panel_no_data,
@@ -86,11 +83,28 @@
   let selectedRace = "Total";
   let selectedYear = "";
   let minStops = 0;
-  let panelOpen = false; // mobile toggle
+  let selectedAgencyType = "";
 
   $: if (metricOptions.length && !selectedMetric) {
     selectedMetric = metricOptions[0].value;
   }
+
+  // ─── Agency type options ──────────────────────────────────────────────────────
+
+  $: agencyTypeOptions = (() => {
+    const types = [...new Set((data.agencies ?? []).map((a) => a.agency_type).filter(Boolean))].sort();
+    return [{ value: "", label: "All types" }, ...types.map((t) => ({ value: t, label: t }))];
+  })();
+
+  // Slugs allowed by the current agency type filter (null = no filter)
+  $: allowedSlugs = selectedAgencyType
+    ? new Set(
+        (data.agencies ?? [])
+          .filter((a) => a.agency_type === selectedAgencyType)
+          .map((a) => a.agency_slug ?? a.slug ?? a.id)
+          .filter(Boolean)
+      )
+    : null;
 
   $: isRateMetric = (() => {
     if (!selectedMetric) return false;
@@ -161,7 +175,7 @@
   const toAgencySlug = (name) =>
     String(name).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
 
-  const computeMap = async (metric, race, year, minS, sMap) => {
+  const computeMap = async (metric, race, year, minS, sMap, allowed) => {
     if (!metric || !year) return;
     isLoading = true;
     loadError = "";
@@ -192,6 +206,7 @@
         const key = normalizeAgencyName(agencyName);
         if (!key) continue;
         const slug = sMap.get(key) ?? toAgencySlug(agencyName);
+        if (allowed && !allowed.has(slug)) continue;
         const stops = stopsMap.get(key) ?? 0;
         if (stops < minS) continue;
         totalStops.set(slug, stops);
@@ -235,7 +250,7 @@
   };
 
   $: loadYearOptions(selectedMetric);
-  $: computeMap(selectedMetric, selectedRace, selectedYear, minStops, slugMap);
+  $: computeMap(selectedMetric, selectedRace, selectedYear, minStops, slugMap, allowedSlugs);
 
   // ─── Hover popup ──────────────────────────────────────────────────────────────
 
@@ -295,154 +310,128 @@
     on:click={handleClick}
   />
 
-  <!-- Loading / error overlay -->
+  <!-- Horizontal controls bar -->
+  <div class="absolute inset-x-0 top-0 z-10 flex flex-wrap items-center gap-x-4 gap-y-1.5 bg-white/95 px-3 py-2 shadow-sm backdrop-blur-sm">
+    <!-- Metric -->
+    <div class="flex items-center gap-1.5">
+      <label for="map-metric" class="shrink-0 text-xs font-semibold text-slate-500">{map_panel_metric_label()}</label>
+      <select
+        id="map-metric"
+        bind:value={selectedMetric}
+        class="max-w-[220px] rounded-md border border-slate-200 bg-white px-2 py-1 text-sm text-slate-800 focus:border-[#1b613c] focus:outline-none focus:ring-1 focus:ring-[#1b613c]"
+      >
+        {#each metricOptions as opt}
+          <option value={opt.value}>{opt.label}</option>
+        {/each}
+      </select>
+    </div>
+
+    <!-- Race -->
+    <div class="flex items-center gap-1.5">
+      <label for="map-race" class="shrink-0 text-xs font-semibold text-slate-500">{map_panel_race_label()}</label>
+      <select
+        id="map-race"
+        bind:value={selectedRace}
+        class="rounded-md border border-slate-200 bg-white px-2 py-1 text-sm text-slate-800 focus:border-[#1b613c] focus:outline-none focus:ring-1 focus:ring-[#1b613c]"
+      >
+        {#each raceOptions as opt}
+          <option value={opt.value}>{opt.label}</option>
+        {/each}
+      </select>
+    </div>
+
+    <!-- Min stops -->
+    <div class="flex items-center gap-1.5">
+      <label for="map-min-stops" class="shrink-0 text-xs font-semibold text-slate-500">{map_panel_min_stops_label()}</label>
+      <input
+        id="map-min-stops"
+        type="number"
+        min="0"
+        step="100"
+        bind:value={minStops}
+        class="w-20 rounded-md border border-slate-200 bg-white px-2 py-1 text-sm text-slate-800 focus:border-[#1b613c] focus:outline-none focus:ring-1 focus:ring-[#1b613c]"
+      />
+    </div>
+
+    <!-- Agency type -->
+    <div class="flex items-center gap-1.5">
+      <label for="map-agency-type" class="shrink-0 text-xs font-semibold text-slate-500">{map_panel_agency_type_label()}</label>
+      <select
+        id="map-agency-type"
+        bind:value={selectedAgencyType}
+        class="rounded-md border border-slate-200 bg-white px-2 py-1 text-sm text-slate-800 focus:border-[#1b613c] focus:outline-none focus:ring-1 focus:ring-[#1b613c]"
+      >
+        {#each agencyTypeOptions as opt}
+          <option value={opt.value}>{opt.label}</option>
+        {/each}
+      </select>
+    </div>
+
+    {#if loadError}
+      <p class="text-xs text-red-600">{loadError}</p>
+    {/if}
+
+    {#if selectedRace === RATIO_KEY && isRateMetric}
+      <p class="text-[0.7rem] leading-snug text-amber-700">{map_race_note_ratio_rates()}</p>
+    {/if}
+  </div>
+
+  <!-- Loading overlay -->
   {#if isLoading}
-    <div class="pointer-events-none absolute inset-x-0 top-3 flex justify-center">
+    <div class="pointer-events-none absolute inset-x-0 top-10 flex justify-center">
       <span class="rounded-full bg-white/90 px-4 py-1.5 text-sm font-medium text-slate-600 shadow">
         {map_panel_loading()}
       </span>
     </div>
   {/if}
 
-  <!-- Controls panel — desktop: always visible; mobile: toggle -->
-  <div class="absolute left-3 top-3 z-10 w-64 max-w-[calc(100vw-1.5rem)]">
-    <!-- Mobile toggle button (shown when panel is closed) -->
-    <button
-      type="button"
-      class="mb-1 flex items-center gap-1.5 rounded-lg bg-white/95 px-3 py-2 text-sm font-semibold text-slate-700 shadow-md md:hidden {panelOpen ? 'hidden' : ''}"
-      on:click={() => (panelOpen = true)}
-    >
-      <svg class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-        <path fill-rule="evenodd" d="M2 4.75A.75.75 0 012.75 4h14.5a.75.75 0 010 1.5H2.75A.75.75 0 012 4.75zm0 10.5a.75.75 0 01.75-.75h14.5a.75.75 0 010 1.5H2.75a.75.75 0 01-.75-.75zM2 10a.75.75 0 01.75-.75h7.5a.75.75 0 010 1.5h-7.5A.75.75 0 012 10z" clip-rule="evenodd" />
-      </svg>
-      {map_panel_controls_open()}
-    </button>
-
-    <!-- Panel body: always open on md+, toggle on mobile -->
-    <div class="{!panelOpen ? 'hidden md:block' : ''} rounded-xl bg-white/95 p-4 shadow-lg backdrop-blur-sm">
-      <div class="mb-3 flex items-center justify-between md:hidden">
-        <span class="text-xs font-semibold uppercase tracking-wide text-slate-500">{map_panel_controls_open()}</span>
-        <button
-          type="button"
-          class="rounded-md p-1 text-slate-500 hover:text-slate-800"
-          on:click={() => (panelOpen = false)}
-          aria-label={map_panel_controls_close()}
-        >
-          <svg class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-            <path d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z" />
-          </svg>
-        </button>
-      </div>
-
-      <!-- Metric select -->
-      <div class="mb-3">
-        <label for="map-metric" class="mb-1 block text-xs font-semibold text-slate-600">
-          {map_panel_metric_label()}
-        </label>
-        <select
-          id="map-metric"
-          bind:value={selectedMetric}
-          class="w-full rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-sm text-slate-800 focus:border-[#1b613c] focus:outline-none focus:ring-1 focus:ring-[#1b613c]"
-        >
-          {#each metricOptions as opt}
-            <option value={opt.value}>{opt.label}</option>
-          {/each}
-        </select>
-      </div>
-
-      <!-- Race select -->
-      <div class="mb-3">
-        <label for="map-race" class="mb-1 block text-xs font-semibold text-slate-600">
-          {map_panel_race_label()}
-        </label>
-        <select
-          id="map-race"
-          bind:value={selectedRace}
-          class="w-full rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-sm text-slate-800 focus:border-[#1b613c] focus:outline-none focus:ring-1 focus:ring-[#1b613c]"
-        >
-          {#each raceOptions as opt}
-            <option value={opt.value}>{opt.label}</option>
-          {/each}
-        </select>
-        {#if selectedRace === RATIO_KEY && isRateMetric}
-          <p class="mt-1 text-[0.7rem] leading-snug text-amber-700">
-            {map_race_note_ratio_rates()}
-          </p>
-        {/if}
-      </div>
-
-      <!-- Year pills -->
-      {#if yearOptions.length}
-        <div class="mb-3">
-          <span class="mb-1 block text-xs font-semibold text-slate-600">
-            {map_panel_year_label()}
-          </span>
-          <div class="flex flex-wrap gap-1">
-            {#each yearOptions as year}
-              <button
-                type="button"
-                class="rounded-md px-2.5 py-1 text-xs font-semibold transition-colors {selectedYear === year
-                  ? 'bg-[#1b613c] text-white'
-                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}"
-                on:click={() => (selectedYear = year)}
-              >
-                {year}
-              </button>
-            {/each}
-          </div>
-        </div>
-      {/if}
-
-      <!-- Min stops -->
-      <div class="mb-3">
-        <label for="map-min-stops" class="mb-1 block text-xs font-semibold text-slate-600">
-          {map_panel_min_stops_label()}
-        </label>
-        <input
-          id="map-min-stops"
-          type="number"
-          min="0"
-          step="100"
-          bind:value={minStops}
-          class="w-full rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-sm text-slate-800 focus:border-[#1b613c] focus:outline-none focus:ring-1 focus:ring-[#1b613c]"
-        />
-      </div>
-
-      <!-- Agency type (stub — architectural placeholder) -->
-      <div class="mb-1 opacity-50">
-        <label for="map-agency-type" class="mb-1 block text-xs font-semibold text-slate-600">
-          {map_panel_agency_type_label()}
-        </label>
-        <select
-          id="map-agency-type"
-          disabled
-          class="w-full cursor-not-allowed rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-sm text-slate-500"
-        >
-          <option>{map_panel_agency_type_placeholder()}</option>
-        </select>
-      </div>
-
-      {#if loadError}
-        <p class="mt-2 text-xs text-red-600">{loadError}</p>
-      {/if}
-    </div>
-  </div>
-
   <!-- Legend -->
   <div class="absolute bottom-8 left-3 z-10 rounded-xl bg-white/95 px-3 py-2 shadow backdrop-blur-sm">
-    <div class="mb-1 flex justify-between text-[0.65rem] font-semibold text-slate-500">
-      <span>{map_legend_low()}</span>
-      <span>{map_legend_high()}</span>
+    <!-- Color + size scale -->
+    <div class="mb-1.5 flex items-center justify-between gap-2">
+      <span class="text-[0.65rem] font-semibold text-slate-500">{map_legend_low()}</span>
+      <div class="flex items-end gap-1">
+        {#each [[4,"#dbeafe"],[7,"#93c5fd"],[11,"#3b82f6"],[16,"#1d4ed8"],[20,"#1e3a8a"]] as [r, fill]}
+          <span
+            class="inline-block rounded-full opacity-80"
+            style="width:{r*2}px;height:{r*2}px;background:{fill};border:0.5px solid #fff"
+          ></span>
+        {/each}
+      </div>
+      <span class="text-[0.65rem] font-semibold text-slate-500">{map_legend_high()}</span>
     </div>
-    <div
-      class="h-3 w-36 rounded-sm"
-      style="background: linear-gradient(to right, #dbeafe, #93c5fd, #3b82f6, #1d4ed8, #1e3a8a)"
-    ></div>
-    <div class="mt-1.5 flex items-center gap-1.5">
-      <span class="inline-block h-3 w-3 flex-shrink-0 rounded-sm bg-slate-200"></span>
+    <div class="flex items-center gap-1.5">
+      <span class="inline-block h-3 w-3 flex-shrink-0 rounded-full bg-slate-300 opacity-50"></span>
       <span class="text-[0.65rem] text-slate-500">{map_panel_no_data()}</span>
     </div>
   </div>
+
+  <!-- Year scrubber -->
+  {#if yearOptions.length}
+    {@const yearsSorted = [...yearOptions].sort((a, b) => Number(a) - Number(b))}
+    {@const selectedIdx = Math.max(0, yearsSorted.indexOf(selectedYear))}
+    <div class="absolute bottom-8 right-3 z-10 rounded-xl bg-white/95 px-3 py-2.5 shadow backdrop-blur-sm">
+      <div class="mb-1.5 flex items-baseline justify-between gap-4">
+        <span class="text-[0.65rem] font-semibold uppercase tracking-wide text-slate-400">{map_panel_year_label()}</span>
+        <span class="text-xl font-bold tabular-nums leading-none text-slate-800">{selectedYear}</span>
+      </div>
+      {#if yearsSorted.length > 1}
+        <input
+          type="range"
+          min="0"
+          max={yearsSorted.length - 1}
+          step="1"
+          value={selectedIdx}
+          on:input={(e) => (selectedYear = yearsSorted[Number(e.target.value)])}
+          class="w-32 accent-[#1b613c]"
+        />
+        <div class="mt-0.5 flex justify-between text-[0.6rem] text-slate-400">
+          <span>{yearsSorted[0]}</span>
+          <span>{yearsSorted[yearsSorted.length - 1]}</span>
+        </div>
+      {/if}
+    </div>
+  {/if}
 
   <!-- Hover tooltip (Svelte-rendered, positioned by map events) -->
   {#if hoverInfo}
