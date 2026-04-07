@@ -153,23 +153,25 @@
   let featureStateData = new Map();
   let rawValuesBySlug = new Map(); // slug → raw display value (for hover)
   let totalStopsBySlug = new Map();
+  let legendMin = null;
+  let legendMax = null;
   let loadError = "";
   let isLoading = false;
 
-  // Percentile normalize: returns Map<slug, 0..1>
+  // Percentile normalize: returns { normalized: Map<slug, 0..1>, min, max }
   const percentileNormalize = (slugValues) => {
     const finite = [...slugValues.values()].filter(Number.isFinite);
-    if (finite.length < 2) return new Map([...slugValues].map(([k]) => [k, 0.5]));
+    if (finite.length < 2) return { normalized: new Map([...slugValues].map(([k]) => [k, 0.5])), min: null, max: null };
     const sorted = [...finite].sort((a, b) => a - b);
     const p5 = sorted[Math.max(0, Math.floor(sorted.length * 0.05))];
     const p95 = sorted[Math.min(sorted.length - 1, Math.floor(sorted.length * 0.95))];
     const range = p95 - p5;
-    const result = new Map();
+    const normalized = new Map();
     for (const [slug, v] of slugValues) {
       if (!Number.isFinite(v)) continue;
-      result.set(slug, range === 0 ? 0.5 : Math.max(0, Math.min(1, (v - p5) / range)));
+      normalized.set(slug, range === 0 ? 0.5 : Math.max(0, Math.min(1, (v - p5) / range)));
     }
-    return result;
+    return { normalized, min: p5, max: p95 };
   };
 
   const toAgencySlug = (name) =>
@@ -225,7 +227,10 @@
 
       rawValuesBySlug = rawValues;
       totalStopsBySlug = totalStops;
-      featureStateData = percentileNormalize(rawValues);
+      const { normalized, min, max } = percentileNormalize(rawValues);
+      featureStateData = normalized;
+      legendMin = min;
+      legendMax = max;
     } catch (e) {
       loadError = e instanceof Error ? e.message : map_panel_error();
       featureStateData = new Map();
@@ -265,7 +270,7 @@
       (a) => (a.agency_slug ?? a.slug ?? a.id) === slug
     );
     const name = agencyEntry?.canonical_name ?? agencyEntry?.names?.[0] ?? slug;
-    hoverInfo = { slug, name, raw, stops, x, y };
+    hoverInfo = { slug, name, raw, stops, x, y, metricLabel };
   };
 
   const handleLeave = () => { hoverInfo = null; };
@@ -279,6 +284,13 @@
       window.location.href = `/${locale}/agency/${slug}`;
     });
   };
+
+  // ─── Metric label (section: metric) for tooltip ───────────────────────────────
+
+  $: metricLabel = (() => {
+    const [, sectionId = "", metricId = ""] = (selectedMetric || "").split("--");
+    return [sectionId, metricId].filter(Boolean).map(humanizeId).join(": ");
+  })();
 
   // ─── Value formatting ─────────────────────────────────────────────────────────
 
@@ -387,18 +399,17 @@
 
   <!-- Legend -->
   <div class="absolute bottom-8 left-3 z-10 rounded-xl bg-white/95 px-3 py-2 shadow backdrop-blur-sm">
-    <!-- Color + size scale -->
-    <div class="mb-1.5 flex items-center justify-between gap-2">
-      <span class="text-[0.65rem] font-semibold text-slate-500">{map_legend_low()}</span>
-      <div class="flex items-end gap-1">
-        {#each [[3,"#dbeafe"],[6,"#93c5fd"],[9,"#3b82f6"],[12,"#1d4ed8"],[16,"#1e3a8a"]] as [r, fill]}
-          <span
-            class="inline-block rounded-full opacity-80"
-            style="width:{r*2}px;height:{r*2}px;background:{fill};border:0.5px solid #fff"
-          ></span>
-        {/each}
-      </div>
-      <span class="text-[0.65rem] font-semibold text-slate-500">{map_legend_high()}</span>
+    <div class="flex items-end gap-1 pb-1">
+      {#each [[3,"#dbeafe"],[6,"#93c5fd"],[9,"#3b82f6"],[12,"#1d4ed8"],[16,"#1e3a8a"]] as [r, fill]}
+        <span
+          class="inline-block rounded-full opacity-80"
+          style="width:{r*2}px;height:{r*2}px;background:{fill};border:0.5px solid #fff"
+        ></span>
+      {/each}
+    </div>
+    <div class="flex justify-between text-[0.65rem] font-semibold text-slate-500">
+      <span>{legendMin != null ? formatRaw(legendMin) : map_legend_low()}</span>
+      <span>{legendMax != null ? formatRaw(legendMax) : map_legend_high()}</span>
     </div>
   </div>
 
@@ -440,6 +451,9 @@
       <p class="text-sm font-semibold leading-snug">{hoverInfo.name}</p>
       {#if Number.isFinite(hoverInfo.raw)}
         <p class="mt-0.5 text-xs text-slate-300">{formatRaw(hoverInfo.raw)}</p>
+        {#if hoverInfo.metricLabel}
+          <p class="text-[0.65rem] text-slate-400">{hoverInfo.metricLabel}</p>
+        {/if}
       {:else}
         <p class="mt-0.5 text-xs text-slate-400">{map_hover_no_data()}</p>
       {/if}

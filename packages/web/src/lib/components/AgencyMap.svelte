@@ -33,13 +33,13 @@
     6, [
       "case",
       [">=", ["coalesce", ["feature-state", "value"], -1], 0],
-      ["interpolate", ["linear"], ["coalesce", ["feature-state", "value"], 0], 0, 1, 1, 8],
+      ["interpolate", ["linear"], ["sqrt", ["coalesce", ["feature-state", "value"], 0]], 0, 1, 1, 8],
       0,
     ],
     10, [
       "case",
       [">=", ["coalesce", ["feature-state", "value"], -1], 0],
-      ["interpolate", ["linear"], ["coalesce", ["feature-state", "value"], 0], 0, 3, 1, 16],
+      ["interpolate", ["linear"], ["sqrt", ["coalesce", ["feature-state", "value"], 0]], 0, 3, 1, 16],
       0,
     ],
   ];
@@ -49,7 +49,7 @@
     ["boolean", ["feature-state", "hovered"], false],
     0.95,
     [">=", ["coalesce", ["feature-state", "value"], -1], 0],
-    0.78,
+    0.65,
     0,
   ];
 
