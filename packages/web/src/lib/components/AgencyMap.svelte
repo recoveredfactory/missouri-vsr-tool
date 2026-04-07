@@ -33,13 +33,13 @@
     6, [
       "case",
       [">=", ["coalesce", ["feature-state", "value"], -1], 0],
-      ["interpolate", ["linear"], ["sqrt", ["coalesce", ["feature-state", "value"], 0]], 0, 1, 1, 8],
+      ["interpolate", ["linear"], ["sqrt", ["coalesce", ["feature-state", "value"], 0]], 0, 3, 1, 11],
       0,
     ],
     10, [
       "case",
       [">=", ["coalesce", ["feature-state", "value"], -1], 0],
-      ["interpolate", ["linear"], ["sqrt", ["coalesce", ["feature-state", "value"], 0]], 0, 3, 1, 16],
+      ["interpolate", ["linear"], ["sqrt", ["coalesce", ["feature-state", "value"], 0]], 0, 3, 1, 22],
       0,
     ],
   ];

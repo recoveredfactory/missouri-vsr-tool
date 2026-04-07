@@ -82,7 +82,7 @@
   let selectedMetric = "";
   let selectedRace = "Total";
   let selectedYear = "";
-  let minStops = 0;
+  let minStops = 500;
   let selectedAgencyType = "Municipal";
 
   $: if (metricOptions.length && !selectedMetric) {
@@ -355,14 +355,15 @@
     <!-- Min stops -->
     <div class="flex items-center gap-1.5">
       <label for="map-min-stops" class="shrink-0 text-xs font-semibold text-slate-500">{map_panel_min_stops_label()}</label>
-      <input
+      <select
         id="map-min-stops"
-        type="number"
-        min="0"
-        step="100"
         bind:value={minStops}
-        class="w-20 rounded-md border border-slate-200 bg-white px-2 py-1 text-sm text-slate-800 focus:border-[#1b613c] focus:outline-none focus:ring-1 focus:ring-[#1b613c]"
-      />
+        class="rounded-md border border-slate-200 bg-white px-2 py-1 text-sm text-slate-800 focus:border-[#1b613c] focus:outline-none focus:ring-1 focus:ring-[#1b613c]"
+      >
+        {#each [0, 100, 500, 1000, 2500, 5000, 10000] as n}
+          <option value={n}>{n === 0 ? "Any" : n.toLocaleString()}</option>
+        {/each}
+      </select>
     </div>
 
     <!-- Agency type -->
@@ -400,7 +401,7 @@
   <!-- Legend -->
   <div class="absolute bottom-8 left-3 z-10 rounded-xl bg-white/95 px-3 py-2 shadow backdrop-blur-sm">
     <div class="flex items-end gap-1 pb-1">
-      {#each [[3,"#dbeafe"],[6,"#93c5fd"],[9,"#3b82f6"],[12,"#1d4ed8"],[16,"#1e3a8a"]] as [r, fill]}
+      {#each [[3,"#dbeafe"],[7,"#93c5fd"],[11,"#3b82f6"],[16,"#1d4ed8"],[22,"#1e3a8a"]] as [r, fill]}
         <span
           class="inline-block rounded-full opacity-80"
           style="width:{r*2}px;height:{r*2}px;background:{fill};border:0.5px solid #fff"
