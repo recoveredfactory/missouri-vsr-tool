@@ -1,6 +1,6 @@
 <script>
   import StickyHeader from "$lib/components/StickyHeader.svelte";
-  import ChoroplethMap from "$lib/components/ChoroplethMap.svelte";
+  import AgencyMap from "$lib/components/AgencyMap.svelte";
   import { withDataBase } from "$lib/dataBase";
   import { getLocale } from "$lib/paraglide/runtime";
   import { goto } from "$app/navigation";
@@ -83,7 +83,7 @@
   let selectedRace = "Total";
   let selectedYear = "";
   let minStops = 0;
-  let selectedAgencyType = "";
+  let selectedAgencyType = "Municipal";
 
   $: if (metricOptions.length && !selectedMetric) {
     selectedMetric = metricOptions[0].value;
@@ -302,7 +302,7 @@
   style="height: calc(100dvh - var(--site-header-height, 56px))"
 >
   <!-- Map fills the full container -->
-  <ChoroplethMap
+  <AgencyMap
     {featureStateData}
     {basemapStyleUrl}
     on:hover={handleHover}
@@ -391,7 +391,7 @@
     <div class="mb-1.5 flex items-center justify-between gap-2">
       <span class="text-[0.65rem] font-semibold text-slate-500">{map_legend_low()}</span>
       <div class="flex items-end gap-1">
-        {#each [[4,"#dbeafe"],[7,"#93c5fd"],[11,"#3b82f6"],[16,"#1d4ed8"],[20,"#1e3a8a"]] as [r, fill]}
+        {#each [[3,"#dbeafe"],[6,"#93c5fd"],[9,"#3b82f6"],[12,"#1d4ed8"],[16,"#1e3a8a"]] as [r, fill]}
           <span
             class="inline-block rounded-full opacity-80"
             style="width:{r*2}px;height:{r*2}px;background:{fill};border:0.5px solid #fff"
@@ -399,10 +399,6 @@
         {/each}
       </div>
       <span class="text-[0.65rem] font-semibold text-slate-500">{map_legend_high()}</span>
-    </div>
-    <div class="flex items-center gap-1.5">
-      <span class="inline-block h-3 w-3 flex-shrink-0 rounded-full bg-slate-300 opacity-50"></span>
-      <span class="text-[0.65rem] text-slate-500">{map_panel_no_data()}</span>
     </div>
   </div>
 
