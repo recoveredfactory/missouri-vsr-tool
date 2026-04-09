@@ -40,17 +40,17 @@
   }));
   $: scorer = enrichedAgencies.length ? new QuickScore(enrichedAgencies, ["search"]) : null;
 
-  $: {
-    if (agencyQuery.trim() && scorer) {
-      agencyResults = scorer.search(agencyQuery.trim()).slice(0, 10);
-      agencyDropdownOpen = agencyResults.length > 0;
-    } else {
+  const toLabel = (item) => item?.canonical_name || item?.names?.[0] || item?.agency_slug || "";
+
+  const runSearch = (query) => {
+    if (!query.trim() || !scorer) {
       agencyResults = [];
       agencyDropdownOpen = false;
+      return;
     }
-  }
-
-  const toLabel = (item) => item?.canonical_name || item?.names?.[0] || item?.agency_slug || "";
+    agencyResults = scorer.search(query.trim()).slice(0, 10);
+    agencyDropdownOpen = agencyResults.length > 0;
+  };
 
   const selectAgency = async (agency) => {
     selectedAgency = agency;
@@ -192,6 +192,8 @@
   const clearAgency = () => {
     selectedAgency = null;
     agencyQuery = "";
+    agencyResults = [];
+    agencyDropdownOpen = false;
     agencyData = null;
     availableMetrics = [];
     selectedMetricKey = "";
@@ -262,8 +264,9 @@
                 placeholder="Search agencies…"
                 bind:value={agencyQuery}
                 on:keydown={handleAgencyKeydown}
-                on:input={() => {
-                  if (selectedAgency && agencyQuery !== toLabel(selectedAgency)) clearAgency();
+                on:input={(e) => {
+                  if (selectedAgency) clearAgency();
+                  runSearch(e.currentTarget.value);
                 }}
                 autocomplete="off"
                 spellcheck="false"
