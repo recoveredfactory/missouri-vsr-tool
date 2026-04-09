@@ -295,7 +295,7 @@
   const computeChange = async (metric, race, sMap, allowed, yOptions, minS) => {
     if (!metric || yOptions.length < 2) { changeFeatureStateData = new Map(); return; }
     const sorted = [...yOptions].sort((a, b) => Number(a) - Number(b));
-    const yearFrom = sorted[0];
+    const yearFrom = sorted.find(y => Number(y) >= 2021) ?? sorted[0];
     const yearTo = sorted[sorted.length - 1];
     try {
       const [payload, stopsPayload] = await Promise.all([
