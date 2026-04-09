@@ -16,7 +16,8 @@
   $: fromPath = normalizePath($navigating?.from?.url?.pathname);
   $: toPath = normalizePath($navigating?.to?.url?.pathname);
   $: isNavigating = Boolean($navigating) && fromPath !== toPath;
-  $: isEmbed = Boolean($page.data.isEmbed);
+  // Match /embed, /embed/..., /en/embed/..., /es/embed/...
+  $: isEmbed = /^(\/[a-z]{2})?\/embed(\/|$)/.test($page.url.pathname);
 </script>
 
 <svelte:head>

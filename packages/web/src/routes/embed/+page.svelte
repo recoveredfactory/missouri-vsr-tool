@@ -110,20 +110,16 @@
   };
 
   // Embed URL and code generation
-  $: embedSrc =
+  // Preview uses a relative path so it works in dev; generated snippets use the full siteUrl
+  $: embedPath =
     selectedAgency && selectedMetricKey
-      ? `${siteUrl}/${selectedLang}/embed/agency-metric-line/${selectedAgency.agency_slug}/${encodeURIComponent(selectedMetricKey)}`
+      ? `/${selectedLang}/embed/agency-metric-line/${selectedAgency.agency_slug}/${encodeURIComponent(selectedMetricKey)}`
       : null;
+  $: embedSrc = embedPath ? `${siteUrl}${embedPath}` : null;
 
   $: webComponentCode = embedSrc
-    ? generateWebComponent(
-        selectedAgency.agency_slug,
-        selectedMetricKey,
-        selectedLang,
-        siteUrl
-      )
+    ? generateWebComponent(selectedAgency.agency_slug, selectedMetricKey, selectedLang, siteUrl)
     : "";
-
   $: iframeResponsiveCode = embedSrc ? generateIframeResponsive(embedSrc) : "";
   $: iframeFixedCode = embedSrc ? generateIframeFixed(embedSrc) : "";
 
@@ -132,32 +128,11 @@
       `chart="agency-metric-line"`,
       `agency="${agency}"`,
       `metric="${metric}"`,
-      `lang="${lang}"`,
-    ].join(" ");
-
-    return `<vsr-chart ${attrs}></vsr-chart>
-<script>
-(function () {
-  class VsrChart extends HTMLElement {
-    connectedCallback() {
-      var chart = this.getAttribute("chart");
-      var agency = this.getAttribute("agency");
-      var metric = this.getAttribute("metric");
-      var lang = this.getAttribute("lang") || "en";
-      var height = this.getAttribute("height") || "420px";
-      var iframe = document.createElement("iframe");
-      iframe.src = "${baseUrl}/" + lang + "/embed/" + chart + "/" + agency + "/" + encodeURIComponent(metric);
-      iframe.style.cssText = "width:100%;height:" + height + ";border:none;display:block;";
-      iframe.setAttribute("loading", "lazy");
-      iframe.setAttribute("title", "Missouri Vehicle Stops chart");
-      this.appendChild(iframe);
-    }
-  }
-  if (!customElements.get("vsr-chart")) {
-    customElements.define("vsr-chart", VsrChart);
-  }
-})();
-<\\/script>`;
+      lang !== "en" ? `lang="${lang}"` : null,
+    ]
+      .filter(Boolean)
+      .join(" ");
+    return `<vsr-chart ${attrs}></vsr-chart>\n<script src="${baseUrl}/embed/vsr-chart.js"><\\/script>`;
   };
 
   const generateIframeResponsive = (src) =>
@@ -384,12 +359,11 @@
             class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm"
             style="aspect-ratio: 16/9;"
           >
-            {#if embedSrc}
+            {#if embedPath}
               <iframe
-                src={embedSrc}
+                src={embedPath}
                 style="width:100%;height:100%;border:none;display:block;"
                 title="Chart preview"
-                loading="lazy"
               ></iframe>
             {:else}
               <div class="flex h-full items-center justify-center text-sm text-slate-400">
@@ -397,9 +371,9 @@
               </div>
             {/if}
           </div>
-          {#if embedSrc}
+          {#if embedPath}
             <a
-              href={embedSrc}
+              href={embedPath}
               target="_blank"
               rel="noopener noreferrer"
               class="mt-2 inline-block text-xs text-slate-400 hover:text-slate-600"
