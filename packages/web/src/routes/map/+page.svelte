@@ -1,6 +1,7 @@
 <script>
   import StickyHeader from "$lib/components/StickyHeader.svelte";
   import AgencyMap from "$lib/components/AgencyMap.svelte";
+  import ChangeMap from "$lib/components/ChangeMap.svelte";
   import { withDataBase } from "$lib/dataBase";
   import { getLocale } from "$lib/paraglide/runtime";
   import { goto } from "$app/navigation";
@@ -21,6 +22,12 @@
     map_legend_high,
     map_hover_stops,
     map_hover_no_data,
+    map_view_value,
+    map_view_change,
+    map_change_increase,
+    map_change_decrease,
+    map_change_year_range,
+    map_change_pct,
   } from "$lib/paraglide/messages";
 
   export let data;
@@ -149,6 +156,8 @@
 
   // ─── Computed choropleth data ─────────────────────────────────────────────────
 
+  let viewMode = "value"; // "value" | "change"
+
   let yearOptions = [];
   let featureStateData = new Map();
   let rawValuesBySlug = new Map(); // slug → raw display value (for hover)
@@ -157,6 +166,13 @@
   let legendMax = null;
   let loadError = "";
   let isLoading = false;
+
+  // ─── Change map data ──────────────────────────────────────────────────────────
+
+  let changeFeatureStateData = new Map(); // Map<agency_id, -1..1>
+  let rawChangesBySlug = new Map();       // Map<agency_id, raw % change (0.23 = 23%)>
+  let changeYearFrom = "";
+  let changeYearTo = "";
 
   // Percentile normalize: returns { normalized: Map<slug, 0..1>, min, max }
   const percentileNormalize = (slugValues) => {
@@ -254,8 +270,83 @@
     }
   };
 
+  const extractValues = (rows, race, sMap, allowed, stopsMap, minS) => {
+    const values = new Map();
+    for (const r of rows) {
+      const agencyName = String(r.agency ?? "");
+      const key = normalizeAgencyName(agencyName);
+      if (!key) continue;
+      const slug = sMap.get(key) ?? toAgencySlug(agencyName);
+      if (allowed && !allowed.has(slug)) continue;
+      const stops = stopsMap?.get(key) ?? Infinity;
+      if (stops < minS) continue;
+      let value;
+      if (race === RATIO_KEY) {
+        const total = Number(r.Total ?? NaN), white = Number(r.White ?? NaN);
+        value = white > 0 && Number.isFinite(total) ? (total - white) / white : NaN;
+      } else {
+        value = Number(r[race] ?? NaN);
+      }
+      if (Number.isFinite(value)) values.set(slug, value);
+    }
+    return values;
+  };
+
+  const computeChange = async (metric, race, sMap, allowed, yOptions, minS) => {
+    if (!metric || yOptions.length < 2) { changeFeatureStateData = new Map(); return; }
+    const sorted = [...yOptions].sort((a, b) => Number(a) - Number(b));
+    const yearFrom = sorted[0];
+    const yearTo = sorted[sorted.length - 1];
+    try {
+      const [payload, stopsPayload] = await Promise.all([
+        fetchMetric(metric),
+        fetchMetric(BASE_STOPS_ROW_KEY),
+      ]);
+      const stopsRows = (stopsPayload?.rows ?? []).filter(r => String(r?.year ?? "") === yearTo);
+      const stopsMap = new Map();
+      for (const r of stopsRows) {
+        const key = normalizeAgencyName(r.agency ?? "");
+        if (key) stopsMap.set(key, Number(r.Total ?? 0));
+      }
+
+      const vFrom = extractValues(
+        (payload?.rows ?? []).filter(r => String(r?.year ?? "") === yearFrom),
+        race, sMap, allowed, null, 0
+      );
+      const vTo = extractValues(
+        (payload?.rows ?? []).filter(r => String(r?.year ?? "") === yearTo),
+        race, sMap, allowed, stopsMap, minS
+      );
+
+      const rawChanges = new Map();
+      for (const [slug, to] of vTo) {
+        const from = vFrom.get(slug);
+        if (!Number.isFinite(from) || from === 0) continue;
+        rawChanges.set(slug, (to - from) / Math.abs(from));
+      }
+
+      // Normalize by p95 of absolute values → -1..1
+      const absVals = [...rawChanges.values()].map(Math.abs).filter(Number.isFinite).sort((a, b) => a - b);
+      if (absVals.length < 2) { changeFeatureStateData = new Map(); return; }
+      const p95 = absVals[Math.min(absVals.length - 1, Math.floor(absVals.length * 0.95))];
+
+      const normalized = new Map();
+      for (const [slug, change] of rawChanges) {
+        normalized.set(slug, Math.max(-1, Math.min(1, change / p95)));
+      }
+
+      rawChangesBySlug = rawChanges;
+      changeYearFrom = yearFrom;
+      changeYearTo = yearTo;
+      changeFeatureStateData = normalized;
+    } catch {
+      changeFeatureStateData = new Map();
+    }
+  };
+
   $: loadYearOptions(selectedMetric);
   $: computeMap(selectedMetric, selectedRace, selectedYear, minStops, slugMap, allowedSlugs);
+  $: computeChange(selectedMetric, selectedRace, slugMap, allowedSlugs, yearOptions, minStops);
 
   // ─── Hover popup ──────────────────────────────────────────────────────────────
 
@@ -264,13 +355,18 @@
   const handleHover = (e) => {
     const { slug, x, y } = e.detail;
     if (!slug) { hoverInfo = null; return; }
-    const raw = rawValuesBySlug.get(slug);
-    const stops = totalStopsBySlug.get(slug);
     const agencyEntry = (data.agencies ?? []).find(
       (a) => (a.agency_slug ?? a.slug ?? a.id) === slug
     );
     const name = agencyEntry?.canonical_name ?? agencyEntry?.names?.[0] ?? slug;
-    hoverInfo = { slug, name, raw, stops, x, y, metricLabel };
+    if (viewMode === "change") {
+      const rawChange = rawChangesBySlug.get(slug);
+      hoverInfo = { slug, name, x, y, rawChange, mode: "change" };
+    } else {
+      const raw = rawValuesBySlug.get(slug);
+      const stops = totalStopsBySlug.get(slug);
+      hoverInfo = { slug, name, raw, stops, x, y, metricLabel, mode: "value" };
+    }
   };
 
   const handleLeave = () => { hoverInfo = null; };
@@ -314,13 +410,23 @@
   style="height: calc(100dvh - var(--site-header-height, 56px))"
 >
   <!-- Map fills the full container -->
-  <AgencyMap
-    {featureStateData}
-    {basemapStyleUrl}
-    on:hover={handleHover}
-    on:leave={handleLeave}
-    on:click={handleClick}
-  />
+  {#if viewMode === "value"}
+    <AgencyMap
+      {featureStateData}
+      {basemapStyleUrl}
+      on:hover={handleHover}
+      on:leave={handleLeave}
+      on:click={handleClick}
+    />
+  {:else}
+    <ChangeMap
+      featureStateData={changeFeatureStateData}
+      {basemapStyleUrl}
+      on:hover={handleHover}
+      on:leave={handleLeave}
+      on:click={handleClick}
+    />
+  {/if}
 
   <!-- Horizontal controls bar -->
   <div class="absolute inset-x-0 top-0 z-10 flex flex-wrap items-center gap-x-4 gap-y-1.5 bg-white/95 px-3 py-2 shadow-sm backdrop-blur-sm">
@@ -380,6 +486,17 @@
       </select>
     </div>
 
+    <!-- View toggle -->
+    <div class="ml-auto flex items-center gap-1 rounded-md border border-slate-200 bg-slate-50 p-0.5">
+      {#each [["value", map_view_value()], ["change", map_view_change()]] as [mode, label]}
+        <button
+          type="button"
+          class="rounded px-2.5 py-1 text-xs font-semibold transition-colors {viewMode === mode ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'}"
+          on:click={() => { viewMode = mode; hoverInfo = null; }}
+        >{label}</button>
+      {/each}
+    </div>
+
     {#if loadError}
       <p class="text-xs text-red-600">{loadError}</p>
     {/if}
@@ -400,22 +517,38 @@
 
   <!-- Legend -->
   <div class="absolute bottom-8 left-3 z-10 rounded-xl bg-white/95 px-3 py-2 shadow backdrop-blur-sm">
-    <div class="flex items-end gap-1 pb-1">
-      {#each [[3,"#dbeafe"],[7,"#93c5fd"],[11,"#3b82f6"],[16,"#1d4ed8"],[22,"#1e3a8a"]] as [r, fill]}
-        <span
-          class="inline-block rounded-full opacity-80"
-          style="width:{r*2}px;height:{r*2}px;background:{fill};border:0.5px solid #fff"
-        ></span>
-      {/each}
-    </div>
-    <div class="flex justify-between text-[0.65rem] font-semibold text-slate-500">
-      <span>{legendMin != null ? formatRaw(legendMin) : map_legend_low()}</span>
-      <span>{legendMax != null ? formatRaw(legendMax) : map_legend_high()}</span>
-    </div>
+    {#if viewMode === "value"}
+      <div class="flex items-end gap-1 pb-1">
+        {#each [[3,"#dbeafe"],[7,"#93c5fd"],[11,"#3b82f6"],[16,"#1d4ed8"],[22,"#1e3a8a"]] as [r, fill]}
+          <span
+            class="inline-block rounded-full opacity-80"
+            style="width:{r*2}px;height:{r*2}px;background:{fill};border:0.5px solid #fff"
+          ></span>
+        {/each}
+      </div>
+      <div class="flex justify-between text-[0.65rem] font-semibold text-slate-500">
+        <span>{legendMin != null ? formatRaw(legendMin) : map_legend_low()}</span>
+        <span>{legendMax != null ? formatRaw(legendMax) : map_legend_high()}</span>
+      </div>
+    {:else}
+      <div class="flex items-center gap-3 pb-1">
+        <div class="flex items-center gap-1">
+          <span class="inline-block h-0 w-0 border-x-[6px] border-b-[10px] border-x-transparent border-b-[#ea580c] opacity-80"></span>
+          <span class="text-[0.65rem] font-semibold text-slate-600">{map_change_increase()}</span>
+        </div>
+        <div class="flex items-center gap-1">
+          <span class="inline-block h-0 w-0 border-x-[6px] border-t-[10px] border-x-transparent border-t-[#2563eb] opacity-80"></span>
+          <span class="text-[0.65rem] font-semibold text-slate-600">{map_change_decrease()}</span>
+        </div>
+      </div>
+      {#if changeYearFrom && changeYearTo}
+        <p class="text-[0.65rem] text-slate-400">{map_change_year_range({ from: changeYearFrom, to: changeYearTo })}</p>
+      {/if}
+    {/if}
   </div>
 
-  <!-- Year scrubber -->
-  {#if yearOptions.length}
+  <!-- Year scrubber (value view only) -->
+  {#if viewMode === "value" && yearOptions.length}
     {@const yearsSorted = [...yearOptions].sort((a, b) => Number(a) - Number(b))}
     {@const selectedIdx = Math.max(0, yearsSorted.indexOf(selectedYear))}
     <div class="absolute bottom-8 right-3 z-10 rounded-xl bg-white/95 px-3 py-2.5 shadow backdrop-blur-sm">
@@ -450,16 +583,28 @@
       style="left: {offsetX}px; top: {offsetY}px; transform: translateY(-100%)"
     >
       <p class="text-sm font-semibold leading-snug">{hoverInfo.name}</p>
-      {#if Number.isFinite(hoverInfo.raw)}
-        <p class="mt-0.5 text-xs text-slate-300">{formatRaw(hoverInfo.raw)}</p>
-        {#if hoverInfo.metricLabel}
-          <p class="text-[0.65rem] text-slate-400">{hoverInfo.metricLabel}</p>
+      {#if hoverInfo.mode === "change"}
+        {#if Number.isFinite(hoverInfo.rawChange)}
+          {@const pct = (hoverInfo.rawChange * 100).toFixed(1)}
+          <p class="mt-0.5 text-xs {hoverInfo.rawChange >= 0 ? 'text-orange-300' : 'text-blue-300'}">
+            {hoverInfo.rawChange >= 0 ? "+" : ""}{pct}%
+          </p>
+          <p class="text-[0.65rem] text-slate-400">{map_change_year_range({ from: changeYearFrom, to: changeYearTo })}</p>
+        {:else}
+          <p class="mt-0.5 text-xs text-slate-400">{map_hover_no_data()}</p>
         {/if}
       {:else}
-        <p class="mt-0.5 text-xs text-slate-400">{map_hover_no_data()}</p>
-      {/if}
-      {#if Number.isFinite(hoverInfo.stops)}
-        <p class="mt-0.5 text-xs text-slate-400">{map_hover_stops({ stops: formatStops(hoverInfo.stops) })}</p>
+        {#if Number.isFinite(hoverInfo.raw)}
+          <p class="mt-0.5 text-xs text-slate-300">{formatRaw(hoverInfo.raw)}</p>
+          {#if hoverInfo.metricLabel}
+            <p class="text-[0.65rem] text-slate-400">{hoverInfo.metricLabel}</p>
+          {/if}
+        {:else}
+          <p class="mt-0.5 text-xs text-slate-400">{map_hover_no_data()}</p>
+        {/if}
+        {#if Number.isFinite(hoverInfo.stops)}
+          <p class="mt-0.5 text-xs text-slate-400">{map_hover_stops({ stops: formatStops(hoverInfo.stops) })}</p>
+        {/if}
       {/if}
     </div>
   {/if}
