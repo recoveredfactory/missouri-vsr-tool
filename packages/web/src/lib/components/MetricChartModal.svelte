@@ -1,6 +1,7 @@
 <script>
   import { createEventDispatcher, onDestroy } from "svelte";
   import { Chart, Svg, Axis, Spline } from "layerchart";
+  import { scalePow, scaleLinear } from "d3-scale";
   import { withDataBase } from "$lib/dataBase";
   import {
     modal_close,
@@ -21,6 +22,18 @@
   } from "$lib/paraglide/messages";
   import * as m from "$lib/paraglide/messages";
   import { raceColors } from "$lib/colors.js";
+
+  // Rate metrics (0–1 values) stay on linear scale; count metrics use log to
+  // prevent large agencies (MSHP, KCPD) from collapsing everyone else.
+  $: isRateMetric = metricKey.includes("-rate") || metricKey.includes("-percentage");
+
+  const formatCountAxis = (v) => {
+    if (!Number.isFinite(v) || v < 0) return "";
+    if (v === 0) return "0";
+    if (v >= 1_000_000) return `${+(v / 1_000_000).toFixed(1)}M`;
+    if (v >= 1_000) return `${Math.round(v / 1_000)}K`;
+    return String(Math.round(v));
+  };
 
   export let open = false;
   export let metricKey = "";
@@ -288,11 +301,12 @@
                 >
                   {panel.label()}{#if agencyStopsRow?.[panel.race] != null && metricKey !== "stops"}&thinsp;<span class="font-normal normal-case tracking-normal text-slate-400">(stops: {numberFormatter.format(agencyStopsRow[panel.race])})</span>{/if}
                 </p>
-                <div class="h-[140px]">
+                <div class="h-[280px]">
                   <Chart
                     data={panel.allPoints}
                     x="year"
                     y="value"
+                    yScale={isRateMetric ? scaleLinear() : scalePow().exponent(0.5)}
                     yDomain={[0, null]}
                     yNice
                     padding={{ left: 40, right: 6, bottom: 22, top: 6 }}
@@ -300,11 +314,11 @@
                     <Svg>
                       <Axis
                         placement="left"
-                        ticks={3}
+                        ticks={4}
                         grid={{ class: "stroke-slate-100" }}
                         rule={{ class: "stroke-slate-200" }}
                         tickLabelProps={{ style: "fill:#94a3b8;font-size:9px;font-family:inherit;" }}
-                        format={(v) => numberFormatter.format(v)}
+                        format={isRateMetric ? (v) => numberFormatter.format(v) : formatCountAxis}
                       />
                       {#each panel.greySeries as gs}
                         <Spline data={gs.data} x="year" y="value" fill="none" stroke="#94a3b8" strokeWidth={0.8} defined={(d) => d.value !== null} />

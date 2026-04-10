@@ -86,6 +86,9 @@
     url: `${siteUrl}/`,
     inLanguage: ["en", "es"]
   };
+  // Base URL without release path — used for v1 (pre-v2) download links
+  const dataBaseUrl = import.meta.env.PUBLIC_DATA_BASE_URL ?? "";
+
   // v2 download datasets — static file structure from releases/v2/downloads/
   const v2Datasets = [
     { key: "vsr_statistics",  label: () => home_download_label_vsr_statistics() },
@@ -264,9 +267,11 @@
                   <text x={padding.left - 8} y={padding.top + height/2 + 3} text-anchor="end" font-size="8" fill="#64748b" font-weight="600">{formatStopsAxis(stopsMax/2)}</text>
                   <text x={padding.left - 8} y={padding.top + height + 3} text-anchor="end" font-size="8" fill="#64748b" font-weight="600">0</text>
 
-                  <!-- X-axis year labels -->
+                  <!-- X-axis year labels: every 5th year + last -->
                   {#each years as year, i}
-                    <text x={padding.left + (i / (years.length - 1)) * width} y={padding.top + height + 16} text-anchor="middle" font-size="9" fill="#64748b">{year}</text>
+                    {#if year % 5 === 0 || i === years.length - 1}
+                      <text x={padding.left + (i / (years.length - 1)) * width} y={padding.top + height + 16} text-anchor="middle" font-size="9" fill="#64748b">{year}</text>
+                    {/if}
                   {/each}
 
                   <!-- Total Stops line -->
@@ -334,9 +339,11 @@
                   <text x={padding.left - 8} y={padding.top + height/2 + 3} text-anchor="end" font-size="8" fill="#64748b" font-weight="600">{formatStopsAxis(consentMax/2)}</text>
                   <text x={padding.left - 8} y={padding.top + height + 3} text-anchor="end" font-size="8" fill="#64748b" font-weight="600">0</text>
 
-                  <!-- X-axis year labels -->
+                  <!-- X-axis year labels: every 5th year + last -->
                   {#each years as year, i}
-                    <text x={padding.left + (i / (years.length - 1)) * width} y={padding.top + height + 16} text-anchor="middle" font-size="9" fill="#64748b">{year}</text>
+                    {#if year % 5 === 0 || i === years.length - 1}
+                      <text x={padding.left + (i / (years.length - 1)) * width} y={padding.top + height + 16} text-anchor="middle" font-size="9" fill="#64748b">{year}</text>
+                    {/if}
                   {/each}
 
                   <!-- Consent Searches line -->
@@ -542,9 +549,11 @@
                     <text x={padding3.left - 6} y={padding3.top + (1 - tick / yMax) * height3 + 3} text-anchor="end" font-size="8" fill="#64748b">{tick}%</text>
                   {/each}
 
-                  <!-- X-axis year labels -->
+                  <!-- X-axis year labels: every 5th year + last -->
                   {#each years3 as year, i}
-                    <text x={padding3.left + (i / (years3.length - 1)) * width3} y={padding3.top + height3 + 16} text-anchor="middle" font-size="9" fill="#64748b">{year}</text>
+                    {#if year % 5 === 0 || i === years3.length - 1}
+                      <text x={padding3.left + (i / (years3.length - 1)) * width3} y={padding3.top + height3 + 16} text-anchor="middle" font-size="9" fill="#64748b">{year}</text>
+                    {/if}
                   {/each}
 
                   <!-- Lines + data points for each outcome -->
@@ -639,9 +648,9 @@
           {home_download_v1_heading()}
         </p>
         <div class="flex flex-wrap justify-center gap-3">
-          {#each ["parquet", "csv"] as ext}
+          {#each ["parquet", "csv", "json"] as ext}
             <a
-              href={withDataBase(`/data/downloads/vsr_statistics_2020_2024.${ext}`)}
+              href="{dataBaseUrl}/downloads/vsr_statistics_2020_2024.{ext}"
               download
               class="rounded border border-slate-200 px-3 py-1.5 text-xs text-slate-500 no-underline transition hover:border-slate-400 hover:text-slate-700"
             >

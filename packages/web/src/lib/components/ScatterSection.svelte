@@ -63,26 +63,20 @@
 
 <div class="mt-12">
   <div class="flex flex-col gap-3">
-    <div
-      role="tablist"
-      aria-label={agency_yearly_data_heading()}
-      class="mt-12 flex flex-wrap items-center gap-2"
-    >
-      {#each years as year}
-        <button
-          type="button"
-          role="tab"
-          aria-selected={year === selectedYear}
-          class={`rounded-md border px-3 py-1.5 text-sm font-semibold tracking-wide transition sm:text-base ${
-            year === selectedYear
-              ? "border-slate-900 bg-slate-900 text-white"
-              : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:text-slate-900"
-          }`}
-          on:click={() => onYearClick(year)}
-        >
-          {year}
-        </button>
-      {/each}
+    <div class="mt-12 flex items-center gap-3">
+      <label for="scatter-year-select" class="text-sm font-semibold uppercase tracking-wide text-slate-600">
+        {agency_yearly_data_heading()}
+      </label>
+      <select
+        id="scatter-year-select"
+        value={selectedYear}
+        on:change={(e) => onYearClick(e.currentTarget.value)}
+        class="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm font-semibold text-slate-900 shadow-sm focus:border-slate-600 focus:outline-none focus:ring-1 focus:ring-slate-600"
+      >
+        {#each years as year}
+          <option value={year}>{year}</option>
+        {/each}
+      </select>
     </div>
     <div class="relative left-1/2 mt-4 w-screen -translate-x-1/2 space-y-4 px-4 sm:px-6">
       <div class="grid gap-7 lg:gap-8 lg:grid-cols-3">
