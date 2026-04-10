@@ -36,21 +36,11 @@
     row_key?: string;
   };
 
-  type MetricFileRow = {
-    agency?: string;
-    year?: number | string;
-    Total?: number | null;
-    White?: number | null;
-    Black?: number | null;
-    Hispanic?: number | null;
-    "Native American"?: number | null;
-    Asian?: number | null;
-    Other?: number | null;
-  };
-
-  type MetricFilePayload = {
-    row_key?: string;
-    rows?: MetricFileRow[];
+  type MetricYearSubset = {
+    agencies: string[];
+    years: Array<number | string>;
+    columns: string[];
+    rows: Record<string, Array<Array<number | null>>>;
   };
 
   type MetricOption = {
@@ -102,7 +92,8 @@
     maximumFractionDigits: 2,
   });
 
-  const metricPayloadCache = new Map<string, Promise<MetricFilePayload>>();
+  const subsetCache = new Map<string, Promise<MetricYearSubset>>();
+  const SUBSET_URL = withDataBase("/data/dist/metric_year_subset.json");
   const naturalTextSorter = new Intl.Collator(undefined, { numeric: true, sensitivity: "base" });
 
   const compareStrings = (a: string, b: string) => (a === b ? 0 : a < b ? -1 : 1);
@@ -144,20 +135,10 @@
     return typeof fn === "function" ? (fn as () => string)() : humanizeId(id);
   };
 
-  const metricLabelForRowKey = (rowKey: string) => {
-    const [tableId = "", sectionId = "", metricId = ""] = rowKey.split("--");
-    return `${humanizeId(tableId)}: ${humanizeId(sectionId)}: ${humanizeId(metricId)}`;
-  };
-
   const toDisplayValue = (value: number | null | undefined) => {
     const numeric = typeof value === "string" ? Number(value) : value;
     if (!Number.isFinite(numeric)) return "—";
     return valueFormatter.format(numeric);
-  };
-
-  const toSortableNumber = (value: number | string | null | undefined) => {
-    const numeric = typeof value === "string" ? Number(value) : value;
-    return Number.isFinite(numeric) ? Number(numeric) : Number.NEGATIVE_INFINITY;
   };
 
   const isRateMetricRowKey = (rowKey: string) => {
@@ -278,104 +259,93 @@
       .map(({ value, label }) => ({ value, label }));
   };
 
-  const fetchMetricPayload = async (rowKey: string) => {
-    const cached = metricPayloadCache.get(rowKey);
+  const fetchSubset = () => {
+    const cached = subsetCache.get(SUBSET_URL);
     if (cached) return cached;
 
-    const request = fetch(withDataBase(`/dist/metric_year/${rowKey}.json`))
+    const request = fetch(SUBSET_URL)
       .then(async (response) => {
         if (!response.ok) {
           throw new Error(`Unable to load metric data (${response.status}).`);
         }
-        return (await response.json()) as MetricFilePayload;
+        return (await response.json()) as MetricYearSubset;
       })
       .catch((error) => {
-        metricPayloadCache.delete(rowKey);
+        subsetCache.delete(SUBSET_URL);
         throw error;
       });
 
-    metricPayloadCache.set(rowKey, request);
+    subsetCache.set(SUBSET_URL, request);
     return request;
   };
 
-  const yearsFromPayload = (payload: MetricFilePayload) => {
-    const years = Array.from(
-      new Set(
-        (Array.isArray(payload?.rows) ? payload.rows : [])
-          .map((row) => String(row?.year ?? ""))
-          .filter(Boolean),
-      ),
-    );
-
-    return years.sort((a, b) => Number(b) - Number(a));
-  };
+  const yearsFromPayload = (payload: MetricYearSubset) =>
+    Array.from(payload.years ?? [])
+      .map((y) => String(y))
+      .sort((a, b) => Number(b) - Number(a));
 
   const rowsForYear = (
-    metricPayload: MetricFilePayload,
-    totalStopsPayload: MetricFilePayload,
+    payload: MetricYearSubset,
+    metricRowKey: string,
     year: string,
     slugMap: Map<string, string>,
     locale: string,
     sortColumn: "Total" | "total_stops",
   ): TableRow[] => {
-    const metricYearRows = (Array.isArray(metricPayload?.rows) ? metricPayload.rows : []).filter(
-      (row) => String(row?.year ?? "") === String(year),
-    );
-    const totalYearRows = (Array.isArray(totalStopsPayload?.rows) ? totalStopsPayload.rows : []).filter(
-      (row) => String(row?.year ?? "") === String(year),
-    );
+    const yearNum = Number(year);
+    const colIdx = (col: string) => payload.columns.indexOf(col);
+    const getVal = (row: Array<number | null>, idx: number) => {
+      if (idx === -1 || idx >= row.length) return NaN;
+      const v = row[idx];
+      return v === null || v === undefined ? NaN : Number(v);
+    };
 
-    const metricMap = new Map<string, MetricFileRow>();
-    metricYearRows.forEach((row) => {
-      const key = normalizeText(String(row?.agency || ""));
-      if (!key) return;
-      metricMap.set(key, row);
-    });
+    const stopsData = payload.rows?.[baseTotalStopsRowKey] ?? [];
+    const stopsMap = new Map<number, number>();
+    for (const row of stopsData) {
+      if (!Array.isArray(row)) continue;
+      if (Number(payload.years?.[Number(row[1])]) !== yearNum) continue;
+      stopsMap.set(Number(row[0]), getVal(row, colIdx("Total")));
+    }
 
-    const totalMap = new Map<string, MetricFileRow>();
-    totalYearRows.forEach((row) => {
-      const key = normalizeText(String(row?.agency || ""));
-      if (!key) return;
-      totalMap.set(key, row);
-    });
+    const metricData =
+      metricRowKey === baseTotalStopsRowKey
+        ? stopsData
+        : (payload.rows?.[metricRowKey] ?? []);
+    const metricMap = new Map<number, Record<string, number>>();
+    for (const row of metricData) {
+      if (!Array.isArray(row)) continue;
+      if (Number(payload.years?.[Number(row[1])]) !== yearNum) continue;
+      const vals: Record<string, number> = {};
+      for (const col of raceColumns) {
+        vals[col] = getVal(row, colIdx(col));
+      }
+      metricMap.set(Number(row[0]), vals);
+    }
 
-    const agencyKeys = Array.from(new Set([...metricMap.keys(), ...totalMap.keys()]));
+    const allIdxs = new Set([...stopsMap.keys(), ...metricMap.keys()]);
 
-    return agencyKeys
-      .map((agencyKey) => {
-        const metricRow = metricMap.get(agencyKey);
-        const totalRow = totalMap.get(agencyKey);
-        const agencyName = String(metricRow?.agency || totalRow?.agency || "Unknown agency");
-        const agencySlug = slugMap.get(agencyKey) || toAgencySlug(agencyName);
+    return Array.from(allIdxs)
+      .map((aIdx) => {
+        const agencyName = payload.agencies?.[aIdx]?.trim() || "Unknown agency";
+        const agencySlug = slugMap.get(normalizeText(agencyName)) || toAgencySlug(agencyName);
+        const stopsTotal = stopsMap.get(aIdx) ?? NaN;
+        const metricVals = metricMap.get(aIdx) ?? {};
 
-        const totalStopsRaw = toSortableNumber(totalRow?.Total);
-        const metricTotalRaw = toSortableNumber(metricRow?.Total);
-
-        const raw = {
-          total_stops: totalStopsRaw,
-          Total: metricTotalRaw,
-          White: toSortableNumber(metricRow?.White),
-          Black: toSortableNumber(metricRow?.Black),
-          Hispanic: toSortableNumber(metricRow?.Hispanic),
-          "Native American": toSortableNumber(metricRow?.["Native American"]),
-          Asian: toSortableNumber(metricRow?.Asian),
-          Other: toSortableNumber(metricRow?.Other),
-        };
+        const raw: Record<string, number> = { total_stops: stopsTotal };
+        for (const col of raceColumns) raw[col] = metricVals[col] ?? NaN;
 
         return {
           id: `${agencyName}-${year}`,
-          agency: {
-            value: agencyName,
-            href: `/${locale}/agency/${agencySlug}`,
-          },
-          total_stops: toDisplayValue(totalRow?.Total),
-          Total: toDisplayValue(metricRow?.Total),
-          White: toDisplayValue(metricRow?.White),
-          Black: toDisplayValue(metricRow?.Black),
-          Hispanic: toDisplayValue(metricRow?.Hispanic),
-          "Native American": toDisplayValue(metricRow?.["Native American"]),
-          Asian: toDisplayValue(metricRow?.Asian),
-          Other: toDisplayValue(metricRow?.Other),
+          agency: { value: agencyName, href: `/${locale}/agency/${agencySlug}` },
+          total_stops: toDisplayValue(stopsTotal),
+          Total: toDisplayValue(metricVals["Total"]),
+          White: toDisplayValue(metricVals["White"]),
+          Black: toDisplayValue(metricVals["Black"]),
+          Hispanic: toDisplayValue(metricVals["Hispanic"]),
+          "Native American": toDisplayValue(metricVals["Native American"]),
+          Asian: toDisplayValue(metricVals["Asian"]),
+          Other: toDisplayValue(metricVals["Other"]),
           raw,
         };
       })
@@ -519,12 +489,8 @@
     loadError = "";
 
     try {
-      const [metricPayload, totalStopsPayload] = await Promise.all([
-        fetchMetricPayload(rowKey),
-        fetchMetricPayload(baseTotalStopsRowKey),
-      ]);
-
-      const years = yearsFromPayload(metricPayload);
+      const payload = await fetchSubset();
+      const years = yearsFromPayload(payload);
       yearOptions = years;
 
       if (!keepYear || !years.includes(selectedYear)) {
@@ -533,14 +499,7 @@
 
       const sortColumn = rowKey === baseTotalStopsRowKey ? "total_stops" : "Total";
       tableRows = selectedYear
-        ? rowsForYear(
-            metricPayload,
-            totalStopsPayload,
-            selectedYear,
-            agencySlugMap,
-            currentLocale,
-            sortColumn,
-          )
+        ? rowsForYear(payload, rowKey, selectedYear, agencySlugMap, currentLocale, sortColumn)
         : [];
     } catch (error) {
       loadError =
@@ -697,23 +656,21 @@
     </div>
 
     {#if yearOptions.length}
-      <div role="tablist" aria-label={home_metric_year_selector_label()} class="mb-5 mt-2 flex flex-wrap items-center gap-2">
-        {#each yearOptions as year}
-          <button
-            type="button"
-            role="tab"
-            aria-selected={year === selectedYear}
-            class={`rounded-md border px-3 py-1.5 text-sm font-semibold tracking-wide transition sm:text-base ${
-              year === selectedYear
-                ? "border-slate-900 bg-slate-900 text-white"
-                : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:text-slate-900"
-            }`}
-            on:click={() => selectYear(year)}
-            disabled={isLoading}
-          >
-            {year}
-          </button>
-        {/each}
+      <div class="mb-5 mt-2 flex items-center gap-3">
+        <label class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500" for="home-year-select">
+          {home_metric_year_selector_label()}
+        </label>
+        <select
+          id="home-year-select"
+          value={selectedYear}
+          on:change={(e) => selectYear(e.currentTarget.value)}
+          disabled={isLoading}
+          class="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm font-semibold text-slate-900 focus:border-slate-500 focus:outline-none"
+        >
+          {#each yearOptions as year}
+            <option value={year}>{year}</option>
+          {/each}
+        </select>
       </div>
     {/if}
 

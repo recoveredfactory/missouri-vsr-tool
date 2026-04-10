@@ -175,6 +175,7 @@
     selectedYear = String(data.latestYear ?? years[0]);
   }
 
+  $: rows = loadedYears[selectedYear]?.rows ?? [];
   $: selectedEntries = loadedYears[selectedYear]?.rows ?? [];
   $: agencyComments = Array.isArray(loadedYears[selectedYear]?.agency_comments)
     ? loadedYears[selectedYear].agency_comments
