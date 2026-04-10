@@ -29,16 +29,15 @@
     home_outcome_arrests,
     home_outcome_no_action,
     home_download_description,
-    home_download_format_fallback,
-    home_download_loading,
+
     home_download_csv_description,
     home_download_parquet_description,
     home_download_json_description,
     home_download_label_agency_list,
     home_download_label_agency_comments,
-    home_download_label_raw_stops,
-    home_download_label_all_combined,
+    home_download_label_combined,
     home_download_label_vsr_statistics,
+    home_download_v1_heading,
     home_download_about_note,
     home_about_link,
   } from "$lib/paraglide/messages";
@@ -87,74 +86,19 @@
     url: `${siteUrl}/`,
     inLanguage: ["en", "es"]
   };
-  const downloadManifest = data?.downloadManifest;
+  // v2 download datasets — static file structure from releases/v2/downloads/
+  const v2Datasets = [
+    { key: "vsr_statistics",  label: () => home_download_label_vsr_statistics() },
+    { key: "agency_index",    label: () => home_download_label_agency_list() },
+    { key: "agency_comments", label: () => home_download_label_agency_comments() },
+    { key: "combined",        label: () => home_download_label_combined() },
+  ];
 
-  $: downloadGroupMeta = {
-    csv: {
-      title: "CSV",
-      description: home_download_csv_description()
-    },
-    parquet: {
-      title: "Parquet",
-      description: home_download_parquet_description()
-    },
-    json: {
-      title: "JSON",
-      description: home_download_json_description()
-    }
-  };
-
-  function getDownloadLabel(file) {
-    if (file.group === "json" && /downloads\.json$/i.test(file.path)) {
-      return home_download_label_all_combined();
-    }
-    if (/vsr_statistics/i.test(file.path)) {
-      return home_download_label_vsr_statistics();
-    }
-    if (/agency_index/i.test(file.path)) return home_download_label_agency_list();
-    if (/agency_comments/i.test(file.path)) return home_download_label_agency_comments();
-    if (/downloads/i.test(file.path)) return home_download_label_raw_stops();
-    return file.path;
-  }
-
-  function formatBytes(bytes) {
-    if (!Number.isFinite(bytes)) return "";
-    const units = ["B", "KB", "MB", "GB"];
-    let value = bytes;
-    let idx = 0;
-    while (value >= 1024 && idx < units.length - 1) {
-      value /= 1024;
-      idx += 1;
-    }
-    const decimals = value >= 100 || idx === 0 ? 0 : 1;
-    return `${value.toFixed(decimals)} ${units[idx]}`;
-  }
-
-  function buildDownloadGroups(manifest) {
-    if (!manifest?.files?.length) return [];
-    const groups = new Map();
-    const orderedGroups = [];
-    manifest.files.forEach((file) => {
-      const group = file.group || "other";
-      if (!groups.has(group)) {
-        groups.set(group, []);
-        orderedGroups.push(group);
-      }
-      groups.get(group).push(file);
-    });
-    const preferredOrder = Object.keys(downloadGroupMeta);
-    const remaining = orderedGroups.filter((group) => !preferredOrder.includes(group));
-    const finalOrder = [
-      ...preferredOrder.filter((group) => groups.has(group)),
-      ...remaining
-    ];
-    return finalOrder.map((group) => ({
-      group,
-      files: groups.get(group)
-    }));
-  }
-
-  $: downloadGroups = buildDownloadGroups(downloadManifest);
+  const v2Formats = [
+    { ext: "csv",     title: "CSV",     description: () => home_download_csv_description() },
+    { ext: "parquet", title: "Parquet", description: () => home_download_parquet_description() },
+    { ext: "json",    title: "JSON",    description: () => home_download_json_description() },
+  ];
 
   function showTooltip(event, content) {
     const el = event.currentTarget || event.target;
@@ -664,41 +608,48 @@
         {home_download_description()}
       </p>
 
-      {#if downloadGroups.length}
-        <div class="grid gap-6 md:grid-cols-3">
-          {#each downloadGroups as downloadGroup}
-            <div class="flex flex-col rounded-lg border-2 border-slate-200 bg-slate-50 p-6 text-center">
-              <h3 class="mb-2 text-xl font-bold text-slate-900">
-                {downloadGroupMeta[downloadGroup.group]?.title ?? downloadGroup.group.toUpperCase()}
-              </h3>
-              <p class="mb-4 min-h-[72px] text-sm text-slate-600">
-                {downloadGroupMeta[downloadGroup.group]?.description ?? home_download_format_fallback()}
-              </p>
-              {#each downloadGroup.files as file, index (file.path)}
-                <a
-                  href={withDataBase(`/data/downloads/${file.path}`)}
-                  download
-                  on:click={() =>
-                    handleDownloadClick(file, withDataBase(`/data/downloads/${file.path}`))
-                  }
-                  class={`block rounded-lg bg-[#1b613c] px-5 py-2.5 text-sm font-semibold text-white no-underline transition-colors hover:bg-[#105430] ${
-                    index === downloadGroup.files.length - 1 ? "" : "mb-3"
-                  }`}
-                >
-                  <span class="block">{getDownloadLabel(file)}</span>
-                  <span class="mt-1 block text-[11px] font-medium text-white/85">
-                    {formatBytes(file.size_bytes)}
-                  </span>
-                </a>
-              {/each}
-            </div>
+      <!-- v2 downloads: three format cards, four datasets each -->
+      <div class="grid gap-6 md:grid-cols-3">
+        {#each v2Formats as fmt}
+          <div class="flex flex-col rounded-lg border-2 border-slate-200 bg-slate-50 p-6 text-center">
+            <h3 class="mb-2 text-xl font-bold text-slate-900">{fmt.title}</h3>
+            <p class="mb-4 min-h-[72px] text-sm text-slate-600">{fmt.description()}</p>
+            {#each v2Datasets as ds, i}
+              <a
+                href={withDataBase(`/data/downloads/${ds.key}.${fmt.ext}`)}
+                download
+                on:click={() =>
+                  handleDownloadClick(
+                    { path: `${ds.key}.${fmt.ext}` },
+                    withDataBase(`/data/downloads/${ds.key}.${fmt.ext}`)
+                  )
+                }
+                class={`block rounded-lg bg-[#1b613c] px-5 py-2.5 text-sm font-semibold text-white no-underline transition-colors hover:bg-[#105430] ${i < v2Datasets.length - 1 ? "mb-3" : ""}`}
+              >
+                {ds.label()}
+              </a>
+            {/each}
+          </div>
+        {/each}
+      </div>
+
+      <!-- Previous release (v1, 2020–2024) -->
+      <div class="mt-10 border-t border-slate-100 pt-6">
+        <p class="mb-3 text-center text-xs font-semibold uppercase tracking-widest text-slate-400">
+          {home_download_v1_heading()}
+        </p>
+        <div class="flex flex-wrap justify-center gap-3">
+          {#each ["parquet", "csv"] as ext}
+            <a
+              href={withDataBase(`/data/downloads/vsr_statistics_2020_2024.${ext}`)}
+              download
+              class="rounded border border-slate-200 px-3 py-1.5 text-xs text-slate-500 no-underline transition hover:border-slate-400 hover:text-slate-700"
+            >
+              VSR Statistics 2020–2024 .{ext}
+            </a>
           {/each}
         </div>
-      {:else}
-        <div class="flex h-[180px] items-center justify-center rounded-lg border-2 border-slate-200 bg-slate-50">
-          <span class="text-sm text-slate-500">{home_download_loading()}</span>
-        </div>
-      {/if}
+      </div>
 
       <p class="mt-8 text-center text-sm text-slate-600">
         {@html home_download_about_note({ link: `<a href="#about" class="text-[#1b613c] underline hover:text-[#105430]">${home_about_link()}</a>` })}

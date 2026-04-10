@@ -387,5 +387,7 @@
   "footer_data_disclaimer": "Data is compiled from public records and may contain errors or omissions.",
   "metric_stops": "Stops",
   "metric_contraband-total": "Total Contraband",
-  "section_core-counts": "Totals"
+  "section_core-counts": "Totals",
+  "home_download_label_combined": "All agencies combined",
+  "home_download_v1_heading": "Previous release (2020–2024)"
 }

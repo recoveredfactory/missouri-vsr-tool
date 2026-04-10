@@ -4,39 +4,32 @@ import { withDataBase } from "$lib/dataBase";
 export async function load({ fetch, params }) {
   const slug = params.slug;
 
-  // Fetch manifest first to know which years are available.
   const manifestResponse = await fetch(withDataBase("/data/dist/manifest.json"));
-  let manifest: Record<string, unknown> | null = null;
-  if (manifestResponse.ok) {
-    manifest = await manifestResponse.json();
+  if (!manifestResponse.ok) {
+    throw error(503, "Data unavailable — manifest could not be loaded");
   }
+  const manifest = await manifestResponse.json();
 
-  const allYears: number[] = Array.isArray(manifest?.years)
-    ? (manifest.years as number[]).slice().sort((a, b) => b - a)
-    : [];
-  const partialCoverageYears: number[] = Array.isArray(manifest?.partial_coverage_years)
-    ? (manifest.partial_coverage_years as number[])
-    : [];
-
-  // Load the most recent year's data server-side.
+  const allYears: number[] = (manifest?.years as number[] ?? []).slice().sort((a, b) => b - a);
+  const partialCoverageYears: number[] = manifest?.partial_coverage_years ?? [];
   const latestYear = allYears[0];
+
   if (!latestYear) {
-    throw error(404, `Agency not found: ${slug}`);
+    throw error(503, "Data unavailable — no years in manifest");
   }
 
-  const response = await fetch(
-    withDataBase(`/data/dist/agency_year/${slug}/${latestYear}.json`)
-  );
-  if (!response.ok) {
+  const [agencyResponse, baselineResponse, indexResponse, boundaryIndexResponse] =
+    await Promise.all([
+      fetch(withDataBase(`/data/dist/agency_year/${slug}/${latestYear}.json`)),
+      fetch(withDataBase("/data/dist/statewide_slug_baselines.json")),
+      fetch(withDataBase("/data/dist/agency_index.json")),
+      fetch(withDataBase("/data/dist/agency_boundaries_index.json")),
+    ]);
+
+  if (!agencyResponse.ok) {
     throw error(404, `Agency not found: ${slug}`);
   }
-  const latestYearData = await response.json();
-
-  const [baselineResponse, indexResponse, boundaryIndexResponse] = await Promise.all([
-    fetch(withDataBase("/data/dist/statewide_slug_baselines.json")),
-    fetch(withDataBase("/data/dist/agency_index.json")),
-    fetch(withDataBase("/data/dist/agency_boundaries_index.json")),
-  ]);
+  const latestYearData = await agencyResponse.json();
 
   const agencyId =
     latestYearData?.agency_metadata?.agency_id ||
@@ -69,6 +62,7 @@ export async function load({ fetch, params }) {
 
   return {
     slug,
+    manifest,
     latestYearData,
     latestYear,
     years: allYears.map(String),
