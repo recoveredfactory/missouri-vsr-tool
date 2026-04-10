@@ -393,7 +393,7 @@
         </section>
 
         <!-- Code snippets -->
-        {#if embedSrc}
+        {#if embedPath}
           <section class="space-y-4">
             <h2 class="text-xs font-semibold uppercase tracking-wider text-slate-500">
               Embed code
