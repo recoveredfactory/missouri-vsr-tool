@@ -148,7 +148,7 @@ const fetchJson = async (fetch, path, dataBaseUrl) => {
 
 export async function load({ fetch, url }) {
   const locale = url.pathname.split("/")[1] === "es" ? "es" : "en";
-  const dataBaseUrl = import.meta.env.PUBLIC_DATA_BASE_URL;
+  const dataBaseUrl = import.meta.env.PUBLIC_DATA_BASE_URL ?? "";
 
   // Fetch manifest first to determine the latest year.
   const manifest = await fetchJson(fetch, "/dist/manifest.json", dataBaseUrl);
@@ -157,9 +157,18 @@ export async function load({ fetch, url }) {
     ? Math.max(...manifestYears)
     : 2024;
 
-  const [statsData, statewideYearSums] = await Promise.all([
+  const [statsData, statewideYearSums, v1DownloadManifest] = await Promise.all([
     fetchJson(fetch, `/dist/homepage_${latestYear}_stats.json`, dataBaseUrl),
     fetchJson(fetch, "/dist/statewide_year_sums_subset.json", dataBaseUrl),
+    // v1 manifest lives at the base CDN URL, not under the v2 release path
+    (async () => {
+      try {
+        const r = await fetch(`${dataBaseUrl}/downloads/missouri_vsr_2020_2024_downloads_manifest.json`);
+        return r.ok ? await r.json() : null;
+      } catch {
+        return null;
+      }
+    })(),
   ]);
 
   const { historicalData, historicalOutcomes } = buildHistoricalData(statewideYearSums);
@@ -170,5 +179,6 @@ export async function load({ fetch, url }) {
     statsData,
     historicalData,
     historicalOutcomes,
+    v1DownloadManifest,
   };
 }

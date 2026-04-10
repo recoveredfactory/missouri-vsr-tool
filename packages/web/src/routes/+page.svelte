@@ -29,13 +29,15 @@
     home_outcome_arrests,
     home_outcome_no_action,
     home_download_description,
-
+    home_download_format_fallback,
+    home_download_loading,
     home_download_csv_description,
     home_download_parquet_description,
     home_download_json_description,
     home_download_label_agency_list,
     home_download_label_agency_comments,
-    home_download_label_combined,
+    home_download_label_raw_stops,
+    home_download_label_all_combined,
     home_download_label_vsr_statistics,
     home_download_v1_heading,
     home_download_about_note,
@@ -94,7 +96,6 @@
     { key: "vsr_statistics",  label: () => home_download_label_vsr_statistics() },
     { key: "agency_index",    label: () => home_download_label_agency_list() },
     { key: "agency_comments", label: () => home_download_label_agency_comments() },
-    { key: "combined",        label: () => home_download_label_combined() },
   ];
 
   const v2Formats = [
@@ -102,6 +103,62 @@
     { ext: "parquet", title: "Parquet", description: () => home_download_parquet_description() },
     { ext: "json",    title: "JSON",    description: () => home_download_json_description() },
   ];
+
+  // v1 manifest-driven downloads (2020–2024)
+  $: v1DownloadManifest = data?.v1DownloadManifest;
+
+  $: v1DownloadGroupMeta = {
+    csv: { title: "CSV", description: home_download_csv_description() },
+    parquet: { title: "Parquet", description: home_download_parquet_description() },
+    json: { title: "JSON", description: home_download_json_description() },
+  };
+
+  function getV1DownloadLabel(file) {
+    if (file.group === "json" && /downloads\.json$/i.test(file.path)) {
+      return home_download_label_all_combined();
+    }
+    if (/vsr_statistics/i.test(file.path)) return home_download_label_vsr_statistics();
+    if (/agency_index/i.test(file.path)) return home_download_label_agency_list();
+    if (/agency_comments/i.test(file.path)) return home_download_label_agency_comments();
+    if (/downloads/i.test(file.path)) return home_download_label_raw_stops();
+    return file.path;
+  }
+
+  function formatBytes(bytes) {
+    if (!Number.isFinite(bytes)) return "";
+    const units = ["B", "KB", "MB", "GB"];
+    let value = bytes;
+    let idx = 0;
+    while (value >= 1024 && idx < units.length - 1) {
+      value /= 1024;
+      idx += 1;
+    }
+    const decimals = value >= 100 || idx === 0 ? 0 : 1;
+    return `${value.toFixed(decimals)} ${units[idx]}`;
+  }
+
+  function buildV1DownloadGroups(manifest) {
+    if (!manifest?.files?.length) return [];
+    const groups = new Map();
+    const orderedGroups = [];
+    manifest.files.forEach((file) => {
+      const group = file.group || "other";
+      if (!groups.has(group)) {
+        groups.set(group, []);
+        orderedGroups.push(group);
+      }
+      groups.get(group).push(file);
+    });
+    const preferredOrder = Object.keys(v1DownloadGroupMeta);
+    const remaining = orderedGroups.filter((g) => !preferredOrder.includes(g));
+    const finalOrder = [
+      ...preferredOrder.filter((g) => groups.has(g)),
+      ...remaining,
+    ];
+    return finalOrder.map((group) => ({ group, files: groups.get(group) }));
+  }
+
+  $: v1DownloadGroups = buildV1DownloadGroups(v1DownloadManifest);
 
   function showTooltip(event, content) {
     const el = event.currentTarget || event.target;
@@ -644,20 +701,44 @@
 
       <!-- Previous release (v1, 2020–2024) -->
       <div class="mt-10 border-t border-slate-100 pt-6">
-        <p class="mb-3 text-center text-xs font-semibold uppercase tracking-widest text-slate-400">
+        <p class="mb-4 text-center text-xs font-semibold uppercase tracking-widest text-slate-400">
           {home_download_v1_heading()}
         </p>
-        <div class="flex flex-wrap justify-center gap-3">
-          {#each ["parquet", "csv", "json"] as ext}
-            <a
-              href="{dataBaseUrl}/downloads/vsr_statistics_2020_2024.{ext}"
-              download
-              class="rounded border border-slate-200 px-3 py-1.5 text-xs text-slate-500 no-underline transition hover:border-slate-400 hover:text-slate-700"
-            >
-              VSR Statistics 2020–2024 .{ext}
-            </a>
-          {/each}
-        </div>
+        {#if v1DownloadGroups.length}
+          <div class="grid gap-6 md:grid-cols-3">
+            {#each v1DownloadGroups as downloadGroup}
+              <div class="flex flex-col rounded-lg border-2 border-slate-200 bg-slate-50 p-6 text-center">
+                <h3 class="mb-2 text-xl font-bold text-slate-900">
+                  {v1DownloadGroupMeta[downloadGroup.group]?.title ?? downloadGroup.group.toUpperCase()}
+                </h3>
+                <p class="mb-4 min-h-[72px] text-sm text-slate-600">
+                  {v1DownloadGroupMeta[downloadGroup.group]?.description ?? home_download_format_fallback()}
+                </p>
+                {#each downloadGroup.files as file, index (file.path)}
+                  <a
+                    href="{dataBaseUrl}/downloads/{file.path}"
+                    download
+                    on:click={() => handleDownloadClick(file, `${dataBaseUrl}/downloads/${file.path}`)}
+                    class={`block rounded-lg bg-slate-600 px-5 py-2.5 text-sm font-semibold text-white no-underline transition-colors hover:bg-slate-700 ${
+                      index === downloadGroup.files.length - 1 ? "" : "mb-3"
+                    }`}
+                  >
+                    <span class="block">{getV1DownloadLabel(file)}</span>
+                    {#if file.size_bytes}
+                      <span class="mt-1 block text-[11px] font-medium text-white/85">
+                        {formatBytes(file.size_bytes)}
+                      </span>
+                    {/if}
+                  </a>
+                {/each}
+              </div>
+            {/each}
+          </div>
+        {:else}
+          <div class="flex h-[120px] items-center justify-center rounded-lg border-2 border-slate-200 bg-slate-50">
+            <span class="text-sm text-slate-500">{home_download_loading()}</span>
+          </div>
+        {/if}
       </div>
 
       <p class="mt-8 text-center text-sm text-slate-600">
