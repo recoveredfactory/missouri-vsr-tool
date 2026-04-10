@@ -106,6 +106,8 @@
   ];
 
   // v2 file sizes from downloads manifest (gracefully null if manifest not yet published)
+  // Manifest paths are prefixed (e.g. "missouri_vsr_2000_2024_vsr_statistics.csv")
+  $: v2DownloadPrefix = data?.v2DownloadManifest?.prefix ?? "";
   $: v2SizeLookup = (() => {
     const files = data?.v2DownloadManifest?.files ?? [];
     return new Map(files.map((f) => [f.path, f.size_bytes]));
@@ -691,7 +693,7 @@
             <h3 class="mb-2 text-xl font-bold text-slate-900">{fmt.title}</h3>
             <p class="mb-4 min-h-[72px] text-sm text-slate-600">{fmt.description()}</p>
             {#each v2Datasets as ds, i}
-              {@const filePath = `${ds.key}.${fmt.ext}`}
+              {@const filePath = `${v2DownloadPrefix}${ds.key}.${fmt.ext}`}
               {@const sizeBytes = v2SizeLookup.get(filePath)}
               <a
                 href={withDataBase(`/data/downloads/${filePath}`)}
