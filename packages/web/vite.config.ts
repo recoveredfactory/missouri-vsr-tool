@@ -18,6 +18,12 @@ const useLocalHttps = process.env.LOCAL_HTTPS === "true";
 export default defineConfig({
   envDir: repoRoot,
   envPrefix: ["VITE_", "PUBLIC_"],
+  server: {
+    cors: true,
+    headers: {
+      "Access-Control-Allow-Private-Network": "true",
+    },
+  },
   plugins: [
     sveltekit(),
     ...(useLocalHttps ? [basicSsl()] : []),
