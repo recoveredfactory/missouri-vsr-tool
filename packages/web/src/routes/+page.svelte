@@ -92,44 +92,21 @@
   // Base URL without release path — used for v1 (pre-v2) download links
   const dataBaseUrl = import.meta.env.PUBLIC_DATA_BASE_URL ?? "";
 
-  // v2 download datasets — static file structure from releases/v2/downloads/
-  const v2Datasets = [
-    { key: "vsr_statistics",  label: () => home_download_label_vsr_statistics() },
-    { key: "agency_index",    label: () => home_download_label_agency_list() },
-    { key: "agency_comments", label: () => home_download_label_agency_comments() },
-  ];
-
-  const v2Formats = [
-    { ext: "csv",     title: "CSV",     description: () => home_download_csv_description() },
-    { ext: "parquet", title: "Parquet", description: () => home_download_parquet_description() },
-    { ext: "json",    title: "JSON",    description: () => home_download_json_description() },
-  ];
-
-  // v2 file sizes from downloads manifest (gracefully null if manifest not yet published)
-  // Manifest paths are prefixed (e.g. "missouri_vsr_2000_2024_vsr_statistics.csv")
-  $: v2DownloadPrefix = data?.v2DownloadManifest?.prefix ?? "";
-  $: v2SizeLookup = (() => {
-    const files = data?.v2DownloadManifest?.files ?? [];
-    return new Map(files.map((f) => [f.path, f.size_bytes]));
-  })();
-
-  // v1 manifest-driven downloads (2020–2024)
-  $: v1DownloadManifest = data?.v1DownloadManifest;
-
-  $: v1DownloadGroupMeta = {
-    csv: { title: "CSV", description: home_download_csv_description() },
+  // Shared download helpers used for both v2 and v1 manifest-driven rendering
+  $: downloadGroupMeta = {
+    csv:     { title: "CSV",     description: home_download_csv_description() },
     parquet: { title: "Parquet", description: home_download_parquet_description() },
-    json: { title: "JSON", description: home_download_json_description() },
+    json:    { title: "JSON",    description: home_download_json_description() },
   };
 
-  function getV1DownloadLabel(file) {
+  function getDownloadLabel(file) {
     if (file.group === "json" && /downloads\.json$/i.test(file.path)) {
       return home_download_label_all_combined();
     }
     if (/vsr_statistics/i.test(file.path)) return home_download_label_vsr_statistics();
-    if (/agency_index/i.test(file.path)) return home_download_label_agency_list();
+    if (/agency_index/i.test(file.path))   return home_download_label_agency_list();
     if (/agency_comments/i.test(file.path)) return home_download_label_agency_comments();
-    if (/downloads/i.test(file.path)) return home_download_label_raw_stops();
+    if (/downloads/i.test(file.path))      return home_download_label_raw_stops();
     return file.path;
   }
 
@@ -138,36 +115,28 @@
     const units = ["B", "KB", "MB", "GB"];
     let value = bytes;
     let idx = 0;
-    while (value >= 1024 && idx < units.length - 1) {
-      value /= 1024;
-      idx += 1;
-    }
+    while (value >= 1024 && idx < units.length - 1) { value /= 1024; idx += 1; }
     const decimals = value >= 100 || idx === 0 ? 0 : 1;
     return `${value.toFixed(decimals)} ${units[idx]}`;
   }
 
-  function buildV1DownloadGroups(manifest) {
+  function buildDownloadGroups(manifest) {
     if (!manifest?.files?.length) return [];
     const groups = new Map();
     const orderedGroups = [];
     manifest.files.forEach((file) => {
       const group = file.group || "other";
-      if (!groups.has(group)) {
-        groups.set(group, []);
-        orderedGroups.push(group);
-      }
+      if (!groups.has(group)) { groups.set(group, []); orderedGroups.push(group); }
       groups.get(group).push(file);
     });
-    const preferredOrder = Object.keys(v1DownloadGroupMeta);
-    const remaining = orderedGroups.filter((g) => !preferredOrder.includes(g));
-    const finalOrder = [
-      ...preferredOrder.filter((g) => groups.has(g)),
-      ...remaining,
-    ];
-    return finalOrder.map((group) => ({ group, files: groups.get(group) }));
+    const preferred = ["csv", "parquet", "json"];
+    const remaining = orderedGroups.filter((g) => !preferred.includes(g));
+    return [...preferred.filter((g) => groups.has(g)), ...remaining]
+      .map((group) => ({ group, files: groups.get(group) }));
   }
 
-  $: v1DownloadGroups = buildV1DownloadGroups(v1DownloadManifest);
+  $: v2DownloadGroups = buildDownloadGroups(data?.v2DownloadManifest);
+  $: v1DownloadGroups = buildDownloadGroups(data?.v1DownloadManifest);
 
   function showTooltip(event, content) {
     const el = event.currentTarget || event.target;
@@ -683,38 +652,41 @@
         {home_download_description()}
       </p>
 
-      <!-- v2 downloads -->
+      <!-- v2 downloads — manifest-driven so JSON shows as one combined file -->
       <p class="mb-3 text-center text-xs font-semibold uppercase tracking-widest text-slate-400">
         {home_download_v2_heading()}
       </p>
-      <div class="grid gap-6 md:grid-cols-3">
-        {#each v2Formats as fmt}
-          <div class="flex flex-col rounded-lg border-2 border-slate-200 bg-slate-50 p-6 text-center">
-            <h3 class="mb-2 text-xl font-bold text-slate-900">{fmt.title}</h3>
-            <p class="mb-4 min-h-[72px] text-sm text-slate-600">{fmt.description()}</p>
-            {#each v2Datasets as ds, i}
-              {@const filePath = `${v2DownloadPrefix}${ds.key}.${fmt.ext}`}
-              {@const sizeBytes = v2SizeLookup.get(filePath)}
-              <a
-                href={withDataBase(`/data/downloads/${filePath}`)}
-                download
-                on:click={() =>
-                  handleDownloadClick(
-                    { path: filePath },
-                    withDataBase(`/data/downloads/${filePath}`)
-                  )
-                }
-                class={`block rounded-lg bg-[#1b613c] px-5 py-2.5 text-sm font-semibold text-white no-underline transition-colors hover:bg-[#105430] ${i < v2Datasets.length - 1 ? "mb-3" : ""}`}
-              >
-                <span class="block">{ds.label()}</span>
-                {#if sizeBytes}
-                  <span class="mt-1 block text-[11px] font-medium text-white/85">{formatBytes(sizeBytes)}</span>
-                {/if}
-              </a>
-            {/each}
-          </div>
-        {/each}
-      </div>
+      {#if v2DownloadGroups.length}
+        <div class="grid gap-6 md:grid-cols-3">
+          {#each v2DownloadGroups as downloadGroup}
+            <div class="flex flex-col rounded-lg border-2 border-slate-200 bg-slate-50 p-6 text-center">
+              <h3 class="mb-2 text-xl font-bold text-slate-900">
+                {downloadGroupMeta[downloadGroup.group]?.title ?? downloadGroup.group.toUpperCase()}
+              </h3>
+              <p class="mb-4 min-h-[72px] text-sm text-slate-600">
+                {downloadGroupMeta[downloadGroup.group]?.description ?? home_download_format_fallback()}
+              </p>
+              {#each downloadGroup.files as file, i (file.path)}
+                <a
+                  href={withDataBase(`/data/downloads/${file.path}`)}
+                  download
+                  on:click={() => handleDownloadClick(file, withDataBase(`/data/downloads/${file.path}`))}
+                  class={`block rounded-lg bg-[#1b613c] px-5 py-2.5 text-sm font-semibold text-white no-underline transition-colors hover:bg-[#105430] ${i < downloadGroup.files.length - 1 ? "mb-3" : ""}`}
+                >
+                  <span class="block">{getDownloadLabel(file)}</span>
+                  {#if file.size_bytes}
+                    <span class="mt-1 block text-[11px] font-medium text-white/85">{formatBytes(file.size_bytes)}</span>
+                  {/if}
+                </a>
+              {/each}
+            </div>
+          {/each}
+        </div>
+      {:else}
+        <div class="flex h-[180px] items-center justify-center rounded-lg border-2 border-slate-200 bg-slate-50">
+          <span class="text-sm text-slate-500">{home_download_loading()}</span>
+        </div>
+      {/if}
 
       <!-- Previous release (v1, 2020–2024) — simple link list -->
       <div class="mt-10 border-t border-slate-100 pt-6">
@@ -731,7 +703,7 @@
                   on:click={() => handleDownloadClick(file, `${dataBaseUrl}/downloads/${file.path}`)}
                   class="text-sm text-slate-500 no-underline hover:text-slate-800"
                 >
-                  {getV1DownloadLabel(file)}
+                  {getDownloadLabel(file)}
                   <span class="font-mono text-xs uppercase text-slate-400">.{downloadGroup.group}</span>
                   {#if file.size_bytes}
                     <span class="text-xs text-slate-400">({formatBytes(file.size_bytes)})</span>
