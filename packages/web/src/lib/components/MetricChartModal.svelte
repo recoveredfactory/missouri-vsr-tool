@@ -163,6 +163,15 @@
       }
     }
 
+    // For rate metrics cap the y-domain at the 99th percentile so one bad data
+    // point (e.g. raw count stored instead of a rate) can't collapse everything
+    // else to the bottom.  Count metrics use null → LayerChart auto-range.
+    const yMax = (() => {
+      if (!isRateMetric || !allPoints.length) return null;
+      const vals = allPoints.map((p) => p.value).sort((a, b) => a - b);
+      return vals[Math.floor(vals.length * 0.99)] ?? null;
+    })();
+
     return {
       race,
       label,
@@ -170,6 +179,7 @@
       greySeries,
       selectedSeries,
       allPoints,
+      yMax,
     };
   });
 
@@ -307,7 +317,7 @@
                     x="year"
                     y="value"
                     yScale={isRateMetric ? scaleLinear() : scalePow().exponent(0.5)}
-                    yDomain={[0, null]}
+                    yDomain={[0, panel.yMax ?? null]}
                     yNice
                     padding={{ left: 40, right: 6, bottom: 22, top: 6 }}
                   >
@@ -321,7 +331,7 @@
                         format={isRateMetric ? (v) => numberFormatter.format(v) : formatCountAxis}
                       />
                       {#each panel.greySeries as gs}
-                        <Spline data={gs.data} x="year" y="value" fill="none" stroke="#94a3b8" strokeWidth={0.8} defined={(d) => d.value !== null} />
+                        <Spline data={gs.data} x="year" y="value" fill="none" stroke="#94a3b8" strokeWidth={0.8} defined={(d) => d.value !== null && (panel.yMax == null || d.value <= panel.yMax * 1.1)} />
                       {/each}
                       {#if panel.selectedSeries}
                         <Spline
@@ -331,7 +341,7 @@
                           fill="none"
                           stroke={panel.color}
                           strokeWidth={2.5}
-                          defined={(d) => d.value !== null}
+                          defined={(d) => d.value !== null && (panel.yMax == null || d.value <= panel.yMax * 1.1)}
                         />
                       {/if}
                       <Axis
