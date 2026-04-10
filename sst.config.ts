@@ -108,6 +108,7 @@ export default $config({
       environment: {
         PUBLIC_DONATE_URL: env.PUBLIC_DONATE_URL ?? "",
         PUBLIC_DATA_BASE_URL: dataBaseUrl,
+        PUBLIC_DATA_RELEASE_PATH: env.PUBLIC_DATA_RELEASE_PATH ?? "",
       },
     });
 
