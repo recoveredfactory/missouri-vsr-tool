@@ -17,6 +17,7 @@
     "@sveltejs/vite-plugin-svelte": "^4.0.0",
     "@tailwindcss/postcss": "^4.1.18",
     "@tailwindcss/typography": "^0.5.19",
+    "@vitejs/plugin-basic-ssl": "^2.3.0",
     "autoprefixer": "^10.4.23",
     "mdsvex": "^0.12.6",
     "postcss": "^8.5.6",

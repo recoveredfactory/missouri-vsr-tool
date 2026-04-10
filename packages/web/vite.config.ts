@@ -5,14 +5,22 @@ import tailwindcss from "@tailwindcss/postcss";
 import autoprefixer from "autoprefixer";
 import { fileURLToPath } from "node:url";
 import { dirname, resolve } from "node:path";
+import basicSsl from "@vitejs/plugin-basic-ssl";
 
-const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..", "..");
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const repoRoot = resolve(__dirname, "..", "..");
+
+// Set LOCAL_HTTPS=true in your root .env to enable HTTPS in dev.
+// Useful for testing embeds in a live WP instance. Browser will warn
+// about the self-signed cert — click through once per session.
+const useLocalHttps = process.env.LOCAL_HTTPS === "true";
 
 export default defineConfig({
   envDir: repoRoot,
   envPrefix: ["VITE_", "PUBLIC_"],
   plugins: [
-    sveltekit(), 
+    sveltekit(),
+    ...(useLocalHttps ? [basicSsl()] : []),
     paraglideVitePlugin({
       project: './project.inlang',
         outdir: './src/lib/paraglide',
