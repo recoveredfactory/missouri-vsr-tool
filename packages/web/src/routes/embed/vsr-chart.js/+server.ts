@@ -1,8 +1,8 @@
-export function GET() {
-  const siteUrl = import.meta.env.PUBLIC_SITE_URL ?? "https://vsr.recoveredfactory.net";
+export function GET({ url }) {
+  const origin = url.origin;
 
   const js = `(function(){
-  var BASE='${siteUrl}';
+  var BASE='${origin}';
   class VsrChart extends HTMLElement{
     connectedCallback(){
       if(this.querySelector('iframe'))return;

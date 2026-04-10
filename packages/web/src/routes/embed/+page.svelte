@@ -1,11 +1,17 @@
 <script>
+  import { onMount } from "svelte";
   import { QuickScore } from "quick-score";
   import { withDataBase } from "$lib/dataBase";
 
   /** @type {import('./$types').PageData} */
   export let data;
 
-  const siteUrl = import.meta.env.PUBLIC_SITE_URL ?? "https://vsr.recoveredfactory.net";
+  // Use the current origin for generated snippets so they work in local dev,
+  // staging, and production without manual adjustment.
+  let currentOrigin = import.meta.env.PUBLIC_SITE_URL ?? "https://vsr.recoveredfactory.net";
+  onMount(() => {
+    currentOrigin = window.location.origin;
+  });
 
   // Chart type registry — add new types here as they're built
   const chartTypes = [
@@ -110,18 +116,19 @@
   };
 
   // Embed URL and code generation
-  // Preview uses a relative path so it works in dev; generated snippets use the full siteUrl
+  // Preview uses a relative path so it works in dev without hitting production.
+  // Generated snippets use currentOrigin (set to window.location.origin on mount)
+  // so they automatically point to local dev, staging, or production.
   $: embedPath =
     selectedAgency && selectedMetricKey
       ? `/${selectedLang}/embed/agency-metric-line/${selectedAgency.agency_slug}/${encodeURIComponent(selectedMetricKey)}`
       : null;
-  $: embedSrc = embedPath ? `${siteUrl}${embedPath}` : null;
 
-  $: webComponentCode = embedSrc
-    ? generateWebComponent(selectedAgency.agency_slug, selectedMetricKey, selectedLang, siteUrl)
+  $: webComponentCode = embedPath
+    ? generateWebComponent(selectedAgency.agency_slug, selectedMetricKey, selectedLang, currentOrigin)
     : "";
-  $: iframeResponsiveCode = embedSrc ? generateIframeResponsive(embedSrc) : "";
-  $: iframeFixedCode = embedSrc ? generateIframeFixed(embedSrc) : "";
+  $: iframeResponsiveCode = embedPath ? generateIframe(embedPath, currentOrigin, "responsive") : "";
+  $: iframeFixedCode = embedPath ? generateIframe(embedPath, currentOrigin, "fixed") : "";
 
   const generateWebComponent = (agency, metric, lang, baseUrl) => {
     const attrs = [
@@ -135,11 +142,13 @@
     return `<vsr-chart ${attrs}></vsr-chart>\n<script src="${baseUrl}/embed/vsr-chart.js"><\\/script>`;
   };
 
-  const generateIframeResponsive = (src) =>
-    `<iframe\n  src="${src}"\n  style="width:100%;aspect-ratio:16/9;border:none;display:block;"\n  title="Missouri Vehicle Stops chart"\n  loading="lazy"\n></iframe>`;
-
-  const generateIframeFixed = (src) =>
-    `<iframe\n  src="${src}"\n  width="640"\n  height="420"\n  style="border:none;display:block;"\n  title="Missouri Vehicle Stops chart"\n  loading="lazy"\n></iframe>`;
+  const generateIframe = (path, baseUrl, variant) => {
+    const src = `${baseUrl}${path}`;
+    if (variant === "responsive") {
+      return `<iframe\n  src="${src}"\n  style="width:100%;aspect-ratio:16/9;border:none;display:block;"\n  title="Missouri Vehicle Stops chart"\n  loading="lazy"\n></iframe>`;
+    }
+    return `<iframe\n  src="${src}"\n  width="640"\n  height="420"\n  style="border:none;display:block;"\n  title="Missouri Vehicle Stops chart"\n  loading="lazy"\n></iframe>`;
+  };
 
   const copyToClipboard = async (text, key) => {
     try {
