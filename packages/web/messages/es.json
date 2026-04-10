@@ -389,5 +389,8 @@
   "footer_developed_by": "Desarrollado por",
   "footer_conjunction": "y",
   "footer_copyright": "Código, diseño y texto copyright © {year} Recovered Factory.",
-  "footer_data_disclaimer": "Los datos se compilaron de registros públicos y pueden contener errores u omisiones."
+  "footer_data_disclaimer": "Los datos se compilaron de registros públicos y pueden contener errores u omisiones.",
+  "metric_stops": "Stops",
+  "metric_contraband-total": "Total Contraband",
+  "section_core-counts": "Totals"
 }

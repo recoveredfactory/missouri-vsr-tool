@@ -82,7 +82,7 @@
 
   export let agencies: AgencyIndexEntry[] = [];
 
-  const baseTotalStopsRowKey = "rates-by-race--totals--all-stops";
+  const baseTotalStopsRowKey = "stops";
   const raceColumns = [
     "Total",
     "White",
@@ -231,47 +231,44 @@
       ),
     );
 
+    // v2: canonical keys have a flat structure; split on first '--' to get group/metric.
+    const RATE_KEYS = new Set([
+      "search-rate", "arrest-rate", "contraband-hit-rate", "stop-rate",
+      "citation-rate", "stop-rate-residents",
+    ]);
+    const getCanonicalGroup = (key: string) => {
+      const idx = key.indexOf("--");
+      if (idx >= 0) return key.slice(0, idx);
+      if (RATE_KEYS.has(key) || key.endsWith("-rate")) return "rates";
+      return "core-counts";
+    };
+
     return keys
       .map((value) => {
-        const [tableId = "", sectionId = "", metricId = ""] = value.split("--");
-        const tableLabel = labelForId("table", tableId) || humanizeId(tableId);
-        const sectionLabel = labelForId("section", sectionId) || humanizeId(sectionId);
-        const metricLabel = labelForId("metric", metricId) || humanizeId(metricId);
+        const groupId = getCanonicalGroup(value);
+        const metricSuffix = value.includes("--") ? value.slice(value.indexOf("--") + 2) : value;
+        const groupLabel = labelForId("section", groupId) || humanizeId(groupId);
+        const metricLabel = labelForId("metric", metricSuffix) || humanizeId(metricSuffix);
 
         return {
           value,
-          label: `${tableLabel}: ${sectionLabel}: ${metricLabel}`,
-          tableId,
-          sectionId,
-          metricId,
-          tableLabel,
-          sectionLabel,
+          label: `${groupLabel}: ${metricLabel}`,
+          tableId: groupId,
+          sectionId: "",
+          metricId: metricSuffix,
+          tableLabel: groupLabel,
+          sectionLabel: "",
           metricLabel,
         };
       })
       .sort((a, b) => {
-        const tableRank = (tableId: string) => {
-          if (tableId === "rates-by-race") return 0;
-          if (tableId === "search-statistics") return 1;
-          if (tableId === "number-of-stops-by-race") return 2;
-          if (tableId === "disparity-index") return 3;
-          return 99;
-        };
-        const sectionRank = (tableId: string, sectionId: string) => {
-          if (tableId !== "rates-by-race") return 99;
-          if (sectionId === "totals") return 0;
-          if (sectionId === "rates") return 1;
-          return 2;
-        };
+        // Flat canonical keys (no '--') are core counts/rates — sort first.
+        const aPriority = a.value.includes("--") ? 1 : 0;
+        const bPriority = b.value.includes("--") ? 1 : 0;
+        if (aPriority !== bPriority) return aPriority - bPriority;
 
-        const tableCmp = tableRank(a.tableId) - tableRank(b.tableId);
-        if (tableCmp !== 0) return tableCmp;
-
-        const sectionPriorityCmp = sectionRank(a.tableId, a.sectionId) - sectionRank(b.tableId, b.sectionId);
-        if (sectionPriorityCmp !== 0) return sectionPriorityCmp;
-
-        const sectionCmp = naturalTextSorter.compare(a.sectionLabel, b.sectionLabel);
-        if (sectionCmp !== 0) return sectionCmp;
+        const groupCmp = naturalTextSorter.compare(a.tableLabel, b.tableLabel);
+        if (groupCmp !== 0) return groupCmp;
 
         const metricCmp = naturalTextSorter.compare(a.metricLabel, b.metricLabel);
         if (metricCmp !== 0) return metricCmp;

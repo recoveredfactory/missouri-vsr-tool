@@ -22,16 +22,21 @@ becomes `https://your-cdn/dist/...`). If `PUBLIC_DATA_BASE_URL` is empty in
 local dev, the app will fall back to the production CDN. To force local files,
 set `PUBLIC_DATA_BASE_URL=/data` and run `pnpm sync:data`.
 
-- `agency_year/*.json` is row-based (array of rows).
-- `report_dimensions.json` lists `table_id`, `section_id`, and `metric_id` keys.
+### v2 data schema (current)
+
+- `manifest.json` — release descriptor: `years`, `partial_coverage_years`, `canonical_metrics`.
+- `agency_year/{slug}/{year}.json` — per-agency per-year data (partitioned; not monolithic).
+- `report_dimensions.json` lists dimension IDs.
 - `statewide_slug_baselines.json` uses `row_key` for lookups.
+- `metric_year_subset.json` — compact indexed format: `{ agencies, years, columns, rows }`.
 
 Schema details:
 
-- `row_key` = `<table_id>--<section_id>--<metric_id>`
+- `row_key` = canonical key (e.g. `stops`, `search-rate`, `stop-outcome--warning`)
 - `row_id` = `<year>-<agency_slug>-<row_key>`
 
-Use `row_key` for metric lookups; legacy `slug` is removed.
+The app lazy-loads agency year data client-side when the user switches years.
+Years 2001–2003 have partial coverage (~50% of agencies); a warning is shown when selected.
 
 ## Translations
 

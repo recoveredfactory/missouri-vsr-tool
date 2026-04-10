@@ -75,8 +75,8 @@ const buildHistoricalData = (statewideYearSums) => {
         []
       : years.map((y) => rowsByKey.get(rowKey)?.get(String(y)) ?? 0);
 
-  const totalStopsKey = "rates-by-race--totals--all-stops";
-  const consentSearchesKey = "search-statistics--probable-cause--consent";
+  const totalStopsKey = "stops";
+  const consentSearchesKey = "probable-cause--consent";
 
   const totalStopsSeries = rowKeySet.has(totalStopsKey)
     ? getSeries(totalStopsKey)
@@ -93,10 +93,10 @@ const buildHistoricalData = (statewideYearSums) => {
     : null;
 
   const outcomeKeys = [
-    "number-of-stops-by-race--stop-outcome--arrests",
-    "number-of-stops-by-race--stop-outcome--citation",
-    "number-of-stops-by-race--stop-outcome--warning",
-    "number-of-stops-by-race--stop-outcome--no-action",
+    "arrests",
+    "citations",
+    "stop-outcome--warning",
+    "stop-outcome--no-action",
   ];
 
   if (!outcomeKeys.every((key) => rowKeySet.has(key))) {
@@ -149,21 +149,24 @@ const fetchJson = async (fetch, path, dataBaseUrl) => {
 export async function load({ fetch, url }) {
   const locale = url.pathname.split("/")[1] === "es" ? "es" : "en";
   const dataBaseUrl = import.meta.env.PUBLIC_DATA_BASE_URL;
-  const [statsData, statewideYearSums, downloadManifest] = await Promise.all([
-    fetchJson(fetch, "/dist/homepage_2024_stats.json", dataBaseUrl),
+
+  // Fetch manifest first to determine the latest year.
+  const manifest = await fetchJson(fetch, "/dist/manifest.json", dataBaseUrl);
+  const manifestYears = Array.isArray(manifest?.years) ? manifest.years : [];
+  const latestYear = manifestYears.length
+    ? Math.max(...manifestYears)
+    : 2024;
+
+  const [statsData, statewideYearSums] = await Promise.all([
+    fetchJson(fetch, `/dist/homepage_${latestYear}_stats.json`, dataBaseUrl),
     fetchJson(fetch, "/dist/statewide_year_sums_subset.json", dataBaseUrl),
-    fetchJson(
-      fetch,
-      "/data/downloads/missouri_vsr_2020_2024_downloads_manifest.json",
-      dataBaseUrl
-    ),
   ]);
 
   const { historicalData, historicalOutcomes } = buildHistoricalData(statewideYearSums);
 
   return {
     aboutDataHtml: await aboutDataHtmlByLocale[locale],
-    downloadManifest,
+    manifest,
     statsData,
     historicalData,
     historicalOutcomes,

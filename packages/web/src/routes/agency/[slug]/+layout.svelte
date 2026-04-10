@@ -85,8 +85,8 @@
   let geocodeAddressResponse;
   let geocodeJurisdictionResponse;
   let baselines = [];
-  let rows = [];
-  let rowsByYear = {};
+  // loadedYears maps year string → per-year data (null = confirmed missing, undefined = not attempted)
+  let loadedYears = {};
   let years = [];
   let selectedYear = "";
   let selectedEntries = [];
@@ -122,7 +122,8 @@
     window.umami?.track?.(event, payload);
   };
 
-  $: agencyData = data.data;
+  // v2: latestYearData is SSR-loaded; other years are lazy-loaded client-side.
+  $: agencyData = data.latestYearData;
   $: baselines = Array.isArray(data.baselines) ? data.baselines : [];
   $: agencyCount = Number(data?.agencyCount) || 0;
   $: metadata = agencyData?.agency_metadata;
@@ -131,20 +132,19 @@
     geocode_jurisdiction_response: geocodeJurisdictionResponse,
   } = metadata || {});
 
-  $: rows = Array.isArray(agencyData?.rows) ? agencyData.rows : [];
-  $: rowsByYear = rows.reduce((acc, row) => {
-    const year = row?.year ?? "Unknown";
-    if (!acc[year]) acc[year] = [];
-    acc[year].push(row);
-    return acc;
-  }, {});
+  // Seed loadedYears with the server-loaded latest year on navigation.
+  $: {
+    const ly = data.latestYear;
+    const lyd = data.latestYearData;
+    if (ly && lyd && !loadedYears[String(ly)]) {
+      loadedYears = { ...loadedYears, [String(ly)]: lyd };
+    }
+  }
 
   $: reportingAgencyCount = (() => {
     if (!selectedYear) return null;
-    const yearRows = rowsByYear?.[selectedYear] ?? [];
-    const totalRow = yearRows.find(
-      (row) => row?.row_key === "rates-by-race--totals--all-stops"
-    );
+    const yearRows = loadedYears[selectedYear]?.rows ?? [];
+    const totalRow = yearRows.find((row) => row?.row_key === "stops");
     const rankCountRaw = totalRow?.rank_count;
     const rankCount = typeof rankCountRaw === "string" ? Number(rankCountRaw) : rankCountRaw;
     if (Number.isFinite(rankCount) && rankCount > 0) return rankCount;
@@ -165,20 +165,17 @@
   $: agencyHrefEn = `${siteUrl}/en/agency/${data.slug}`;
   $: agencyHrefEs = `${siteUrl}/es/agency/${data.slug}`;
 
-  $: years = Object.keys(rowsByYear).sort((a, b) => {
-    const numA = Number(a);
-    const numB = Number(b);
-    if (Number.isFinite(numA) && Number.isFinite(numB)) return numB - numA;
-    return compareStrings(String(a), String(b));
-  });
+  // Years come from manifest, already sorted descending.
+  $: years = Array.isArray(data.years) ? data.years : [];
+  $: partialCoverageYears = new Set((data.partialCoverageYears ?? []).map(String));
 
   $: if (years.length && (!selectedYear || !years.includes(selectedYear))) {
-    selectedYear = years[0];
+    selectedYear = String(data.latestYear ?? years[0]);
   }
 
-  $: selectedEntries = selectedYear ? rowsByYear[selectedYear] ?? [] : [];
-  $: agencyComments = Array.isArray(agencyData?.agency_comments)
-    ? agencyData.agency_comments
+  $: selectedEntries = loadedYears[selectedYear]?.rows ?? [];
+  $: agencyComments = Array.isArray(loadedYears[selectedYear]?.agency_comments)
+    ? loadedYears[selectedYear].agency_comments
     : [];
   $: selectedAgencyComment =
     agencyComments.find((entry) => String(entry?.year) === String(selectedYear)) ??
@@ -200,11 +197,8 @@
     : agency_comment_none();
   $: metricGroups = getMetricGroups(selectedEntries);
   $: {
-    const priorityGroups = [
-      "rates-by-race__totals",
-      "rates-by-race__rates",
-      "rates-by-race__population",
-    ];
+    // v2: canonical groups — core counts and rates first, then breakdown sections.
+    const priorityGroups = ["core-counts", "rates"];
     groupOrderMap = new Map();
     let nextIndex = 0;
     priorityGroups.forEach((key) => {
@@ -213,9 +207,7 @@
       }
     });
     metricGroups.forEach((metric) => {
-      const tableId = metric.base?.table_id ?? "";
-      const sectionId = metric.base?.section_id ?? "";
-      const key = `${tableId}__${sectionId}`;
+      const key = getCanonicalGroup(metric.key);
       if (!groupOrderMap.has(key)) {
         groupOrderMap.set(key, nextIndex++);
       }
@@ -224,20 +216,14 @@
   $: gridRows = metricGroups.map((metric) => {
     const isPercentageMetric = metric.key.endsWith("-percentage");
     const columns = normalizeMetric(metric.base, { isPercentage: isPercentageMetric });
-    const tableId = metric.base?.table_id ?? "";
-    const sectionId = metric.base?.section_id ?? "";
-    const groupLabelParts = [
-      tableLabelForId(tableId),
-      sectionLabelForId(sectionId),
-    ].filter(Boolean);
-    const groupLabel = groupLabelParts.length ? groupLabelParts.join(": ") : "—";
-    const groupId = `${tableId}__${sectionId}`;
+    const groupId = getCanonicalGroup(metric.key);
+    const groupLabel = sectionLabelForId(groupId) || humanizeId(groupId);
     const row = {
       id: metric.base?.row_id ?? metric.key,
       metricKey: metric.key,
       group_label: groupLabel,
       group_id: groupId,
-      metric: metricLabelForKey(metric.key, metric.base?.metric_id),
+      metric: metricLabelForKey(metric.key),
     };
 
     columnKeys.forEach((label) => {
@@ -798,7 +784,8 @@
   $: phoneDisplay = rawPhone ? formatPhone(rawPhone) : "";
 
   $: {
-    const latestYear = years.find((year) => Number.isFinite(Number(year)));
+    const latestYear = data.latestYear ?? years[0];
+    const latestYearRows = loadedYears[String(latestYear)]?.rows ?? [];
     stopVolumeLead = "";
     stopVolumeSegmentLabel = "";
     stopVolumeSegmentPrefix = "";
@@ -808,34 +795,13 @@
     if (!latestYear) {
       stopVolumeLead = "";
     } else {
-      const yearValue = Number(latestYear);
-      const totalEntry = rows.find(
-        (row) =>
-          Number(row?.year) === yearValue &&
-          row?.row_key === "rates-by-race--totals--all-stops"
-      );
+      const totalEntry = latestYearRows.find((row) => row?.row_key === "stops");
       const percentileEntry =
-        rows.find(
-          (row) =>
-            Number(row?.year) === yearValue &&
-            row?.row_key === "rates-by-race--totals--all-stops-percentile"
-        ) ||
-        rows.find(
-          (row) =>
-            Number(row?.year) === yearValue &&
-            row?.row_key === "rates-by-race--totals--all-stops-percentile-no-mshp"
-        );
+        latestYearRows.find((row) => row?.row_key === "stops-percentile") ||
+        latestYearRows.find((row) => row?.row_key === "stops-percentile-no-mshp");
       const rankEntry =
-        rows.find(
-          (row) =>
-            Number(row?.year) === yearValue &&
-            row?.row_key === "rates-by-race--totals--all-stops-rank"
-        ) ||
-        rows.find(
-          (row) =>
-            Number(row?.year) === yearValue &&
-            row?.row_key === "rates-by-race--totals--all-stops-rank-no-mshp"
-        );
+        latestYearRows.find((row) => row?.row_key === "stops-rank") ||
+        latestYearRows.find((row) => row?.row_key === "stops-rank-no-mshp");
       const totalValue = getMetricValue(totalEntry, "Total");
       const totalNumeric = typeof totalValue === "string" ? Number(totalValue) : totalValue;
       if (!Number.isFinite(totalNumeric)) {
@@ -930,7 +896,19 @@
     "Other",
   ];
   const chartRaceKeys = columnKeys.filter((label) => label !== "Total");
-  const priorityPrefix = "rates--totals-";
+  // Rate keys and count keys with no '--' separator are canonically flat metrics.
+  const RATE_KEYS = new Set([
+    "search-rate", "arrest-rate", "contraband-hit-rate", "stop-rate",
+    "citation-rate", "stop-rate-residents",
+  ]);
+
+  const getCanonicalGroup = (canonicalKey) => {
+    if (!canonicalKey) return "";
+    const idx = canonicalKey.indexOf("--");
+    if (idx >= 0) return canonicalKey.slice(0, idx);
+    if (RATE_KEYS.has(canonicalKey) || canonicalKey.endsWith("-rate")) return "rates";
+    return "core-counts";
+  };
 
   const translationKeyForId = (prefix, id) =>
     `${prefix}_${id}`
@@ -1073,8 +1051,9 @@
     return Object.values(groups)
       .filter((group) => group.base !== undefined)
       .sort((a, b) => {
-        const aPriority = a.key.startsWith(priorityPrefix) ? 0 : 1;
-        const bPriority = b.key.startsWith(priorityPrefix) ? 0 : 1;
+        // v2: flat canonical keys (no '--') are core counts/rates — sort first.
+        const aPriority = a.key.includes("--") ? 1 : 0;
+        const bPriority = b.key.includes("--") ? 1 : 0;
         if (aPriority !== bPriority) return aPriority - bPriority;
         return compareStrings(a.key, b.key);
       });
@@ -1163,13 +1142,27 @@
     }
   };
 
-  const selectYear = (year, source = "unknown") => {
-    selectedYear = year;
+  const selectYear = async (year, source = "unknown") => {
+    selectedYear = String(year);
     trackEvent("agency_year_select", {
       year,
       source,
       agency: agencyData?.agency ?? data.slug,
     });
+    // Lazy-load the year's data if not yet fetched.
+    if (loadedYears[selectedYear] === undefined) {
+      try {
+        const res = await fetch(
+          withDataBase(`/data/dist/agency_year/${data.slug}/${year}.json`)
+        );
+        loadedYears = {
+          ...loadedYears,
+          [selectedYear]: res.ok ? await res.json() : null,
+        };
+      } catch {
+        loadedYears = { ...loadedYears, [selectedYear]: null };
+      }
+    }
   };
 
   const handleMetricOpen = (metricKey) => {
@@ -1314,7 +1307,7 @@
 
 <StickyHeader
   agencies={data.agencies}
-  selectedAgencyLabel={agencyData?.agency ?? data.data?.agency ?? data.slug}
+  selectedAgencyLabel={agencyData?.agency ?? data.slug}
 />
 
 <main id="main-content" class="mx-auto w-full max-w-5xl bg-slate-50 px-4 pb-16 pt-12 sm:px-6">
@@ -1506,6 +1499,13 @@
                   </button>
                 {/each}
               </div>
+              {#if partialCoverageYears.has(selectedYear)}
+                <p class="mt-3 text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded px-3 py-2 max-w-xl">
+                  Data for {selectedYear} is incomplete — approximately half of agencies are missing due to a known source PDF issue. Rankings and statewide totals are not available for this year.
+                </p>
+              {:else if loadedYears[selectedYear] === null}
+                <p class="mt-3 text-sm text-slate-500">No data available for {selectedYear}.</p>
+              {/if}
               <div class="mt-6 max-w-2xl">
                 <div class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">
                   {commentHeading}

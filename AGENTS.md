@@ -7,25 +7,27 @@
   `<table_id>--<section_id>` key).
 - Search/filter is a Gridcraft filter on the metric column.
 
-## Data schema
+## Data schema (v2)
 
-- Per-agency data is row-based with `row_key` and `row_id`.
-- `row_key` = `<table_id>--<section_id>--<metric_id>`.
+- Per-agency data is partitioned by year: `agency_year/{slug}/{year}.json` (not monolithic).
+- `row_key` = canonical key (e.g. `stops`, `search-rate`, `stop-outcome--warning`).
 - `row_id` = `<year>-<agency_slug>-<row_key>`.
-- Baselines (`statewide_slug_baselines.json`) also key by `row_key`.
+- Baselines (`statewide_slug_baselines.json`) also key by canonical `row_key`.
+- `manifest.json` drives year range; `partial_coverage_years` = [2001, 2002, 2003].
+- Agency page lazy-loads year data on year selection; latest year is SSR-loaded.
 - Sync the latest dataset from S3 with `pnpm sync:data` (pull-only).
 - Data sync reads `MISSOURI_VSR_BUCKET_NAME` + `MISSOURI_VSR_S3_PREFIX` from `.env`.
+- Set `MISSOURI_VSR_S3_PREFIX=releases/v2` to sync v2 data.
 
 ## Translation keys
 
 Report dimension labels use ID-based keys:
 
-- `table_<table_id>`
-- `section_<section_id>`
-- `metric_<metric_id>`
+- `section_<group_id>` — for canonical key prefix (e.g. `section_stop_outcome`, `section_core_counts`)
+- `metric_<metric_id>` — for the last segment of the canonical key (e.g. `metric_stops`, `metric_warning`)
 
-These are generated from `packages/web/static/data/report_dimensions.json` and
-stored in `packages/web/messages/en.json` and `packages/web/messages/es.json`.
+These are stored in `packages/web/messages/en.json` and `packages/web/messages/es.json`.
+In v2, `table_*` keys are no longer used; grouping is by canonical key prefix only.
 
 ## Paraglide / i18n rules
 

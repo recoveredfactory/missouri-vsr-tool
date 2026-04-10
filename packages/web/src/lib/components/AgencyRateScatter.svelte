@@ -87,7 +87,7 @@
   export let minStops: number | null = null;
   export let sizeByStops = false;
   export let minCount: number | null = null;
-  export let minCountKey = "rates-by-race--totals--searches";
+  export let minCountKey = "searches";
   export let minCountColumn: string | null = null;
   export let minCountMessage = "Not enough records to display this chart.";
   export let excludeExactValue: number | null = null;
@@ -114,11 +114,11 @@
   export let domainGroup: string | null = null;
   export let showMeanLines = false;
   export let dataUrl = withDataBase("/data/dist/metric_year_subset.json");
-  export let xMetricKey = "rates-by-race--totals--contraband-rate";
-  export let yMetricKey = "rates-by-race--totals--searches-rate";
+  export let xMetricKey = "contraband-hit-rate";
+  export let yMetricKey = "search-rate";
   export let xColumn: string | null = null;
   export let yColumn: string | null = null;
-  export let stopsMetricKey = "rates-by-race--totals--all-stops";
+  export let stopsMetricKey = "stops";
   export let stopsColumn: string | null = null;
 
   let isLoading = true;
