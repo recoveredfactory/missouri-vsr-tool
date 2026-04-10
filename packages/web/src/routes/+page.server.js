@@ -170,7 +170,7 @@ export async function load({ fetch, url }) {
       }
     })(),
     // v2 manifest lives under the release path
-    fetchJson(fetch, "/data/downloads/manifest.json", dataBaseUrl),
+    fetchJson(fetch, "/data/downloads/missouri_vsr_2000_2024_downloads_manifest.json", dataBaseUrl),
   ]);
 
   const { historicalData, historicalOutcomes } = buildHistoricalData(statewideYearSums);
