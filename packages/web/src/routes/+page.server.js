@@ -157,7 +157,7 @@ export async function load({ fetch, url }) {
     ? Math.max(...manifestYears)
     : 2024;
 
-  const [statsData, statewideYearSums, v1DownloadManifest] = await Promise.all([
+  const [statsData, statewideYearSums, v1DownloadManifest, v2DownloadManifest] = await Promise.all([
     fetchJson(fetch, `/dist/homepage_${latestYear}_stats.json`, dataBaseUrl),
     fetchJson(fetch, "/dist/statewide_year_sums_subset.json", dataBaseUrl),
     // v1 manifest lives at the base CDN URL, not under the v2 release path
@@ -169,6 +169,8 @@ export async function load({ fetch, url }) {
         return null;
       }
     })(),
+    // v2 manifest lives under the release path
+    fetchJson(fetch, "/data/downloads/manifest.json", dataBaseUrl),
   ]);
 
   const { historicalData, historicalOutcomes } = buildHistoricalData(statewideYearSums);
@@ -180,5 +182,6 @@ export async function load({ fetch, url }) {
     historicalData,
     historicalOutcomes,
     v1DownloadManifest,
+    v2DownloadManifest,
   };
 }

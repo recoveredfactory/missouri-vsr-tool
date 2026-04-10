@@ -39,6 +39,7 @@
     home_download_label_raw_stops,
     home_download_label_all_combined,
     home_download_label_vsr_statistics,
+    home_download_v2_heading,
     home_download_v1_heading,
     home_download_about_note,
     home_about_link,
@@ -103,6 +104,12 @@
     { ext: "parquet", title: "Parquet", description: () => home_download_parquet_description() },
     { ext: "json",    title: "JSON",    description: () => home_download_json_description() },
   ];
+
+  // v2 file sizes from downloads manifest (gracefully null if manifest not yet published)
+  $: v2SizeLookup = (() => {
+    const files = data?.v2DownloadManifest?.files ?? [];
+    return new Map(files.map((f) => [f.path, f.size_bytes]));
+  })();
 
   // v1 manifest-driven downloads (2020–2024)
   $: v1DownloadManifest = data?.v1DownloadManifest;
@@ -674,70 +681,65 @@
         {home_download_description()}
       </p>
 
-      <!-- v2 downloads: three format cards, four datasets each -->
+      <!-- v2 downloads -->
+      <p class="mb-3 text-center text-xs font-semibold uppercase tracking-widest text-slate-400">
+        {home_download_v2_heading()}
+      </p>
       <div class="grid gap-6 md:grid-cols-3">
         {#each v2Formats as fmt}
           <div class="flex flex-col rounded-lg border-2 border-slate-200 bg-slate-50 p-6 text-center">
             <h3 class="mb-2 text-xl font-bold text-slate-900">{fmt.title}</h3>
             <p class="mb-4 min-h-[72px] text-sm text-slate-600">{fmt.description()}</p>
             {#each v2Datasets as ds, i}
+              {@const filePath = `${ds.key}.${fmt.ext}`}
+              {@const sizeBytes = v2SizeLookup.get(filePath)}
               <a
-                href={withDataBase(`/data/downloads/${ds.key}.${fmt.ext}`)}
+                href={withDataBase(`/data/downloads/${filePath}`)}
                 download
                 on:click={() =>
                   handleDownloadClick(
-                    { path: `${ds.key}.${fmt.ext}` },
-                    withDataBase(`/data/downloads/${ds.key}.${fmt.ext}`)
+                    { path: filePath },
+                    withDataBase(`/data/downloads/${filePath}`)
                   )
                 }
                 class={`block rounded-lg bg-[#1b613c] px-5 py-2.5 text-sm font-semibold text-white no-underline transition-colors hover:bg-[#105430] ${i < v2Datasets.length - 1 ? "mb-3" : ""}`}
               >
-                {ds.label()}
+                <span class="block">{ds.label()}</span>
+                {#if sizeBytes}
+                  <span class="mt-1 block text-[11px] font-medium text-white/85">{formatBytes(sizeBytes)}</span>
+                {/if}
               </a>
             {/each}
           </div>
         {/each}
       </div>
 
-      <!-- Previous release (v1, 2020–2024) -->
+      <!-- Previous release (v1, 2020–2024) — simple link list -->
       <div class="mt-10 border-t border-slate-100 pt-6">
-        <p class="mb-4 text-center text-xs font-semibold uppercase tracking-widest text-slate-400">
+        <p class="mb-3 text-center text-xs font-semibold uppercase tracking-widest text-slate-400">
           {home_download_v1_heading()}
         </p>
         {#if v1DownloadGroups.length}
-          <div class="grid gap-6 md:grid-cols-3">
+          <div class="flex flex-wrap justify-center gap-x-6 gap-y-2">
             {#each v1DownloadGroups as downloadGroup}
-              <div class="flex flex-col rounded-lg border-2 border-slate-200 bg-slate-50 p-6 text-center">
-                <h3 class="mb-2 text-xl font-bold text-slate-900">
-                  {v1DownloadGroupMeta[downloadGroup.group]?.title ?? downloadGroup.group.toUpperCase()}
-                </h3>
-                <p class="mb-4 min-h-[72px] text-sm text-slate-600">
-                  {v1DownloadGroupMeta[downloadGroup.group]?.description ?? home_download_format_fallback()}
-                </p>
-                {#each downloadGroup.files as file, index (file.path)}
-                  <a
-                    href="{dataBaseUrl}/downloads/{file.path}"
-                    download
-                    on:click={() => handleDownloadClick(file, `${dataBaseUrl}/downloads/${file.path}`)}
-                    class={`block rounded-lg bg-slate-600 px-5 py-2.5 text-sm font-semibold text-white no-underline transition-colors hover:bg-slate-700 ${
-                      index === downloadGroup.files.length - 1 ? "" : "mb-3"
-                    }`}
-                  >
-                    <span class="block">{getV1DownloadLabel(file)}</span>
-                    {#if file.size_bytes}
-                      <span class="mt-1 block text-[11px] font-medium text-white/85">
-                        {formatBytes(file.size_bytes)}
-                      </span>
-                    {/if}
-                  </a>
-                {/each}
-              </div>
+              {#each downloadGroup.files as file (file.path)}
+                <a
+                  href="{dataBaseUrl}/downloads/{file.path}"
+                  download
+                  on:click={() => handleDownloadClick(file, `${dataBaseUrl}/downloads/${file.path}`)}
+                  class="text-sm text-slate-500 no-underline hover:text-slate-800"
+                >
+                  {getV1DownloadLabel(file)}
+                  <span class="font-mono text-xs uppercase text-slate-400">.{downloadGroup.group}</span>
+                  {#if file.size_bytes}
+                    <span class="text-xs text-slate-400">({formatBytes(file.size_bytes)})</span>
+                  {/if}
+                </a>
+              {/each}
             {/each}
           </div>
         {:else}
-          <div class="flex h-[120px] items-center justify-center rounded-lg border-2 border-slate-200 bg-slate-50">
-            <span class="text-sm text-slate-500">{home_download_loading()}</span>
-          </div>
+          <p class="text-center text-sm text-slate-400">{home_download_loading()}</p>
         {/if}
       </div>
 
