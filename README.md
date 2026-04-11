@@ -66,6 +66,23 @@ After the first prod deploy, SST outputs `dataCdnDistributionId`. Use that ID
 in the S3 bucket policy to allow CloudFront `s3:GetObject` access (CloudFront
 origin access control). The bucket policy is managed outside this repo.
 
+## Embed system
+
+The internal embed code generator lives at `/embed` (not linked publicly). It lets you pick a chart, agency, and metric and outputs a web component snippet plus iframe fallbacks.
+
+Embed pages live at `/<lang>/embed/<chart-type>/<params>`, e.g. `/en/embed/agency-metric-line/<slug>/<metricKey>`.
+
+### Testing embeds locally in a live site (e.g. WordPress)
+
+Browsers block HTTP iframes on HTTPS pages. To test embeds against a live site, run the dev server over HTTPS:
+
+1. Add `LOCAL_HTTPS=true` to your root `.env` file.
+2. Run `pnpm -F web dev` — the server starts at `https://localhost:5173`.
+3. Visit `https://localhost:5173` and click through the browser's self-signed cert warning once.
+4. The embed generator will produce snippets pointing to `https://localhost:5173`, which the live site can load.
+
+Remove `LOCAL_HTTPS=true` when done — the self-signed cert warning is annoying in normal dev.
+
 ## Analytics events
 
 - `search_action`: search box usage on home/agency header (payload: `action`, `method`, `term`, `slug`).
