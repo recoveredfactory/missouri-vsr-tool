@@ -138,6 +138,7 @@
     if (data.slug !== _seededSlug) {
       _seededSlug = data.slug;
       loadedYears = { [String(data.latestYear)]: data.latestYearData };
+      selectedYear = String(data.latestYear);
     } else if (data.latestYearData && !loadedYears[String(data.latestYear)]) {
       loadedYears = { ...loadedYears, [String(data.latestYear)]: data.latestYearData };
     }
@@ -171,8 +172,44 @@
   $: years = Array.isArray(data.years) ? data.years : [];
   $: partialCoverageYears = new Set((data.partialCoverageYears ?? []).map(String));
 
-  $: if (years.length && (!selectedYear || !years.includes(selectedYear))) {
-    selectedYear = String(data.latestYear ?? years[0]);
+  // Per-agency year coverage. When the pipeline emits `agencyYears`, drive the
+  // year <select> from it; otherwise fall back to the statewide list.
+  $: agencyYears = Array.isArray(data.agencyYears) && data.agencyYears.length
+    ? data.agencyYears.slice().sort((a, b) => Number(b) - Number(a))
+    : years;
+
+  // Coverage gaps relative to the statewide year range (only when pipeline
+  // supplied us per-agency coverage — otherwise we can't tell).
+  $: agencyYearSet = new Set(agencyYears);
+  $: hasPerAgencyCoverage =
+    Array.isArray(data.agencyYears) && data.agencyYears.length > 0;
+  $: statewideLatestYear = years.length ? years[0] : null;
+  $: isMissingStatewideLatest =
+    hasPerAgencyCoverage &&
+    statewideLatestYear !== null &&
+    !agencyYearSet.has(statewideLatestYear);
+  $: interiorMissingYears = (() => {
+    if (!hasPerAgencyCoverage || !agencyYears.length) return [];
+    const agencyMinYear = Number(agencyYears[agencyYears.length - 1]);
+    const agencyMaxYear = Number(agencyYears[0]);
+    return years
+      .filter((y) => {
+        const n = Number(y);
+        return (
+          Number.isFinite(n) &&
+          n >= agencyMinYear &&
+          n <= agencyMaxYear &&
+          !agencyYearSet.has(y)
+        );
+      })
+      .slice()
+      .sort((a, b) => Number(a) - Number(b));
+  })();
+  $: hasCoverageNotice =
+    isMissingStatewideLatest || interiorMissingYears.length > 0;
+
+  $: if (agencyYears.length && (!selectedYear || !agencyYears.includes(selectedYear))) {
+    selectedYear = String(data.latestYear ?? agencyYears[0]);
   }
 
   $: rows = loadedYears[selectedYear]?.rows ?? [];
@@ -308,20 +345,35 @@
 
   const expandDefaultGroups = () => setAllGroupsExpanded(true);
 
+  // toggle.click() steals focus to whichever group button was clicked, which
+  // makes the browser scroll that button into view — typing in the search box
+  // would jerk the page upward as groups expanded. Restore focus + scroll.
+  const preserveFocusAndScroll = (fn) => {
+    const prevActive = document.activeElement;
+    const prevScrollY = typeof window !== "undefined" ? window.scrollY : 0;
+    fn();
+    if (prevActive instanceof HTMLElement) {
+      try { prevActive.focus({ preventScroll: true }); } catch { prevActive.focus(); }
+    }
+    if (typeof window !== "undefined") window.scrollTo(window.scrollX, prevScrollY);
+  };
+
   const setAllGroupsExpanded = async (expand) => {
     if (typeof document === "undefined") return;
     await tick();
-    const groupRows = Array.from(document.querySelectorAll(".gridcraft-table .gc-tr__groupby"));
-    groupRows.forEach((row) => {
-      const toggle = row.querySelector("button");
-      if (!toggle) return;
-      const isCollapsed = row.querySelector(".feather-chevron-right");
-      const isExpanded = row.querySelector(".feather-chevron-down");
-      if (expand && isCollapsed) {
-        toggle.click();
-      } else if (!expand && isExpanded) {
-        toggle.click();
-      }
+    preserveFocusAndScroll(() => {
+      const groupRows = Array.from(document.querySelectorAll(".gridcraft-table .gc-tr__groupby"));
+      groupRows.forEach((row) => {
+        const toggle = row.querySelector("button");
+        if (!toggle) return;
+        const isCollapsed = row.querySelector(".feather-chevron-right");
+        const isExpanded = row.querySelector(".feather-chevron-down");
+        if (expand && isCollapsed) {
+          toggle.click();
+        } else if (!expand && isExpanded) {
+          toggle.click();
+        }
+      });
     });
   };
 
@@ -347,17 +399,19 @@
   const restoreGroupExpansion = async (desiredExpanded) => {
     if (typeof document === "undefined") return;
     await tick();
-    getGroupRows().forEach(({ groupId, row }) => {
-      if (!groupId || !row) return;
-      const toggle = row.querySelector("button");
-      if (!toggle) return;
-      const isCollapsed = row.querySelector(".feather-chevron-right");
-      const isExpanded = row.querySelector(".feather-chevron-down");
-      if (desiredExpanded.has(groupId) && isCollapsed) {
-        toggle.click();
-      } else if (!desiredExpanded.has(groupId) && isExpanded) {
-        toggle.click();
-      }
+    preserveFocusAndScroll(() => {
+      getGroupRows().forEach(({ groupId, row }) => {
+        if (!groupId || !row) return;
+        const toggle = row.querySelector("button");
+        if (!toggle) return;
+        const isCollapsed = row.querySelector(".feather-chevron-right");
+        const isExpanded = row.querySelector(".feather-chevron-down");
+        if (desiredExpanded.has(groupId) && isCollapsed) {
+          toggle.click();
+        } else if (!desiredExpanded.has(groupId) && isExpanded) {
+          toggle.click();
+        }
+      });
     });
   };
 
@@ -1051,13 +1105,24 @@
       }
     });
 
+    const FLAT_KEY_ORDER = { stops: 0, citations: 1 };
+
     return Object.values(groups)
       .filter((group) => group.base !== undefined)
+      .filter((group) => !group.key.startsWith("rates-population"))
       .sort((a, b) => {
         // v2: flat canonical keys (no '--') are core counts/rates — sort first.
         const aPriority = a.key.includes("--") ? 1 : 0;
         const bPriority = b.key.includes("--") ? 1 : 0;
         if (aPriority !== bPriority) return aPriority - bPriority;
+
+        // Explicit ordering for key flat metrics.
+        if (aPriority === 0) {
+          const aOrder = FLAT_KEY_ORDER[a.key] ?? 999;
+          const bOrder = FLAT_KEY_ORDER[b.key] ?? 999;
+          if (aOrder !== bOrder) return aOrder - bOrder;
+        }
+
         return compareStrings(a.key, b.key);
       });
   };
@@ -1309,7 +1374,6 @@
 </svelte:head>
 
 <StickyHeader
-  agencies={data.agencies}
   selectedAgencyLabel={agencyData?.agency ?? data.slug}
 />
 
@@ -1318,6 +1382,17 @@
     <h1 class="mt-3 text-3xl font-semibold tracking-tight text-slate-900 md:text-4xl">
       {agencyData?.agency ?? data.slug}
     </h1>
+    {#if hasCoverageNotice}
+      <p class="mt-3 text-xs text-slate-500">
+        {#if isMissingStatewideLatest}
+          {m.agency_coverage_no_data_latest({ year: String(statewideLatestYear) })}
+        {/if}
+        {#if interiorMissingYears.length}
+          {#if isMissingStatewideLatest}{" "}{/if}
+          {m.agency_coverage_missing_interior({ years: interiorMissingYears.join(", ") })}
+        {/if}
+      </p>
+    {/if}
   </header>
 
   <section class="mb-1 grid gap-4 md:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] md:items-start">
@@ -1494,7 +1569,7 @@
                   on:change={(e) => selectYear(e.currentTarget.value, "top")}
                   class="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm font-semibold text-slate-900 shadow-sm focus:border-slate-600 focus:outline-none focus:ring-1 focus:ring-slate-600"
                 >
-                  {#each years as year}
+                  {#each agencyYears as year}
                     <option value={year}>
                       {year}{partialCoverageYears.has(year) ? " ⚠" : ""}
                     </option>

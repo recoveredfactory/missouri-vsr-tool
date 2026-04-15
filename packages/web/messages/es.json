@@ -55,6 +55,8 @@
   "search_unknown_agency": "Agencia desconocida",
   "search_stops_label": "paradas",
   "agency_title_suffix": "Agencia",
+  "agency_coverage_no_data_latest": "Sin datos para {year}.",
+  "agency_coverage_missing_interior": "Faltan datos para {years}.",
   "agency_preview_label": "Vista previa de la agencia",
   "agency_slug_label": "Slug",
   "agency_type_label": "Tipo de agencia",

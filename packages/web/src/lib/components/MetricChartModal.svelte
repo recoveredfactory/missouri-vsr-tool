@@ -1,18 +1,9 @@
 <script>
   import { createEventDispatcher, onDestroy } from "svelte";
-  import { Chart, Svg, Axis, Spline } from "layerchart";
-  import { scalePow, scaleLinear } from "d3-scale";
   import { withDataBase } from "$lib/dataBase";
   import {
     modal_close,
     modal_no_data,
-    modal_no_baselines,
-    modal_statewide_baselines_heading,
-    modal_statewide_baselines_subheading,
-    modal_baseline_race_header,
-    modal_baseline_mean_header,
-    modal_baseline_median_header,
-    modal_baseline_agency_fallback,
     race_white,
     race_black,
     race_hispanic,
@@ -22,25 +13,34 @@
   } from "$lib/paraglide/messages";
   import * as m from "$lib/paraglide/messages";
   import { raceColors } from "$lib/colors.js";
+  import SpaghettiChart from "$lib/components/SpaghettiChart.svelte";
+  import StatewideComparisonChart from "$lib/components/StatewideComparisonChart.svelte";
 
-  // Rate metrics (0–1 values) stay on linear scale; count metrics use log to
-  // prevent large agencies (MSHP, KCPD) from collapsing everyone else.
   $: isRateMetric = metricKey.includes("-rate") || metricKey.includes("-percentage");
 
-  const formatCountAxis = (v) => {
-    if (!Number.isFinite(v) || v < 0) return "";
-    if (v === 0) return "0";
-    if (v >= 1_000_000) return `${+(v / 1_000_000).toFixed(1)}M`;
-    if (v >= 1_000) return `${Math.round(v / 1_000)}K`;
-    return String(Math.round(v));
+  // Rate metrics are 0–100. Values outside that range indicate upstream data
+  // issues (e.g. denominator races/year mismatches) — drop them so one garbage
+  // point doesn't warp the y-axis or draw a flying line across the chart.
+  const sanitizeRateValue = (v, isRate) => {
+    if (v == null) return null;
+    const n = Number(v);
+    if (!Number.isFinite(n)) return null;
+    if (isRate && (n < 0 || n > 100)) return null;
+    return n;
   };
+
+  let minStopsThreshold = 100;
+  let maxStopsThreshold = null; // null = All
+  let lastInitializedAgency = "";
+  let showMSHP = false;
+  let useSqrtScale = true;    // default sqrt; user can toggle
 
   export let open = false;
   export let metricKey = "";
   export let metricLabel = "";
   export let baselines = [];
   export let agencyName = "";
-  // Kept for backward compat — chart now fetches its own data
+  // Kept for backward compat — chart fetches its own data
   export let rows = [];
   export let raceKeys = [];
 
@@ -60,6 +60,9 @@
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, " ")
       .trim();
+
+  // MSHP dominates count scales — excluded from grey series by default.
+  const MSHP_NORMALIZED = "missouri state highway patrol";
 
   const fetchMetricRows = (key) => {
     if (!key) return Promise.resolve([]);
@@ -115,14 +118,14 @@
     { race: "Other",           label: race_other },
   ];
 
+  const TOTAL_COLOR = "#1e293b";
+
   $: allYears = Array.from(new Set(allRows.map((r) => Number(r.year))))
     .filter(Number.isFinite)
     .sort((a, b) => a - b);
-  $: minYear = allYears[0] ?? 2000;
-  $: maxYear = allYears[allYears.length - 1] ?? 2024;
   $: normalizedAgencyName = normalizeAgency(agencyName);
 
-  // Most recent stops row for the selected agency
+  // Most recent stops row for the selected agency (used for panel skip + header label)
   $: agencyStopsRow = (() => {
     const agencyRows = stopsRows.filter(
       (r) => normalizeAgency(String(r.agency || "")) === normalizedAgencyName
@@ -133,104 +136,151 @@
     );
   })();
 
-  $: panelData = RACE_PANELS.map(({ race, label }) => {
+  // Max total stops per agency across all years — shared by sharedRateYMax + buildPanel.
+  $: agencyMaxTotalStops = (() => {
+    const map = new Map();
+    for (const row of stopsRows) {
+      const ag = normalizeAgency(String(row.agency || "").trim());
+      if (!ag) continue;
+      const v = Number(row["Total"] ?? NaN);
+      if (Number.isFinite(v)) map.set(ag, Math.max(map.get(ag) ?? 0, v));
+    }
+    return map;
+  })();
+
+  // Shared y-axis max for rate metrics — recomputes when filter changes so the
+  // scale reflects only visible agencies (+ selected agency, always included).
+  // Values are in the 0–100 range so we cap at 100.
+  $: sharedRateYMax = (() => {
+    if (!isRateMetric || !allRows.length) return null;
+
+    const cols = ["Total", "White", "Black", "Hispanic", "Native American", "Asian", "Other"];
+    let globalMax = 0;
+
+    for (const row of allRows) {
+      const ag = normalizeAgency(String(row.agency || "").trim());
+      const isSelected = ag === normalizedAgencyName;
+      const agStops = agencyMaxTotalStops.get(ag) ?? 0;
+      const isMSHP = ag === MSHP_NORMALIZED;
+      const passes = agStops >= minStopsThreshold
+        && (maxStopsThreshold == null || agStops <= maxStopsThreshold)
+        && (showMSHP || !isMSHP);
+
+      if (!isSelected && !passes) continue;
+
+      for (const col of cols) {
+        const v = sanitizeRateValue(row[col], isRateMetric);
+        if (v !== null && v > globalMax) globalMax = v;
+      }
+    }
+
+    return globalMax > 0 ? Math.min(globalMax * 1.1, 100) : null;
+  })();
+
+  // Build filtered series for one column (race or "Total").
+  const buildPanel = (col, stopsCol, allRows, stopsRows, allYears, ctx) => {
+    const {
+      normalizedAgencyName, isRateMetric, minStopsThreshold, maxStopsThreshold,
+      showMSHP, sharedRateYMax, agencyStopsRow, agencyMaxTotalStops,
+    } = ctx;
+
     const byAgency = new Map();
     for (const row of allRows) {
       const agency = String(row.agency || "").trim();
       if (!agency) continue;
       if (!byAgency.has(agency)) byAgency.set(agency, new Map());
-      const raw = row[race];
-      const val = raw === null || raw === undefined ? null : Number(raw);
-      if (val !== null && Number.isFinite(val)) byAgency.get(agency).set(Number(row.year), val);
+      const val = sanitizeRateValue(row[col], isRateMetric);
+      if (val !== null) byAgency.get(agency).set(Number(row.year), val);
+    }
+
+    // Max stops for the relevant column — used to filter noisy grey series.
+    const agencyMaxStops = new Map();
+    for (const row of stopsRows) {
+      const ag = normalizeAgency(String(row.agency || "").trim());
+      if (!ag) continue;
+      const v = Number(row[stopsCol] ?? NaN);
+      if (Number.isFinite(v)) agencyMaxStops.set(ag, Math.max(agencyMaxStops.get(ag) ?? 0, v));
     }
 
     const greySeries = [];
     let selectedSeries = null;
-    const allPoints = [];
 
     for (const [agency, yearMap] of byAgency.entries()) {
       const data = allYears.map((y) => ({ year: y, value: yearMap.get(y) ?? null }));
       if (!data.some((p) => p.value !== null)) continue;
 
-      const isSelected = normalizeAgency(agency) === normalizedAgencyName;
-      const nonNull = data.filter((p) => p.value !== null);
-      allPoints.push(...nonNull);
-
-      if (isSelected) {
+      const normAgency = normalizeAgency(agency);
+      if (normAgency === normalizedAgencyName) {
         selectedSeries = { agency, data };
       } else {
-        greySeries.push({ agency, data });
+        const isMSHP = normAgency === MSHP_NORMALIZED;
+        const totalStops = agencyMaxTotalStops.get(normAgency) ?? 0;
+        const passesMin = totalStops >= minStopsThreshold;
+        const passesMax = maxStopsThreshold == null || totalStops <= maxStopsThreshold;
+        if (passesMin && passesMax && (showMSHP || !isMSHP)) {
+          greySeries.push({ agency, data });
+        }
       }
     }
 
-    // For rate metrics cap the y-domain at the 99th percentile so one bad data
-    // point (e.g. raw count stored instead of a rate) can't collapse everything
-    // else to the bottom.  Count metrics use null → LayerChart auto-range.
-    const yMax = (() => {
-      if (!isRateMetric || !allPoints.length) return null;
-      const vals = allPoints.map((p) => p.value).sort((a, b) => a - b);
-      return vals[Math.floor(vals.length * 0.99)] ?? null;
-    })();
+    const colStops = agencyStopsRow?.[stopsCol];
+    const skipPanel =
+      colStops != null &&
+      Number.isFinite(Number(colStops)) &&
+      Number(colStops) < minStopsThreshold;
 
-    return {
-      race,
-      label,
-      color: raceColors[race] || "#64748b",
-      greySeries,
-      selectedSeries,
-      allPoints,
-      yMax,
-    };
-  });
+    // Rate metrics: shared yMax (same across all panels for comparability).
+    // Count metrics: null → SpaghettiChart auto-ranges from visible series only.
+    const yMax = isRateMetric ? sharedRateYMax : null;
 
-  // ── Baselines table ────────────────────────────────────────────────────────
-
-  const baselineRaceOrder = ["Total", "White", "Black", "Hispanic", "Asian", "Other", "Native American"];
-
-  $: baselineEntries = Array.isArray(baselines)
-    ? baselines.filter((e) => e?.row_key === metricKey)
-    : [];
-  $: baselineYears = Array.from(new Set(baselineEntries.map((e) => e.year))).sort(
-    (a, b) => Number(b) - Number(a)
-  );
-  $: baselineByYear = baselineEntries.reduce((acc, e) => {
-    const y = e.year;
-    if (y == null) return acc;
-    (acc[y] = acc[y] || []).push(e);
-    return acc;
-  }, {});
-  $: agencyRowsByYear = allRows.reduce((acc, row) => {
-    if (normalizeAgency(String(row.agency || "")) !== normalizedAgencyName) return acc;
-    const y = row.year;
-    if (y != null) acc[y] = row;
-    return acc;
-  }, {});
-
-  const sortBaselineMetrics = (a, b) => {
-    const idx = (x) => baselineRaceOrder.indexOf(x.metric);
-    const [ai, bi] = [idx(a), idx(b)];
-    if (ai !== -1 || bi !== -1) {
-      if (ai === -1) return 1;
-      if (bi === -1) return -1;
-      return ai - bi;
-    }
-    return String(a.metric).localeCompare(String(b.metric));
+    return { greySeries, selectedSeries, yMax, skipPanel, colStops };
   };
+
+  // When opening the modal for an agency with very few recent stops, default
+  // the min-stops filter to 0 so its line isn't filtered out of count panels.
+  $: if (open && agencyStopsRow && agencyName && agencyName !== lastInitializedAgency) {
+    lastInitializedAgency = agencyName;
+    const total = Number(agencyStopsRow["Total"] ?? NaN);
+    minStopsThreshold = Number.isFinite(total) && total < 100 ? 0 : 100;
+  }
+  $: if (!open) lastInitializedAgency = "";
+
+  $: panelCtx = {
+    normalizedAgencyName, isRateMetric, minStopsThreshold, maxStopsThreshold,
+    showMSHP, sharedRateYMax, agencyStopsRow, agencyMaxTotalStops,
+  };
+
+  // ── Statewide series (rate metrics) ───────────────────────────────────────
+
+  // baselines schema: { row_key, year, metric (race/category), count (# agencies),
+  //   mean, median, mean__no_mshp, median__no_mshp }
+  // col maps to the `metric` field ("Total", "White", "Black", etc.)
+  const buildStatewideSeries = (col, baselines, key) => {
+    const isRate = key.includes("-rate") || key.includes("-percentage");
+    return {
+      data: baselines
+        .filter((r) => r.row_key === key && r.metric === col)
+        .map((r) => ({ year: Number(r.year), value: sanitizeRateValue(r.mean__no_mshp, isRate) }))
+        .filter((p) => Number.isFinite(p.year))
+        .sort((a, b) => a.year - b.year),
+    };
+  };
+
+  $: totalStatewideSeries = buildStatewideSeries("Total", baselines, metricKey);
+
+  $: panelData = RACE_PANELS.map(({ race, label }) => ({
+    race,
+    label,
+    color: raceColors[race] || "#64748b",
+    statewideSeries: buildStatewideSeries(race, baselines, metricKey),
+    ...buildPanel(race, race, allRows, stopsRows, allYears, panelCtx),
+  }));
+
+  $: totalPanelData = allRows.length
+    ? { color: TOTAL_COLOR, ...buildPanel("Total", "Total", allRows, stopsRows, allYears, panelCtx) }
+    : null;
 
   const numberFormatter = new Intl.NumberFormat(undefined, { maximumFractionDigits: 1 });
-  const pctFormatter = new Intl.NumberFormat(undefined, { style: "percent", maximumFractionDigits: 1 });
-  const isPct = (key) => key?.endsWith("-percentage");
-  const formatNum = (v, pct = false) => {
-    if (v === null || v === undefined) return "—";
-    const n = Number(v);
-    if (!Number.isFinite(n)) return "—";
-    return pct ? pctFormatter.format(n) : numberFormatter.format(n);
-  };
-
-  const raceLabel = (race) => {
-    const key = `race_${String(race || "").toLowerCase().replace(/[\s-]+/g, "_")}`;
-    return typeof m[key] === "function" ? m[key]() : race;
-  };
 
   // ── Modal controls ─────────────────────────────────────────────────────────
 
@@ -262,7 +312,7 @@
   >
     <div
       bind:this={dialogEl}
-      class="w-full max-w-full overflow-x-hidden overflow-y-auto rounded-none bg-white p-4 shadow-2xl focus:outline-none sm:max-w-4xl sm:rounded-2xl sm:p-6"
+      class="w-full max-w-full overflow-x-hidden overflow-y-auto rounded-none bg-white p-4 shadow-2xl focus:outline-none sm:max-w-[90rem] sm:rounded-2xl sm:p-6"
       style="max-height: calc(100dvh - var(--site-header-height, 0px) - 2rem);"
       role="dialog"
       aria-modal="true"
@@ -275,14 +325,11 @@
       <div class="flex items-start justify-between gap-4">
         <div>
           {#if agencyName}
-            <p class="text-[11px] uppercase tracking-[0.22em] text-slate-400">{agencyName}</p>
+            <p class="text-base font-semibold text-slate-700">{agencyName}</p>
           {/if}
-          <h2 id="modal-title" class="mt-2 text-xl font-semibold text-slate-900">
+          <h2 id="modal-title" class="mt-1 text-xl font-semibold text-slate-900">
             {metricLabel || metricKey}
           </h2>
-          {#if metricKey}
-            <p class="mt-1 font-mono text-xs text-slate-400">{metricKey}</p>
-          {/if}
         </div>
         <button
           class="shrink-0 rounded-lg border border-slate-200 px-3 py-1 text-sm font-semibold text-slate-600 hover:bg-slate-50"
@@ -302,111 +349,157 @@
         {:else if allRows.length === 0}
           <p class="text-sm text-slate-500">{modal_no_data()}</p>
         {:else}
-          <div class="grid grid-cols-1 gap-x-4 gap-y-5 sm:grid-cols-2">
+          <!-- Filter / scale controls (count metrics only) -->
+          {#if !isRateMetric}
+            <div class="mb-4 flex flex-wrap items-center justify-end gap-3">
+              <!-- MSHP toggle -->
+              <button
+                type="button"
+                class="rounded border px-2.5 py-1 text-[11px] font-semibold transition {showMSHP ? 'border-slate-800 bg-slate-800 text-white' : 'border-slate-300 bg-white text-slate-600 hover:bg-slate-50'}"
+                on:click={() => showMSHP = !showMSHP}
+              >
+                {showMSHP ? m.chart_mshp_hide() : m.chart_mshp_show()}
+              </button>
+              <!-- Min stops -->
+              <div class="flex items-center gap-2">
+                <span class="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400">{m.chart_min_stops_label()}</span>
+                <div class="flex overflow-hidden rounded border border-slate-300 text-[11px] font-semibold">
+                  {#each [0, 100, 500, 1000, 5000] as preset, i}
+                    <button
+                      type="button"
+                      class="px-2.5 py-1 transition {minStopsThreshold === preset ? 'bg-slate-800 text-white' : 'bg-white text-slate-600 hover:bg-slate-50'} {i > 0 ? 'border-l border-slate-300' : ''}"
+                      on:click={() => minStopsThreshold = preset}
+                    >{preset >= 1000 ? `${preset / 1000}K` : preset}</button>
+                  {/each}
+                </div>
+              </div>
+              <!-- Max total stops -->
+              <div class="flex items-center gap-2">
+                <span class="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400">{m.chart_max_stops_label()}</span>
+                <div class="flex overflow-hidden rounded border border-slate-300 text-[11px] font-semibold">
+                  {#each [[null, null], [10000, '10K'], [25000, '25K'], [50000, '50K']] as [val, lbl], i}
+                    <button
+                      type="button"
+                      class="px-2.5 py-1 transition {maxStopsThreshold === val ? 'bg-slate-800 text-white' : 'bg-white text-slate-600 hover:bg-slate-50'} {i > 0 ? 'border-l border-slate-300' : ''}"
+                      on:click={() => maxStopsThreshold = val}
+                    >{lbl ?? m.chart_max_stops_all()}</button>
+                  {/each}
+                </div>
+              </div>
+              <!-- Scale toggle -->
+              <div class="flex items-center gap-2">
+                <span class="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400">{m.chart_scale_label()}</span>
+                <div class="flex overflow-hidden rounded border border-slate-300 text-[11px] font-semibold">
+                  <button
+                    type="button"
+                    class="px-2.5 py-1 transition {!useSqrtScale ? 'bg-slate-800 text-white' : 'bg-white text-slate-600 hover:bg-slate-50'}"
+                    on:click={() => useSqrtScale = false}
+                  >{m.chart_scale_linear()}</button>
+                  <button
+                    type="button"
+                    class="border-l border-slate-300 px-2.5 py-1 transition {useSqrtScale ? 'bg-slate-800 text-white' : 'bg-white text-slate-600 hover:bg-slate-50'}"
+                    on:click={() => useSqrtScale = true}
+                  >{m.chart_scale_sqrt()}</button>
+                </div>
+              </div>
+            </div>
+          {/if}
+
+          <!-- Total panel — own row, centered ~2/3 width -->
+          {#if totalPanelData}
+            <div class="mb-6 flex justify-center">
+              <div class="w-full lg:w-2/3">
+                <p class="mb-2 text-base font-semibold" style="color:{TOTAL_COLOR}">
+                  Total{metricLabel ? ' ' + metricLabel : ''}{#if totalPanelData.colStops != null && metricKey !== "stops"}&thinsp;<span class="font-normal normal-case tracking-normal text-slate-400">({agencyStopsRow?.year} total stops: {numberFormatter.format(totalPanelData.colStops)})</span>{/if}
+                </p>
+                {#if totalPanelData.skipPanel && !isRateMetric}
+                  <div class="flex h-[280px] items-center justify-center rounded-lg border border-slate-200 bg-white text-center text-[11px] text-slate-400">
+                    {m.chart_panel_skipped({ n: minStopsThreshold })}
+                  </div>
+                {:else}
+                  <div class="h-[280px]">
+                    {#if isRateMetric}
+                      <StatewideComparisonChart
+                        statewideSeries={totalStatewideSeries}
+                        selectedSeries={totalPanelData.selectedSeries}
+                        {allYears}
+                        color={TOTAL_COLOR}
+                        {agencyName}
+                        height={280}
+                      />
+                    {:else}
+                      <SpaghettiChart
+                        greySeries={totalPanelData.greySeries}
+                        selectedSeries={totalPanelData.selectedSeries}
+                        {allYears}
+                        yMax={totalPanelData.yMax}
+                        useSqrt={useSqrtScale && !isRateMetric}
+                        {isRateMetric}
+                        color={TOTAL_COLOR}
+                        {agencyName}
+                        height={280}
+                      />
+                    {/if}
+                  </div>
+                {/if}
+              </div>
+            </div>
+          {/if}
+
+          <!-- Race panels — 3-column grid -->
+          <div class="grid grid-cols-1 gap-x-6 gap-y-7 sm:grid-cols-2 lg:grid-cols-3">
             {#each panelData as panel}
               <div>
-                <p
-                  class="mb-1.5 text-[10px] font-bold uppercase tracking-[0.14em]"
-                  style="color:{panel.color}"
-                >
-                  {panel.label()}{#if agencyStopsRow?.[panel.race] != null && metricKey !== "stops"}&thinsp;<span class="font-normal normal-case tracking-normal text-slate-400">(stops: {numberFormatter.format(agencyStopsRow[panel.race])})</span>{/if}
+                <p class="mb-2 text-base font-semibold" style="color:{panel.color}">
+                  {panel.label()}{metricLabel ? ' ' + metricLabel : ''}{#if panel.colStops != null && metricKey !== "stops"}&thinsp;<span class="font-normal normal-case tracking-normal text-slate-400">({agencyStopsRow?.year} total stops: {numberFormatter.format(panel.colStops)})</span>{/if}
                 </p>
-                <div class="h-[280px]">
-                  <Chart
-                    data={panel.allPoints}
-                    x="year"
-                    y="value"
-                    yScale={isRateMetric ? scaleLinear() : scalePow().exponent(0.5)}
-                    yDomain={[0, panel.yMax ?? null]}
-                    yNice
-                    padding={{ left: 40, right: 6, bottom: 22, top: 6 }}
-                  >
-                    <Svg>
-                      <Axis
-                        placement="left"
-                        ticks={4}
-                        grid={{ class: "stroke-slate-100" }}
-                        rule={{ class: "stroke-slate-200" }}
-                        tickLabelProps={{ style: "fill:#94a3b8;font-size:9px;font-family:inherit;" }}
-                        format={isRateMetric ? (v) => numberFormatter.format(v) : formatCountAxis}
+                {#if panel.skipPanel && !isRateMetric}
+                  <div class="flex h-[280px] items-center justify-center rounded-lg border border-slate-200 bg-white text-center text-[11px] text-slate-400">
+                    {m.chart_panel_skipped({ n: minStopsThreshold })}
+                  </div>
+                {:else}
+                  <div class="h-[280px]">
+                    {#if isRateMetric}
+                      <StatewideComparisonChart
+                        statewideSeries={panel.statewideSeries}
+                        selectedSeries={panel.selectedSeries}
+                        {allYears}
+                        color={panel.color}
+                        {agencyName}
+                        height={280}
                       />
-                      {#each panel.greySeries as gs}
-                        <Spline data={gs.data} x="year" y="value" fill="none" stroke="#94a3b8" strokeWidth={0.8} defined={(d) => d.value !== null && (panel.yMax == null || d.value <= panel.yMax * 1.1)} />
-                      {/each}
-                      {#if panel.selectedSeries}
-                        <Spline
-                          data={panel.selectedSeries.data}
-                          x="year"
-                          y="value"
-                          fill="none"
-                          stroke={panel.color}
-                          strokeWidth={2.5}
-                          defined={(d) => d.value !== null && (panel.yMax == null || d.value <= panel.yMax * 1.1)}
-                        />
-                      {/if}
-                      <Axis
-                        placement="bottom"
-                        ticks={5}
-                        rule={{ class: "stroke-slate-200" }}
-                        tickLabelProps={{ style: "fill:#94a3b8;font-size:9px;font-family:inherit;" }}
-                        format={(v) => String(Math.round(v))}
+                    {:else}
+                      <SpaghettiChart
+                        greySeries={panel.greySeries}
+                        selectedSeries={panel.selectedSeries}
+                        {allYears}
+                        yMax={panel.yMax}
+                        useSqrt={useSqrtScale && !isRateMetric}
+                        {isRateMetric}
+                        color={panel.color}
+                        {agencyName}
+                        height={280}
                       />
-                    </Svg>
-                  </Chart>
-                </div>
+                    {/if}
+                  </div>
+                {/if}
               </div>
             {/each}
           </div>
-          {#if agencyName}
-            <p class="mt-3 text-[10px] text-slate-400">
-              All agencies shown in grey — <span style="color:{raceColors['Black'] || '#64748b'}" class="font-semibold">{agencyName}</span> highlighted.
-            </p>
-          {/if}
-        {/if}
-      </div>
 
-      <!-- Statewide baselines -->
-      <div class="mt-6 rounded-xl border border-slate-200 bg-white p-4">
-        <div class="flex items-baseline justify-between gap-4">
-          <h3 class="text-sm font-semibold text-slate-900">{modal_statewide_baselines_heading()}</h3>
-          <p class="text-xs text-slate-400">{modal_statewide_baselines_subheading()}</p>
-        </div>
-        {#if baselineYears.length === 0}
-          <p class="mt-3 text-sm text-slate-500">{modal_no_baselines()}</p>
-        {:else}
-          <div class="mt-3 space-y-4">
-            {#each baselineYears as year}
-              {@const yearEntries = (baselineByYear[year] ?? []).slice().sort(sortBaselineMetrics)}
-              {@const agencyRow = agencyRowsByYear[year]}
-              <div class="rounded-lg border border-slate-200">
-                <div class="border-b border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-600">
-                  {year}
-                </div>
-                <div class="overflow-x-auto">
-                  <table class="min-w-full table-auto border-separate border-spacing-0 text-xs text-slate-600">
-                    <thead class="bg-white text-[11px] uppercase tracking-wide text-slate-400">
-                      <tr>
-                        <th class="px-3 py-2 text-left font-semibold">{modal_baseline_race_header()}</th>
-                        <th class="px-3 py-2 text-left font-semibold">{agencyName || modal_baseline_agency_fallback()}</th>
-                        <th class="px-3 py-2 text-left font-semibold">{modal_baseline_mean_header()}</th>
-                        <th class="px-3 py-2 text-left font-semibold">{modal_baseline_median_header()}</th>
-                      </tr>
-                    </thead>
-                    <tbody class="divide-y divide-slate-100">
-                      {#each yearEntries as entry}
-                        <tr>
-                          <td class="px-3 py-2 font-medium text-slate-700">{raceLabel(entry.metric)}</td>
-                          <td class="px-3 py-2">{formatNum(agencyRow?.[entry.metric], isPct(metricKey))}</td>
-                          <td class="px-3 py-2">{formatNum(entry.mean__no_mshp, isPct(metricKey))}</td>
-                          <td class="px-3 py-2">{formatNum(entry.median__no_mshp, isPct(metricKey))}</td>
-                        </tr>
-                      {/each}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            {/each}
-          </div>
+          {#if agencyName}
+            {#if isRateMetric}
+              <p class="mt-3 text-[10px] text-slate-400">
+                <span style="color:{TOTAL_COLOR}" class="font-semibold">{agencyName}</span>
+                {" — "}
+                <span>{m.chart_statewide_label()}</span>
+              </p>
+            {:else}
+              <p class="mt-3 text-[10px] text-slate-400">
+                {m.chart_count_legend({ agencyName })}
+              </p>
+            {/if}
+          {/if}
         {/if}
       </div>
 
