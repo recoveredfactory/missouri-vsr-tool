@@ -1,6 +1,8 @@
 <script>
   import StickyHeader from "$lib/components/StickyHeader.svelte";
   import HomeAgencyMetricTable from "$lib/components/HomeAgencyMetricTable.svelte";
+  import AboutDataEn from "../../content/about-the-data.en.md";
+  import AboutDataEs from "../../content/about-the-data.es.md";
   import {
     home_highlights_heading,
     home_toc_download,
@@ -47,6 +49,7 @@
   import { raceColors, raceTextColors, outcomeColors } from "$lib/colors.js";
   import { withDataBase } from "$lib/dataBase";
   import { getLocale } from "$lib/paraglide/runtime";
+  import { browser } from "$app/environment";
 
   export let data;
 
@@ -54,6 +57,9 @@
   $: statsData = data.statsData;
   $: historicalData = data.historicalData;
   $: historicalOutcomes = data.historicalOutcomes;
+
+  // YouTube facade: only load the iframe after user clicks play
+  let youtubeLoaded = false;
 
   // Tooltip state
   let tooltip = { show: false, x: 0, y: 0, content: "" };
@@ -135,7 +141,10 @@
       .map((group) => ({ group, files: groups.get(group) }));
   }
 
-  $: v2DownloadGroups = buildDownloadGroups(data?.v2DownloadManifest);
+  $: v2DownloadGroups = buildDownloadGroups({
+    ...data?.v2DownloadManifest,
+    files: (data?.v2DownloadManifest?.files ?? []).filter(f => !f.path.includes("2020_2024"))
+  });
   $: v1DownloadGroups = buildDownloadGroups(data?.v1DownloadManifest);
 
   function showTooltip(event, content) {
@@ -225,7 +234,7 @@
   {@html `<script type="application/ld+json">${JSON.stringify(webSiteSchema)}</script>`}
 </svelte:head>
 
-<StickyHeader agencies={data.agencies} />
+<StickyHeader />
 
 <main id="main-content" class="min-h-screen bg-white overflow-x-hidden">
   <!-- Hero Section -->
@@ -241,14 +250,39 @@
       </div>
       {#if locale === 'en'}
         <div class="flex justify-center md:justify-end md:flex-shrink-0">
-          <iframe
-            class="w-[70vw] md:w-52 rounded-lg"
-            style="aspect-ratio: 9/16"
-            src="https://www.youtube.com/embed/Oboc38ZD6hY"
-            title="Missouri Vehicle Stops Report video"
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-            allowfullscreen
-          ></iframe>
+          {#if youtubeLoaded}
+            <iframe
+              class="w-[70vw] md:w-52 rounded-lg"
+              style="aspect-ratio: 9/16"
+              src="https://www.youtube.com/embed/Oboc38ZD6hY?autoplay=1"
+              title="Missouri Vehicle Stops Report video"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+              allowfullscreen
+            ></iframe>
+          {:else}
+            <button
+              class="relative w-[70vw] md:w-52 rounded-lg overflow-hidden cursor-pointer p-0 border-0 bg-transparent"
+              style="aspect-ratio: 9/16"
+              on:click={() => (youtubeLoaded = true)}
+              aria-label="Play Missouri Vehicle Stops Report video"
+            >
+              <img
+                src="https://img.youtube.com/vi/Oboc38ZD6hY/hqdefault.jpg"
+                alt="Missouri Vehicle Stops Report video thumbnail"
+                class="w-full h-full object-cover rounded-lg"
+                width="480"
+                height="360"
+                loading="lazy"
+              />
+              <div class="absolute inset-0 flex items-center justify-center">
+                <div class="bg-red-600 rounded-full w-14 h-14 flex items-center justify-center shadow-lg">
+                  <svg class="w-7 h-7 text-white ml-1" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                    <path d="M8 5v14l11-7z"/>
+                  </svg>
+                </div>
+              </div>
+            </button>
+          {/if}
         </div>
       {/if}
     </div>
@@ -632,6 +666,9 @@
                     </span>
                   {/each}
                 </div>
+                {#if historicalOutcomes.citationStartYear}
+                  <p class="mt-2 text-center text-[10px] text-slate-400">Citation data not available before {historicalOutcomes.citationStartYear}.</p>
+                {/if}
               </div>
             {/if}
           </div>
@@ -640,7 +677,9 @@
     </div>
   </section>
 
-  <HomeAgencyMetricTable agencies={data.agencies} />
+  {#if browser}
+    <HomeAgencyMetricTable />
+  {/if}
 
   <!-- Download Section -->
   <section id="download" class="border-t border-slate-200 bg-white py-12">
@@ -743,7 +782,7 @@
   <section id="about" class="border-t border-slate-200 bg-slate-50 py-12">
     <div class="mx-auto max-w-4xl px-6">
       <div class="content">
-        {@html data.aboutDataHtml}
+        <svelte:component this={data.locale === "es" ? AboutDataEs : AboutDataEn} />
       </div>
     </div>
   </section>

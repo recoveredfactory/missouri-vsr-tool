@@ -1,24 +1,8 @@
-import { compile } from "mdsvex";
-import aboutMarkdownEn from "../../content/about-the-data.en.md?raw";
-import aboutMarkdownEs from "../../content/about-the-data.es.md?raw";
 import { withDataBase } from "$lib/dataBase";
 
-const unwrapHtmlBlocks = (html) =>
-  html.replace(/{@html\s+`([\s\S]*?)`}/g, (_match, inner) => inner);
-
-const wrapTables = (html) =>
-  html.replace(
-    /<table([\s\S]*?)<\/table>/g,
-    (_match, inner) => `<div class="table-wrapper"><table${inner}</table></div>`
-  );
-
-const compileMarkdown = (md) =>
-  compile(md).then((compiled) => wrapTables(unwrapHtmlBlocks(compiled.code)));
-
-const aboutDataHtmlByLocale = {
-  en: compileMarkdown(aboutMarkdownEn),
-  es: compileMarkdown(aboutMarkdownEs),
-};
+// The about-the-data markdown is imported as a Svelte component in +page.svelte
+// (mdsvex is registered for .md in svelte.config.js), so server-side compile is
+// no longer needed here.
 
 const isStructuredSums = (data) =>
   data && !Array.isArray(data) && Array.isArray(data.years);
@@ -106,9 +90,14 @@ const buildHistoricalData = (statewideYearSums) => {
   const [outcomeArrests, outcomeCitations, outcomeWarnings, outcomeNoAction] =
     outcomeKeys.map((rowKey) => getSeries(rowKey));
 
+  // Citation data is not available before 2004; filter outcomes to that range.
+  const OUTCOMES_START_YEAR = 2004;
+  const outcomeYears = years.filter((y) => y >= OUTCOMES_START_YEAR);
   const historicalOutcomes = {
-    years,
-    data: years.map((y, idx) => {
+    years: outcomeYears,
+    citationStartYear: OUTCOMES_START_YEAR,
+    data: outcomeYears.map((y) => {
+      const idx = years.indexOf(y);
       const arrests = outcomeArrests[idx] ?? 0;
       const citations = outcomeCitations[idx] ?? 0;
       const warnings = outcomeWarnings[idx] ?? 0;
@@ -146,19 +135,18 @@ const fetchJson = async (fetch, path, dataBaseUrl) => {
   }
 };
 
+// Fetch stats speculatively for the expected latest year so it runs in
+// parallel with the manifest instead of waiting for it.
+const EXPECTED_LATEST_YEAR = 2024;
+
 export async function load({ fetch, url }) {
   const locale = url.pathname.split("/")[1] === "es" ? "es" : "en";
   const dataBaseUrl = import.meta.env.PUBLIC_DATA_BASE_URL ?? "";
 
-  // Fetch manifest first to determine the latest year.
-  const manifest = await fetchJson(fetch, "/dist/manifest.json", dataBaseUrl);
-  const manifestYears = Array.isArray(manifest?.years) ? manifest.years : [];
-  const latestYear = manifestYears.length
-    ? Math.max(...manifestYears)
-    : 2024;
-
-  const [statsData, statewideYearSums, v1DownloadManifest, v2DownloadManifest] = await Promise.all([
-    fetchJson(fetch, `/dist/homepage_${latestYear}_stats.json`, dataBaseUrl),
+  // Fetch everything in one parallel batch. statsData uses the expected year;
+  // we only re-fetch if manifest says otherwise (rare).
+  const [manifest, statewideYearSums, v1DownloadManifest, v2DownloadManifest, speculativeStats] = await Promise.all([
+    fetchJson(fetch, "/dist/manifest.json", dataBaseUrl),
     fetchJson(fetch, "/dist/statewide_year_sums_subset.json", dataBaseUrl),
     // v1 manifest lives at the base CDN URL, not under the v2 release path
     (async () => {
@@ -171,12 +159,22 @@ export async function load({ fetch, url }) {
     })(),
     // v2 manifest lives under the release path
     fetchJson(fetch, "/data/downloads/missouri_vsr_2000_2024_downloads_manifest.json", dataBaseUrl),
+    fetchJson(fetch, `/dist/homepage_${EXPECTED_LATEST_YEAR}_stats.json`, dataBaseUrl),
   ]);
+
+  const manifestYears = Array.isArray(manifest?.years) ? manifest.years : [];
+  const latestYear = manifestYears.length
+    ? Math.max(...manifestYears)
+    : EXPECTED_LATEST_YEAR;
+
+  const statsData = latestYear === EXPECTED_LATEST_YEAR
+    ? speculativeStats
+    : await fetchJson(fetch, `/dist/homepage_${latestYear}_stats.json`, dataBaseUrl);
 
   const { historicalData, historicalOutcomes } = buildHistoricalData(statewideYearSums);
 
   return {
-    aboutDataHtml: await aboutDataHtmlByLocale[locale],
+    locale,
     manifest,
     statsData,
     historicalData,
