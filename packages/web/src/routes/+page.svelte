@@ -136,7 +136,10 @@
       .map((group) => ({ group, files: groups.get(group) }));
   }
 
-  $: v2DownloadGroups = buildDownloadGroups(data?.v2DownloadManifest);
+  $: v2DownloadGroups = buildDownloadGroups(data?.v2DownloadManifest && {
+    ...data.v2DownloadManifest,
+    files: data.v2DownloadManifest.files?.filter((f) => f.path.startsWith(data.v2DownloadManifest.prefix)),
+  });
   $: v1DownloadGroups = buildDownloadGroups(data?.v1DownloadManifest);
 
   function showTooltip(event, content) {
