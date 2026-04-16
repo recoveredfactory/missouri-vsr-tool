@@ -83,9 +83,52 @@
     }
     return null;
   };
-  $: selectedLastPoint = selectedSeries ? lastPoint(selectedSeries.data) : null;
-  $: statewideLastPoint = lastPoint(statewideClipped);
   $: selectedLabel = agencyName || selectedSeries?.agency || "";
+
+  // Anchor each label to the extremum where the two series naturally separate:
+  // the higher-average line labels at its max (above), the lower at its min
+  // (below). Pulls labels apart along the axis of greatest divergence.
+  const seriesAvg = (data) => {
+    let sum = 0, n = 0;
+    for (const p of data) if (p?.value != null) { sum += p.value; n++; }
+    return n ? sum / n : 0;
+  };
+  const seriesExtremum = (data, type) => {
+    let best = null;
+    for (const p of data) {
+      if (p?.value == null) continue;
+      if (!best || (type === "max" ? p.value > best.value : p.value < best.value)) best = p;
+    }
+    return best;
+  };
+
+  $: agencyHigher = selectedSeries
+    ? seriesAvg(selectedSeries.data) >= seriesAvg(statewideClipped)
+    : false;
+
+  // If a series' min is 0 (or rounds to 0), labeling below it would crash the
+  // chart floor and clip the text. Fall back to the max in that case.
+  const pickAnchor = (data, preferred) => {
+    if (preferred === "max") return seriesExtremum(data, "max");
+    const min = seriesExtremum(data, "min");
+    if (min && min.value <= 0.05) return seriesExtremum(data, "max");
+    return min;
+  };
+  $: selectedPreferred = agencyHigher ? "max" : "min";
+  $: statewidePreferred = agencyHigher ? "min" : "max";
+  $: selectedAnchor = selectedSeries ? pickAnchor(selectedSeries.data, selectedPreferred) : null;
+  $: statewideAnchor = pickAnchor(statewideClipped, statewidePreferred);
+  // Side derives from the actual anchor used (not the preferred), so a min→max
+  // fallback flips the label to "above".
+  $: selDy = (selectedAnchor && selectedSeries
+    && selectedAnchor === seriesExtremum(selectedSeries.data, "max")) ? -12 : 16;
+  $: moDy = (statewideAnchor
+    && statewideAnchor === seriesExtremum(statewideClipped, "max")) ? -12 : 16;
+  // text-anchor: keep label inside chart (end if anchor is in right half).
+  $: selTextAnchor = selectedAnchor && xSc(selectedAnchor.year) > iw / 2 ? "end" : "start";
+  $: moTextAnchor = statewideAnchor && xSc(statewideAnchor.year) > iw / 2 ? "end" : "start";
+  $: selDx = selTextAnchor === "end" ? -4 : 4;
+  $: moDx = moTextAnchor === "end" ? -4 : 4;
 
   // ── Tooltip ────────────────────────────────────────────────────────────────
 
@@ -184,15 +227,13 @@
           {/each}
         {/if}
 
-        <!-- Inline line labels -->
-        {#if statewideLastPoint}
-          {@const lx = xSc(statewideLastPoint.year)}
-          {@const ly = ySc(statewideLastPoint.value)}
-          {@const right = lx < iw - 30}
+        <!-- Inline line labels — anchored at each series' extremum so the
+             agency and MO labels sit on opposite sides of the divergence. -->
+        {#if statewideAnchor}
           <text
-            x={(right ? lx + 6 : lx - 6).toFixed(1)}
-            y={(ly + 11).toFixed(1)}
-            text-anchor={right ? "start" : "end"}
+            x={(xSc(statewideAnchor.year) + moDx).toFixed(1)}
+            y={(ySc(statewideAnchor.value) + moDy).toFixed(1)}
+            text-anchor={moTextAnchor}
             fill="#64748b"
             font-size="10" font-weight="700" font-family="inherit"
             pointer-events="none"
@@ -200,14 +241,11 @@
             stroke="white" stroke-width="3" stroke-linejoin="round"
           >MO</text>
         {/if}
-        {#if selectedLastPoint && selectedLabel}
-          {@const lx = xSc(selectedLastPoint.year)}
-          {@const ly = ySc(selectedLastPoint.value)}
-          {@const right = lx < iw - 60}
+        {#if selectedAnchor && selectedLabel}
           <text
-            x={(right ? lx + 7 : lx - 7).toFixed(1)}
-            y={(ly - 7).toFixed(1)}
-            text-anchor={right ? "start" : "end"}
+            x={(xSc(selectedAnchor.year) + selDx).toFixed(1)}
+            y={(ySc(selectedAnchor.value) + selDy).toFixed(1)}
+            text-anchor={selTextAnchor}
             fill={color}
             font-size="10" font-weight="700" font-family="inherit"
             pointer-events="none"

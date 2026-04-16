@@ -9,7 +9,7 @@
     agency_scatter_chart_unavailable,
     agency_scatter_chart_loading,
   } from "$lib/paraglide/messages";
-  import { withDataBase } from "$lib/dataBase";
+  import { fetchYearSubset } from "$lib/metricSubset";
   import { scatterDomainGroupStore, type ScatterDomainRange } from "$lib/stores/scatter";
 
   type MetricYearSubset = {
@@ -32,46 +32,6 @@
     "citations-rate": "citations",
     "contraband-hit-rate": "contraband",
     "contraband-rate": "contraband",
-  };
-  const metricDataCache = new Map<string, Promise<MetricYearSubset>>();
-
-  const normalizePayload = (payload: unknown): MetricYearSubset => {
-    if (!payload || typeof payload !== "object") {
-      return { agencies: [], years: [], columns: [], rows: {} };
-    }
-    const record = payload as Record<string, unknown>;
-    return {
-      agencies: Array.isArray(record.agencies)
-        ? record.agencies.map((agency) => String(agency))
-        : [],
-      years: Array.isArray(record.years) ? record.years : [],
-      columns: Array.isArray(record.columns)
-        ? record.columns.map((column) => String(column))
-        : [],
-      rows:
-        record.rows && typeof record.rows === "object"
-          ? (record.rows as Record<string, Array<Array<number | null>>>)
-          : {},
-    };
-  };
-
-  const fetchMetricData = (url: string) => {
-    const cached = metricDataCache.get(url);
-    if (cached) return cached;
-    const request = fetch(url)
-      .then((response) => {
-        if (!response.ok) {
-          throw new Error("Failed to load rate data.");
-        }
-        return response.json();
-      })
-      .then((payload) => normalizePayload(payload))
-      .catch((error) => {
-        metricDataCache.delete(url);
-        throw error;
-      });
-    metricDataCache.set(url, request);
-    return request;
   };
 
   export let selectedYear: number | string;
@@ -113,7 +73,6 @@
   export let note = "";
   export let domainGroup: string | null = null;
   export let showMeanLines = false;
-  export let dataUrl = withDataBase("/data/dist/metric_year_subset.json");
   export let xMetricKey = "contraband-hit-rate";
   export let yMetricKey = "search-rate";
   export let xColumn: string | null = null;
@@ -508,7 +467,23 @@
     isLoading = true;
     loadError = "";
     try {
-      const payload = await fetchMetricData(dataUrl);
+      // Scatter only renders a single year — fetch the combined by_year slice
+      // so all 9-ish metrics we need come from one ~80KB gzipped file instead
+      // of N separate per-metric fetches. Fallback row_keys let the loader
+      // reconstruct from per-metric files if by_year is missing.
+      const fallbackKeys = Array.from(
+        new Set(
+          [
+            xMetricKey,
+            yMetricKey,
+            sizeByStops || minStops !== null ? stopsMetricKey : null,
+            xCountKey,
+            yCountKey,
+            minCount !== null ? minCountKey : null,
+          ].filter((k): k is string => Boolean(k))
+        )
+      );
+      const payload = await fetchYearSubset(selectedYear, fallbackKeys);
       const xMap = buildMetricValueMap(payload, xMetricKey, xColumn ?? "Total");
       const yMap = buildMetricValueMap(payload, yMetricKey, yColumn ?? "Total");
       const needsStops = sizeByStops || minStops !== null;

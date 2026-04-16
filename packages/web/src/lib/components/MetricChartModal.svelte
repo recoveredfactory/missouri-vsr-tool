@@ -55,6 +55,15 @@
   let isLoading = false;
   let loadError = "";
 
+  // Snap an agency's max total stops up to the nearest filter bucket.
+  const niceMaxStopsBucket = (v) => {
+    if (!Number.isFinite(v) || v <= 1000) return null;
+    if (v <= 10000) return 10000;
+    if (v <= 25000) return 25000;
+    if (v <= 50000) return 50000;
+    return null;
+  };
+
   const normalizeAgency = (name) =>
     String(name || "")
       .toLowerCase()
@@ -148,30 +157,28 @@
     return map;
   })();
 
-  // Shared y-axis max for rate metrics — recomputes when filter changes so the
-  // scale reflects only visible agencies (+ selected agency, always included).
-  // Values are in the 0–100 range so we cap at 100.
+  // Shared y-axis max for rate metrics — scaled to the range of the selected
+  // agency and statewide baselines across all races, so every rate panel uses
+  // the same scale and inter-race comparisons are honest.
   $: sharedRateYMax = (() => {
-    if (!isRateMetric || !allRows.length) return null;
+    if (!isRateMetric) return null;
 
     const cols = ["Total", "White", "Black", "Hispanic", "Native American", "Asian", "Other"];
     let globalMax = 0;
 
     for (const row of allRows) {
       const ag = normalizeAgency(String(row.agency || "").trim());
-      const isSelected = ag === normalizedAgencyName;
-      const agStops = agencyMaxTotalStops.get(ag) ?? 0;
-      const isMSHP = ag === MSHP_NORMALIZED;
-      const passes = agStops >= minStopsThreshold
-        && (maxStopsThreshold == null || agStops <= maxStopsThreshold)
-        && (showMSHP || !isMSHP);
-
-      if (!isSelected && !passes) continue;
-
+      if (ag !== normalizedAgencyName) continue;
       for (const col of cols) {
         const v = sanitizeRateValue(row[col], isRateMetric);
         if (v !== null && v > globalMax) globalMax = v;
       }
+    }
+
+    for (const r of baselines) {
+      if (r.row_key !== metricKey) continue;
+      const v = sanitizeRateValue(r.mean__no_mshp, isRateMetric);
+      if (v !== null && v > globalMax) globalMax = v;
     }
 
     return globalMax > 0 ? Math.min(globalMax * 1.1, 100) : null;
@@ -224,10 +231,9 @@
     }
 
     const colStops = agencyStopsRow?.[stopsCol];
-    const skipPanel =
-      colStops != null &&
-      Number.isFinite(Number(colStops)) &&
-      Number(colStops) < minStopsThreshold;
+    // Min-stops filter applies only to grey background series (above) — the
+    // selected agency is always drawn so its values show even at low volumes.
+    const skipPanel = false;
 
     // Rate metrics: shared yMax (same across all panels for comparability).
     // Count metrics: null → SpaghettiChart auto-ranges from visible series only.
@@ -242,6 +248,8 @@
     lastInitializedAgency = agencyName;
     const total = Number(agencyStopsRow["Total"] ?? NaN);
     minStopsThreshold = Number.isFinite(total) && total < 100 ? 0 : 100;
+    const agencyMax = agencyMaxTotalStops.get(normalizedAgencyName) ?? 0;
+    maxStopsThreshold = niceMaxStopsBucket(agencyMax);
   }
   $: if (!open) lastInitializedAgency = "";
 
@@ -423,6 +431,7 @@
                         statewideSeries={totalStatewideSeries}
                         selectedSeries={totalPanelData.selectedSeries}
                         {allYears}
+                        yMax={totalPanelData.yMax}
                         color={TOTAL_COLOR}
                         {agencyName}
                         height={280}
@@ -464,6 +473,7 @@
                         statewideSeries={panel.statewideSeries}
                         selectedSeries={panel.selectedSeries}
                         {allYears}
+                        yMax={panel.yMax}
                         color={panel.color}
                         {agencyName}
                         height={280}

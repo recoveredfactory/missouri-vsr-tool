@@ -3,6 +3,7 @@
   import { onMount } from "svelte";
   import { getLocale } from "$lib/paraglide/runtime.js";
   import { withDataBase } from "$lib/dataBase";
+  import { fetchSubsetIndex, fetchSubsetFor, type MetricYearSubset as SharedSubset } from "$lib/metricSubset";
   import {
     home_metric_table_label,
     home_metric_table_heading,
@@ -48,6 +49,12 @@
     label: string;
   };
 
+  type MetricOptionGroup = {
+    groupId: string;
+    groupLabel: string;
+    options: MetricOption[];
+  };
+
   type AgencyLink = {
     value: string;
     href: string;
@@ -70,7 +77,7 @@
     raw: Record<string, number>;
   };
 
-  export let agencies: AgencyIndexEntry[] = [];
+  let agencies: AgencyIndexEntry[] = [];
 
   const baseTotalStopsRowKey = "stops";
   const raceColumns = [
@@ -92,8 +99,7 @@
     maximumFractionDigits: 2,
   });
 
-  const subsetCache = new Map<string, Promise<MetricYearSubset>>();
-  const SUBSET_URL = withDataBase("/data/dist/metric_year_subset.json");
+  const AGENCY_INDEX_URL = withDataBase("/data/dist/agency_index.json");
   const naturalTextSorter = new Intl.Collator(undefined, { numeric: true, sensitivity: "base" });
 
   const compareStrings = (a: string, b: string) => (a === b ? 0 : a < b ? -1 : 1);
@@ -203,16 +209,15 @@
     return map;
   };
 
-  const rowKeyOptionsFromBaselines = (baselineEntries: BaselineEntry[]) => {
+  const rowKeyOptionsFromBaselines = (baselineEntries: BaselineEntry[]): MetricOptionGroup[] => {
     const keys = Array.from(
       new Set(
         baselineEntries
           .map((entry) => String(entry?.row_key || "").trim())
           .filter(Boolean),
       ),
-    );
+    ).filter((key) => !key.startsWith("rates-population"));
 
-    // v2: canonical keys have a flat structure; split on first '--' to get group/metric.
     const RATE_KEYS = new Set([
       "search-rate", "arrest-rate", "contraband-hit-rate", "stop-rate",
       "citation-rate", "stop-rate-residents",
@@ -224,59 +229,48 @@
       return "core-counts";
     };
 
-    return keys
-      .map((value) => {
-        const groupId = getCanonicalGroup(value);
-        const metricSuffix = value.includes("--") ? value.slice(value.indexOf("--") + 2) : value;
-        const groupLabel = labelForId("section", groupId) || humanizeId(groupId);
-        const metricLabel = labelForId("metric", metricSuffix) || humanizeId(metricSuffix);
+    const GROUP_PRIORITY: Record<string, number> = { "core-counts": 0, "rates": 1 };
+    const METRIC_PRIORITY: Record<string, number> = { stops: 0, citations: 1 };
 
-        return {
-          value,
-          label: `${groupLabel}: ${metricLabel}`,
-          tableId: groupId,
-          sectionId: "",
-          metricId: metricSuffix,
-          tableLabel: groupLabel,
-          sectionLabel: "",
-          metricLabel,
-        };
-      })
-      .sort((a, b) => {
-        // Flat canonical keys (no '--') are core counts/rates — sort first.
-        const aPriority = a.value.includes("--") ? 1 : 0;
-        const bPriority = b.value.includes("--") ? 1 : 0;
-        if (aPriority !== bPriority) return aPriority - bPriority;
+    const groupsMap = new Map<string, MetricOptionGroup>();
 
-        const groupCmp = naturalTextSorter.compare(a.tableLabel, b.tableLabel);
-        if (groupCmp !== 0) return groupCmp;
+    for (const value of keys) {
+      const groupId = getCanonicalGroup(value);
+      const metricSuffix = value.includes("--") ? value.slice(value.indexOf("--") + 2) : value;
+      const groupLabel = labelForId("section", groupId) || humanizeId(groupId);
+      const metricLabel = labelForId("metric", metricSuffix) || humanizeId(metricSuffix);
 
-        const metricCmp = naturalTextSorter.compare(a.metricLabel, b.metricLabel);
-        if (metricCmp !== 0) return metricCmp;
+      if (!groupsMap.has(groupId)) {
+        groupsMap.set(groupId, { groupId, groupLabel, options: [] });
+      }
+      groupsMap.get(groupId)!.options.push({ value, label: metricLabel });
+    }
 
-        return naturalTextSorter.compare(a.value, b.value);
-      })
-      .map(({ value, label }) => ({ value, label }));
+    // Sort options within each group: explicit priority first, then alphabetical by label.
+    for (const group of groupsMap.values()) {
+      group.options.sort((a, b) => {
+        const aOrder = METRIC_PRIORITY[a.value] ?? 999;
+        const bOrder = METRIC_PRIORITY[b.value] ?? 999;
+        if (aOrder !== bOrder) return aOrder - bOrder;
+        return naturalTextSorter.compare(a.label, b.label);
+      });
+    }
+
+    // Sort groups: core-counts first, rates second, then alphabetical.
+    return Array.from(groupsMap.values()).sort((a, b) => {
+      const aOrder = GROUP_PRIORITY[a.groupId] ?? 999;
+      const bOrder = GROUP_PRIORITY[b.groupId] ?? 999;
+      if (aOrder !== bOrder) return aOrder - bOrder;
+      return naturalTextSorter.compare(a.groupLabel, b.groupLabel);
+    });
   };
 
-  const fetchSubset = () => {
-    const cached = subsetCache.get(SUBSET_URL);
-    if (cached) return cached;
-
-    const request = fetch(SUBSET_URL)
-      .then(async (response) => {
-        if (!response.ok) {
-          throw new Error(`Unable to load metric data (${response.status}).`);
-        }
-        return (await response.json()) as MetricYearSubset;
-      })
-      .catch((error) => {
-        subsetCache.delete(SUBSET_URL);
-        throw error;
-      });
-
-    subsetCache.set(SUBSET_URL, request);
-    return request;
+  // Fetch only the rows for the selected metric (+ `stops` for the Total Stops
+  // column). The shared loader caches per-metric so switching metrics fetches
+  // one small file instead of re-pulling the 12MB bundle.
+  const fetchSubsetForMetric = (rowKey: string) => {
+    const keys = rowKey === baseTotalStopsRowKey ? [baseTotalStopsRowKey] : [baseTotalStopsRowKey, rowKey];
+    return fetchSubsetFor(keys);
   };
 
   const yearsFromPayload = (payload: MetricYearSubset) =>
@@ -359,6 +353,7 @@
   let agencySlugMap = new Map<string, string>();
 
   let metricOptions: MetricOption[] = [];
+  let metricOptionGroups: MetricOptionGroup[] = [];
   let selectedMetric = baseTotalStopsRowKey;
   let yearOptions: string[] = [];
   let selectedYear = "";
@@ -489,7 +484,7 @@
     loadError = "";
 
     try {
-      const payload = await fetchSubset();
+      const payload = await fetchSubsetForMetric(rowKey);
       const years = yearsFromPayload(payload);
       yearOptions = years;
 
@@ -517,13 +512,19 @@
     loadError = "";
 
     try {
-      const response = await fetch(withDataBase("/dist/statewide_slug_baselines.json"));
-      if (!response.ok) {
-        throw new Error(`Unable to load metric list (${response.status}).`);
-      }
-
-      const baselineEntries = (await response.json()) as BaselineEntry[];
-      metricOptions = rowKeyOptionsFromBaselines(baselineEntries);
+      // Fetch the subset index (row_key list only, no data rows) in parallel
+      // with agency index. Browser caches the agency index so StickyHeader's
+      // concurrent fetch doesn't double the work.
+      const [index] = await Promise.all([
+        fetchSubsetIndex(),
+        fetch(AGENCY_INDEX_URL)
+          .then((r) => (r.ok ? r.json() : []))
+          .then((data: AgencyIndexEntry[]) => { agencies = data; })
+          .catch(() => {}),
+      ]);
+      const keyEntries = index.row_keys.map((key) => ({ row_key: key }));
+      metricOptionGroups = rowKeyOptionsFromBaselines(keyEntries);
+      metricOptions = metricOptionGroups.flatMap((g) => g.options);
 
       if (!metricOptions.length) {
         throw new Error("No metrics available.");
@@ -602,8 +603,12 @@
           on:change={handleMetricChange}
           disabled={!metricOptions.length || isLoading}
         >
-          {#each metricOptions as option}
-            <option value={option.value}>{option.label}</option>
+          {#each metricOptionGroups as group}
+            <optgroup label={group.groupLabel}>
+              {#each group.options as option}
+                <option value={option.value}>{option.label}</option>
+              {/each}
+            </optgroup>
           {/each}
         </select>
         <p class="mt-2 pl-1 text-[0.72rem] font-medium text-slate-500 sm:text-xs">

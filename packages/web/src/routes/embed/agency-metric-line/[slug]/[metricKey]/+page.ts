@@ -2,24 +2,31 @@ import { error } from "@sveltejs/kit";
 import { withDataBase } from "$lib/dataBase";
 
 export async function load({ fetch, params }) {
-  const { slug, metricKey } = params;
+  const { slug } = params;
+  const metricKey = decodeURIComponent(params.metricKey);
 
-  const [agencyResponse, baselinesResponse] = await Promise.all([
-    fetch(withDataBase(`/data/dist/agency_year/${slug}.json`)),
-    fetch(withDataBase("/data/dist/statewide_slug_baselines.json")),
+  const [metricResponse, indexResponse] = await Promise.all([
+    fetch(withDataBase(`/data/dist/metric_year/${metricKey}.json`)),
+    fetch(withDataBase("/data/dist/agency_index.json")),
   ]);
 
-  if (!agencyResponse.ok) {
-    throw error(404, `Agency not found: ${slug}`);
+  if (!metricResponse.ok) {
+    throw error(404, `Metric not found: ${metricKey}`);
   }
 
-  const agencyData = await agencyResponse.json();
-  const baselines = baselinesResponse.ok ? await baselinesResponse.json() : [];
+  const metricRows = await metricResponse.json();
+  const agencies = indexResponse.ok ? await indexResponse.json() : [];
+
+  const agencyEntry = Array.isArray(agencies)
+    ? agencies.find((a) => a.agency_slug === slug || a.slug === slug)
+    : null;
+  const agencyName =
+    agencyEntry?.canonical_name || agencyEntry?.agency_name || slug;
 
   return {
     slug,
-    metricKey: decodeURIComponent(metricKey),
-    agencyData,
-    baselines,
+    agencyName,
+    metricKey,
+    metricRows: Array.isArray(metricRows) ? metricRows : [],
   };
 }

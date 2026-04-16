@@ -33,10 +33,15 @@
     return toNumber(row[race] ?? row[lower] ?? 0);
   };
 
-  $: rows = Array.isArray(data.agencyData?.rows) ? data.agencyData.rows : [];
-  $: metricRows = rows.filter((row) => row?.row_key === data.metricKey);
-  $: metricRowsSorted = metricRows
-    .slice()
+  const normalizeAgency = (name) =>
+    String(name || "")
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, " ")
+      .trim();
+
+  $: normalizedAgencyName = normalizeAgency(data.agencyName);
+  $: metricRowsSorted = (data.metricRows ?? [])
+    .filter((row) => normalizeAgency(String(row?.agency || "")) === normalizedAgencyName)
     .sort((a, b) => Number(a?.year) - Number(b?.year))
     .filter((row) => row?.year !== null && row?.year !== undefined);
 

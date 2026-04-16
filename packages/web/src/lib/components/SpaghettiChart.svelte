@@ -101,18 +101,21 @@
   $: greyPaths = greySeries.map((s) => buildPath(s.data, xSc, ySc, clip));
   $: selectedPath = selectedSeries ? buildPath(selectedSeries.data, xSc, ySc, clip) : null;
 
-  // Last visible point of the selected series — anchor for the inline label.
-  $: selectedLastPoint = (() => {
+  // Anchor the inline label at the series max so it sits above its own peak —
+  // less likely to collide with grey background lines than the rightmost dot.
+  $: selectedAnchor = (() => {
     if (!selectedSeries) return null;
-    for (let i = selectedSeries.data.length - 1; i >= 0; i--) {
-      const pt = selectedSeries.data[i];
-      if (pt.value == null) continue;
+    let best = null;
+    for (const pt of selectedSeries.data) {
+      if (pt?.value == null) continue;
       if (clip != null && pt.value > clip * 1.1) continue;
-      return pt;
+      if (!best || pt.value > best.value) best = pt;
     }
-    return null;
+    return best;
   })();
   $: selectedLabel = agencyName || selectedSeries?.agency || "";
+  $: selTextAnchor = selectedAnchor && xSc(selectedAnchor.year) > iw / 2 ? "end" : "start";
+  $: selDx = selTextAnchor === "end" ? -4 : 4;
 
   // ── Tooltip ────────────────────────────────────────────────────────────────
 
@@ -166,7 +169,7 @@
         <!-- Grey background series -->
         {#each greyPaths as d}
           {#if d}
-            <path {d} fill="none" stroke="#cbd5e1" stroke-width="0.9" />
+            <path {d} fill="none" stroke="#cbd5e1" stroke-width="0.6" />
           {/if}
         {/each}
 
@@ -189,14 +192,11 @@
               />
             {/if}
           {/each}
-          {#if selectedLastPoint && selectedLabel}
-            {@const lx = xSc(selectedLastPoint.year)}
-            {@const ly = ySc(selectedLastPoint.value)}
-            {@const labelRight = lx < iw - 60}
+          {#if selectedAnchor && selectedLabel}
             <text
-              x={(labelRight ? lx + 7 : lx - 7).toFixed(1)}
-              y={(ly - 7).toFixed(1)}
-              text-anchor={labelRight ? "start" : "end"}
+              x={(xSc(selectedAnchor.year) + selDx).toFixed(1)}
+              y={(ySc(selectedAnchor.value) - 12).toFixed(1)}
+              text-anchor={selTextAnchor}
               fill={color}
               font-size="10" font-weight="700" font-family="inherit"
               pointer-events="none"

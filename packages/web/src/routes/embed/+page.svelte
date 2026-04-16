@@ -28,9 +28,6 @@
   let agencyResults = [];
   /** @type {any} */
   let selectedAgency = null;
-  /** @type {any} */
-  let agencyData = null;
-  let agencyLoading = false;
   /** @type {{ key: string; label: string }[]} */
   let availableMetrics = [];
   let selectedMetricKey = "";
@@ -58,37 +55,6 @@
     agencyDropdownOpen = agencyResults.length > 0;
   };
 
-  const selectAgency = async (agency) => {
-    selectedAgency = agency;
-    agencyQuery = toLabel(agency);
-    agencyResults = [];
-    agencyDropdownOpen = false;
-    selectedMetricKey = "";
-    agencyData = null;
-    availableMetrics = [];
-    agencyLoading = true;
-
-    try {
-      const resp = await fetch(withDataBase(`/data/dist/agency_year/${agency.agency_slug}.json`));
-      if (resp.ok) {
-        agencyData = await resp.json();
-        availableMetrics = buildMetricList(agencyData);
-      }
-    } catch {
-      agencyData = null;
-    } finally {
-      agencyLoading = false;
-    }
-  };
-
-  const metricSuffixes = [
-    "-percentage",
-    "-rank",
-    "-rank-no-mshp",
-    "-percentile",
-    "-percentile-no-mshp",
-  ];
-
   const humanizeId = (id) => {
     if (!id) return "";
     return String(id)
@@ -101,18 +67,18 @@
     return humanizeId(id);
   };
 
-  const buildMetricList = (d) => {
-    if (!Array.isArray(d?.rows)) return [];
-    const seen = new Set();
-    const metrics = [];
-    for (const row of d.rows) {
-      const key = row?.row_key;
-      if (!key || seen.has(key)) continue;
-      if (metricSuffixes.some((s) => key.endsWith(s))) continue;
-      seen.add(key);
-      metrics.push({ key, label: metricLabelForKey(key) });
-    }
-    return metrics;
+  const buildMetricListFromCanonical = (canonicalMetrics) =>
+    (canonicalMetrics || [])
+      .filter((key) => !key.startsWith("rates-population"))
+      .map((key) => ({ key, label: metricLabelForKey(key) }));
+
+  const selectAgency = (agency) => {
+    selectedAgency = agency;
+    agencyQuery = toLabel(agency);
+    agencyResults = [];
+    agencyDropdownOpen = false;
+    selectedMetricKey = "";
+    availableMetrics = buildMetricListFromCanonical(data.manifest?.canonical_metrics);
   };
 
   // Embed URL and code generation
@@ -178,7 +144,6 @@
     agencyQuery = "";
     agencyResults = [];
     agencyDropdownOpen = false;
-    agencyData = null;
     availableMetrics = [];
     selectedMetricKey = "";
   };
@@ -300,9 +265,6 @@
               </p>
             {/if}
 
-            {#if agencyLoading}
-              <p class="mt-1.5 text-xs text-slate-400">Loading metrics…</p>
-            {/if}
           </div>
         </section>
 
