@@ -320,8 +320,7 @@
   >
     <div
       bind:this={dialogEl}
-      class="w-full max-w-full overflow-x-hidden overflow-y-auto rounded-none bg-white p-4 shadow-2xl focus:outline-none sm:max-w-[90rem] sm:rounded-2xl sm:p-6"
-      style="max-height: calc(100dvh - var(--site-header-height, 0px) - 2rem);"
+      class="h-full w-full max-w-full overflow-x-hidden overflow-y-auto rounded-none bg-white p-4 shadow-2xl focus:outline-none sm:h-auto sm:max-h-[calc(100dvh-var(--site-header-height,0px)-2rem)] sm:max-w-[90rem] sm:rounded-2xl sm:p-6"
       role="dialog"
       aria-modal="true"
       aria-labelledby="modal-title"

@@ -361,7 +361,7 @@
 
 <header
   bind:this={headerElement}
-  class="sticky top-0 z-50 border-b-6 border-b-[#1b613c] bg-white/95 backdrop-blur-sm shadow-sm"
+  class="sticky top-0 z-[70] border-b-6 border-b-[#1b613c] bg-white/95 backdrop-blur-sm shadow-sm"
 >
   <div class="mx-auto w-full max-w-7xl px-4 sm:px-6 md:w-[85%] md:px-0">
     <div class="py-1.5 sm:py-2.5">
