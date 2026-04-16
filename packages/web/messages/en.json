@@ -357,6 +357,7 @@
   "home_chart_traffic_stops_label": "Traffic Stops",
   "home_chart_outcomes_heading": "Law enforcement issues citations at a rate of 41 per 100 stops, down from a peak of around 60 a decade ago",
   "home_chart_outcomes_subheading": "Outcome rates are computed against total stops. A single stop may have multiple outcomes.",
+  "home_chart_outcomes_note": "Stop outcomes (citations, arrests, warnings, no action) were not reported before 2004.",
   "home_outcome_warnings": "Warnings",
   "home_outcome_citations": "Citations",
   "home_outcome_arrests": "Arrests",

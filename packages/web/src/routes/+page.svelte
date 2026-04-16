@@ -24,6 +24,7 @@
     home_chart_traffic_stops_label,
     home_chart_outcomes_heading,
     home_chart_outcomes_subheading,
+    home_chart_outcomes_note,
     home_outcome_warnings,
     home_outcome_citations,
     home_outcome_arrests,
@@ -632,6 +633,7 @@
                     </span>
                   {/each}
                 </div>
+                <p class="mt-2 text-center text-[10px] text-slate-500">{home_chart_outcomes_note()}</p>
               </div>
             {/if}
           </div>

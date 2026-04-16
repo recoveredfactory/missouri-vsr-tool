@@ -106,9 +106,13 @@ const buildHistoricalData = (statewideYearSums) => {
   const [outcomeArrests, outcomeCitations, outcomeWarnings, outcomeNoAction] =
     outcomeKeys.map((rowKey) => getSeries(rowKey));
 
+  // Citations/outcomes were not tracked before 2004 — filter earlier years out.
+  const OUTCOMES_MIN_YEAR = 2004;
+  const outcomeYears = years.filter((y) => Number(y) >= OUTCOMES_MIN_YEAR);
   const historicalOutcomes = {
-    years,
-    data: years.map((y, idx) => {
+    years: outcomeYears,
+    data: outcomeYears.map((y) => {
+      const idx = years.indexOf(y);
       const arrests = outcomeArrests[idx] ?? 0;
       const citations = outcomeCitations[idx] ?? 0;
       const warnings = outcomeWarnings[idx] ?? 0;

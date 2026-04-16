@@ -349,6 +349,7 @@
   "home_chart_traffic_stops_label": "Paradas de tráfico",
   "home_chart_outcomes_heading": "La policía emite citaciones a una tasa de 41 por cada 100 paradas, muy por debajo del pico de alrededor de 60 hace una década",
   "home_chart_outcomes_subheading": "Las tasas de resultados se calculan sobre las paradas totales. Una sola parada puede tener múltiples resultados.",
+  "home_chart_outcomes_note": "Los resultados de las paradas (citaciones, arrestos, advertencias, sin acción) no se reportaron antes de 2004.",
   "home_outcome_warnings": "Advertencias",
   "home_outcome_citations": "Citaciones",
   "home_outcome_arrests": "Arrestos",
