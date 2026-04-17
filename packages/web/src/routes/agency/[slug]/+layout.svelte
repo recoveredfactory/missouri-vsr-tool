@@ -1281,10 +1281,18 @@
   };
 
 
+  let didInsertAgencyHome = false;
   const syncFromRoute = (metricKey) => {
     if (typeof window === "undefined" || !rows.length) return;
     const routeKey = getRouteMetricKey(metricKey);
     if (routeKey && hasMetricKey(routeKey)) {
+      // If landing directly on a metric URL, insert agency home into history
+      // so back navigates to the agency overview instead of the previous page.
+      if (!didInsertAgencyHome && !activeMetricKey) {
+        didInsertAgencyHome = true;
+        window.history.replaceState(window.history.state, "", baseAgencyPath());
+        window.history.pushState(window.history.state, "", buildMetricPath(routeKey));
+      }
       openMetric(routeKey, { updateRoute: false });
       return;
     }
