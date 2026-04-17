@@ -44,7 +44,27 @@ Source reports and comments are available from the AG’s office:
   - 2022: https://ago.mo.gov/wp-content/uploads/2022-agency-comments-ago.pdf
   - 2021: https://ago.mo.gov/wp-content/uploads/2021-VSR-Agency-Comments.pdf
   - 2020: https://ago.mo.gov/wp-content/uploads/2020-VSR-Agency-Comments.pdf
-- Pre‑2020 format (2001–2019): a single combined statewide PDF per year listing every agency in sequence, with substantially fewer metrics per agency. Earlier years were also retrieved from the AG archive; the URLs vary by year and are tracked in the pipeline source.
+- Pre‑2020 format (2000–2019): a single combined statewide PDF per year listing every agency in sequence, with substantially fewer metrics per agency. No separate agency‑comments PDFs exist for these years.
+  - 2019: https://ago.mo.gov/wp-content/uploads/2019agencyreports.pdf
+  - 2018: https://ago.mo.gov/wp-content/uploads/2018agencyreports.pdf
+  - 2017: https://ago.mo.gov/wp-content/uploads/2017agencyreports.pdf
+  - 2016: https://ago.mo.gov/wp-content/uploads/2016agencyreports.pdf
+  - 2015: https://ago.mo.gov/wp-content/uploads/2015agencyreports.pdf
+  - 2014: https://ago.mo.gov/wp-content/uploads/2014agencyreports.pdf
+  - 2013: https://ago.mo.gov/wp-content/uploads/2013-agency-reports.pdf
+  - 2012: https://ago.mo.gov/wp-content/uploads/2012agencyreport.pdf
+  - 2011: https://ago.mo.gov/wp-content/uploads/2011agencyreport.pdf
+  - 2010: https://ago.mo.gov/wp-content/uploads/2010agencyreports.pdf
+  - 2009: https://ago.mo.gov/wp-content/uploads/2009agencyreports.pdf
+  - 2008: https://ago.mo.gov/wp-content/uploads/2008agencyreports.pdf
+  - 2007: https://ago.mo.gov/wp-content/uploads/2007agencyreports.pdf
+  - 2006: https://ago.mo.gov/wp-content/uploads/2006agencyreports.pdf
+  - 2005: https://ago.mo.gov/wp-content/uploads/2005agencyreports.pdf
+  - 2004: https://ago.mo.gov/wp-content/uploads/2004agencyreports.pdf
+  - 2003: https://ago.mo.gov/wp-content/uploads/2003agencyreports.pdf
+  - 2002: https://ago.mo.gov/wp-content/uploads/2002agencyreports.pdf
+  - 2001: https://ago.mo.gov/wp-content/uploads/2001agencyreports.pdf
+  - 2000: https://ago.mo.gov/wp-content/uploads/2000agencyreports.pdf
 
 Currently, we extract data for reports **2000–2024** (published 2001–2025). The 2000 report is included in the underlying parquet/CSV downloads but suppressed in the web UX because coverage is too sparse to chart meaningfully. Pre‑2020 reports use a different format and report a smaller set of metrics; see **Key normalization** below for how the two eras are reconciled. Coverage in the earliest years (2000–2003) is partial: roughly half of agencies are missing in those years because of blank race columns in the source PDFs.
 
@@ -69,7 +89,7 @@ The central dataset is a row‑based table where each row represents one metric 
 - `row_key` — era‑specific `table_id--section_id--metric_id` (the original, format‑specific identifier)
 - `canonical_key` — era‑independent metric identifier shared between the pre‑2020 and 2020+ formats (see **Key normalization** below)
 - `row_id` — `year-agency-row_key` (globally unique)
-- Race columns: `Total`, `White`, `Black`, `Hispanic`, `Native American`, `Asian`, `Other` (pre‑2020 reports also use `Am. Indian`, preserved at the parse layer)
+- Race columns: `Total`, `White`, `Black`, `Hispanic`, `Native American`, `Asian`, `Other`. Pre‑2020 reports use the header `Am. Indian`; the combine step collapses it into `Native American` so the column is populated across all years.
 
 All values are numeric or null (`.` in the PDF becomes `null`).
 

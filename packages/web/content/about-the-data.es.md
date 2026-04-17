@@ -46,7 +46,27 @@ Los informes fuente y los comentarios están disponibles en la oficina del Fisca
   - 2022: https://ago.mo.gov/wp-content/uploads/2022-agency-comments-ago.pdf
   - 2021: https://ago.mo.gov/wp-content/uploads/2021-VSR-Agency-Comments.pdf
   - 2020: https://ago.mo.gov/wp-content/uploads/2020-VSR-Agency-Comments.pdf
-- Formato pre‑2020 (2001–2019): un único PDF estatal combinado por año que lista todas las agencias en secuencia, con bastantes menos métricas por agencia. Los años más antiguos también se obtuvieron del archivo del Fiscal General; las URLs varían por año y se rastrean en el código fuente del pipeline.
+- Formato pre‑2020 (2000–2019): un único PDF estatal combinado por año que lista todas las agencias en secuencia, con bastantes menos métricas por agencia. No existen PDFs separados de comentarios de agencias para estos años.
+  - 2019: https://ago.mo.gov/wp-content/uploads/2019agencyreports.pdf
+  - 2018: https://ago.mo.gov/wp-content/uploads/2018agencyreports.pdf
+  - 2017: https://ago.mo.gov/wp-content/uploads/2017agencyreports.pdf
+  - 2016: https://ago.mo.gov/wp-content/uploads/2016agencyreports.pdf
+  - 2015: https://ago.mo.gov/wp-content/uploads/2015agencyreports.pdf
+  - 2014: https://ago.mo.gov/wp-content/uploads/2014agencyreports.pdf
+  - 2013: https://ago.mo.gov/wp-content/uploads/2013-agency-reports.pdf
+  - 2012: https://ago.mo.gov/wp-content/uploads/2012agencyreport.pdf
+  - 2011: https://ago.mo.gov/wp-content/uploads/2011agencyreport.pdf
+  - 2010: https://ago.mo.gov/wp-content/uploads/2010agencyreports.pdf
+  - 2009: https://ago.mo.gov/wp-content/uploads/2009agencyreports.pdf
+  - 2008: https://ago.mo.gov/wp-content/uploads/2008agencyreports.pdf
+  - 2007: https://ago.mo.gov/wp-content/uploads/2007agencyreports.pdf
+  - 2006: https://ago.mo.gov/wp-content/uploads/2006agencyreports.pdf
+  - 2005: https://ago.mo.gov/wp-content/uploads/2005agencyreports.pdf
+  - 2004: https://ago.mo.gov/wp-content/uploads/2004agencyreports.pdf
+  - 2003: https://ago.mo.gov/wp-content/uploads/2003agencyreports.pdf
+  - 2002: https://ago.mo.gov/wp-content/uploads/2002agencyreports.pdf
+  - 2001: https://ago.mo.gov/wp-content/uploads/2001agencyreports.pdf
+  - 2000: https://ago.mo.gov/wp-content/uploads/2000agencyreports.pdf
 
 Actualmente, extraemos datos de los informes de **2000–2024** (publicados entre 2001 y 2025). El informe de 2000 está incluido en las descargas de parquet/CSV pero se suprime en la interfaz web porque su cobertura es demasiado escasa para graficar de forma significativa. Los informes pre‑2020 usan un formato distinto y reportan un conjunto más pequeño de métricas; consulte **Normalización de claves** abajo para entender cómo se reconcilian las dos eras. La cobertura en los años más tempranos (2000–2003) es parcial: aproximadamente la mitad de las agencias faltan en esos años debido a columnas de raza vacías en los PDFs fuente.
 
@@ -71,7 +91,7 @@ El conjunto de datos central es una tabla basada en filas donde cada fila repres
 - `row_key` — `table_id--section_id--metric_id` específico de la era (el identificador original del formato fuente)
 - `canonical_key` — identificador de métrica independiente de la era, compartido entre los formatos pre‑2020 y 2020+ (consulte **Normalización de claves** abajo)
 - `row_id` — `year-agency-row_key` (globalmente único)
-- Columnas de raza: `Total`, `White`, `Black`, `Hispanic`, `Native American`, `Asian`, `Other` (los informes pre‑2020 también usan `Am. Indian`, preservado en la capa de extracción)
+- Columnas de raza: `Total`, `White`, `Black`, `Hispanic`, `Native American`, `Asian`, `Other`. Los informes pre‑2020 usan el encabezado `Am. Indian`; el paso de combinación lo colapsa en `Native American` para que la columna esté poblada en todos los años.
 
 Todos los valores son numéricos o nulos (`.` en el PDF se convierte en `null`).
 
