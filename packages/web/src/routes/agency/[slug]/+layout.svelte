@@ -1187,11 +1187,13 @@
 
   const openMetric = (metricKey, { updateRoute = true } = {}) => {
     if (!metricKey) return;
+    // If already viewing a metric, replace so back always goes to agency home
+    const alreadyOnMetric = !!activeMetricKey;
     activeMetricKey = metricKey;
     activeMetricLabel = metricLabelForKey(metricKey);
     if (updateRoute) {
       goto(buildMetricPath(metricKey), {
-        replaceState: false,
+        replaceState: alreadyOnMetric,
         keepfocus: true,
         noScroll: true,
       });
