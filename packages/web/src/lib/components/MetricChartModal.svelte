@@ -1,319 +1,312 @@
 <script>
-  import { createEventDispatcher, onDestroy, onMount } from "svelte";
+  import { createEventDispatcher, onDestroy } from "svelte";
+  import { withDataBase } from "$lib/dataBase";
   import {
-    agency_section_label,
-    agency_table_label,
-    modal_baseline_agency_fallback,
-    modal_baseline_mean_header,
-    modal_baseline_median_header,
-    modal_baseline_race_header,
-    modal_chart_unavailable,
     modal_close,
-    modal_metric_label,
-    modal_no_baselines,
     modal_no_data,
-    modal_statewide_baselines_heading,
-    modal_statewide_baselines_subheading,
-    race_asian,
+    race_white,
     race_black,
     race_hispanic,
     race_native_american,
+    race_asian,
     race_other,
-    race_total,
-    race_white,
   } from "$lib/paraglide/messages";
   import * as m from "$lib/paraglide/messages";
-  import { raceColors as importedRaceColors } from "$lib/colors.js";
+  import { raceColors } from "$lib/colors.js";
+  import SpaghettiChart from "$lib/components/SpaghettiChart.svelte";
+  import StatewideComparisonChart from "$lib/components/StatewideComparisonChart.svelte";
+
+  $: isRateMetric = metricKey.includes("-rate") || metricKey.includes("-percentage");
+
+  // Rate metrics are 0–100. Values outside that range indicate upstream data
+  // issues (e.g. denominator races/year mismatches) — drop them so one garbage
+  // point doesn't warp the y-axis or draw a flying line across the chart.
+  const sanitizeRateValue = (v, isRate) => {
+    if (v == null) return null;
+    const n = Number(v);
+    if (!Number.isFinite(n)) return null;
+    if (isRate && (n < 0 || n > 100)) return null;
+    return n;
+  };
+
+  let minStopsThreshold = 100;
+  let maxStopsThreshold = null; // null = All
+  let lastInitializedAgency = "";
+  let showMSHP = false;
+  let useSqrtScale = true;    // default sqrt; user can toggle
 
   export let open = false;
   export let metricKey = "";
   export let metricLabel = "";
-  export let rows = [];
-  export let raceKeys = [];
   export let baselines = [];
   export let agencyName = "";
+  // Kept for backward compat — chart fetches its own data
+  export let rows = [];
+  export let raceKeys = [];
 
   const dispatch = createEventDispatcher();
   /** @type {HTMLDivElement | undefined} */
   let dialogEl;
-  let ChartComponent;
-  let LineComponent;
-  let chartLoadError = null;
 
-  const chartTypeForMetric = (key, sample) => {
-    if (!key) return "bar";
-    if (sample && typeof sample === "object" && !Array.isArray(sample)) return "line";
-    return "bar";
+  // ── Data fetching ──────────────────────────────────────────────────────────
+
+  const metricCache = new Map();
+  let allRows = [];
+  let isLoading = false;
+  let loadError = "";
+
+  // Snap an agency's max total stops up to the nearest filter bucket.
+  const niceMaxStopsBucket = (v) => {
+    if (!Number.isFinite(v) || v <= 1000) return null;
+    if (v <= 10000) return 10000;
+    if (v <= 25000) return 25000;
+    if (v <= 50000) return 50000;
+    return null;
   };
 
-  const toNumber = (value) => {
-    const numeric = typeof value === "string" ? Number(value) : value;
-    return Number.isFinite(numeric) ? numeric : 0;
+  const normalizeAgency = (name) =>
+    String(name || "")
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, " ")
+      .trim();
+
+  // MSHP dominates count scales — excluded from grey series by default.
+  const MSHP_NORMALIZED = "missouri state highway patrol";
+
+  const fetchMetricRows = (key) => {
+    if (!key) return Promise.resolve([]);
+    const cached = metricCache.get(key);
+    if (cached) return cached;
+    const promise = fetch(withDataBase(`/data/dist/metric_year/${key}.json`))
+      .then(async (r) => {
+        if (!r.ok) throw new Error(`${r.status}`);
+        const d = await r.json();
+        return Array.isArray(d?.rows) ? d.rows : [];
+      })
+      .catch((err) => {
+        metricCache.delete(key);
+        throw err;
+      });
+    metricCache.set(key, promise);
+    return promise;
   };
 
-  const toTotal = (value) => {
-    if (value === null || value === undefined) return 0;
-    if (typeof value === "number" || typeof value === "string") return toNumber(value);
-    if (typeof value !== "object" || Array.isArray(value)) return 0;
+  let stopsRows = [];
 
-    const direct = value.Total ?? value.total;
-    if (direct !== null && direct !== undefined && direct !== "") {
-      return toNumber(direct);
+  $: if (open && metricKey) {
+    const key = metricKey;
+    if (!metricCache.has(key)) {
+      isLoading = true;
+      loadError = "";
+      allRows = [];
     }
+    Promise.all([
+      fetchMetricRows(key),
+      fetchMetricRows("stops"),
+    ])
+      .then(([metric, stops]) => {
+        if (metricKey === key) {
+          allRows = metric;
+          stopsRows = stops;
+          isLoading = false;
+        }
+      })
+      .catch((err) => {
+        if (metricKey === key) { loadError = err.message; isLoading = false; allRows = []; }
+      });
+  }
 
-    return resolvedRaceKeys.reduce((acc, key) => {
-      const lower = key.toLowerCase();
-      return acc + toNumber(value[key] ?? value[lower] ?? 0);
-    }, 0);
-  };
+  // ── Chart panel data ───────────────────────────────────────────────────────
 
-  $: resolvedRaceKeys = raceKeys.length
-    ? raceKeys
-    : ["White", "Black", "Hispanic", "Native American", "Asian", "Other"];
-  $: isPercentageMetric = metricKey.endsWith("-percentage");
-  $: metricRows = (rows || []).filter((row) => row?.row_key === metricKey);
-  $: metricRowsSorted = metricRows.slice().sort((a, b) => Number(a?.year) - Number(b?.year));
-  $: sampleValue = metricRows[0];
-  $: chartType = chartTypeForMetric(metricKey, sampleValue);
-  $: tableId = metricRows[0]?.table_id ?? "";
-  $: sectionId = metricRows[0]?.section_id ?? "";
-  $: metricId = metricRows[0]?.metric_id ?? "";
-  $: isRateMetric = sectionId === "rates" || metricId.includes("rate");
-
-  const numberFormatter = new Intl.NumberFormat(undefined, {
-    maximumFractionDigits: 1,
-  });
-  const percentFormatter = new Intl.NumberFormat(undefined, {
-    style: "percent",
-    maximumFractionDigits: 1,
-  });
-
-  const formatNumber = (value, { isPercentage = false } = {}) => {
-    if (value === null || value === undefined) return "—";
-    if (typeof value !== "number" || !Number.isFinite(value)) return String(value);
-    return isPercentage ? percentFormatter.format(value) : numberFormatter.format(value);
-  };
-
-  const baselineRaceOrder = [
-    "Total",
-    "White",
-    "Black",
-    "Hispanic",
-    "Asian",
-    "Other",
-    "Native American",
+  const RACE_PANELS = [
+    { race: "White",           label: race_white },
+    { race: "Black",           label: race_black },
+    { race: "Hispanic",        label: race_hispanic },
+    { race: "Native American", label: race_native_american },
+    { race: "Asian",           label: race_asian },
+    { race: "Other",           label: race_other },
   ];
 
-  const raceLabel = (key) => {
-    switch (key) {
-      case "Total":
-        return race_total();
-      case "White":
-        return race_white();
-      case "Black":
-        return race_black();
-      case "Hispanic":
-        return race_hispanic();
-      case "Asian":
-        return race_asian();
-      case "Other":
-        return race_other();
-      case "Native American":
-        return race_native_american();
-      default:
-        return key;
+  const TOTAL_COLOR = "#1e293b";
+
+  $: allYears = Array.from(new Set(allRows.map((r) => Number(r.year))))
+    .filter(Number.isFinite)
+    .sort((a, b) => a - b);
+  $: normalizedAgencyName = normalizeAgency(agencyName);
+
+  // Most recent stops row for the selected agency (used for panel skip + header label)
+  $: agencyStopsRow = (() => {
+    const agencyRows = stopsRows.filter(
+      (r) => normalizeAgency(String(r.agency || "")) === normalizedAgencyName
+    );
+    if (!agencyRows.length) return null;
+    return agencyRows.reduce((best, r) =>
+      Number(r.year) > Number(best.year) ? r : best
+    );
+  })();
+
+  // Max total stops per agency across all years — shared by sharedRateYMax + buildPanel.
+  $: agencyMaxTotalStops = (() => {
+    const map = new Map();
+    for (const row of stopsRows) {
+      const ag = normalizeAgency(String(row.agency || "").trim());
+      if (!ag) continue;
+      const v = Number(row["Total"] ?? NaN);
+      if (Number.isFinite(v)) map.set(ag, Math.max(map.get(ag) ?? 0, v));
     }
-  };
+    return map;
+  })();
 
-  const labelForId = (kind, id) => {
-    if (!id) return "";
-    const key = `${kind}_${id}`;
-    const fn = m[key];
-    return typeof fn === "function" ? fn() : "";
-  };
+  // Shared y-axis max for rate metrics — scaled to the range of the selected
+  // agency and statewide baselines across all races, so every rate panel uses
+  // the same scale and inter-race comparisons are honest.
+  $: sharedRateYMax = (() => {
+    if (!isRateMetric) return null;
 
-  $: tableLabel = labelForId("table", tableId) || tableId;
-  $: sectionLabel = labelForId("section", sectionId) || sectionId;
+    const cols = ["Total", "White", "Black", "Hispanic", "Native American", "Asian", "Other"];
+    let globalMax = 0;
 
-  const stackRaceKeys = (keys) =>
-    keys.filter((key) => key && key.toLowerCase() !== "total");
-
-  const getRaceValue = (row, race) => {
-    if (!row || !race) return 0;
-    const lower = race.toLowerCase();
-    return toNumber(row[race] ?? row[lower] ?? 0);
-  };
-
-  const raceColor = (race) => importedRaceColors[race] || "#25784c";
-
-  $: stackedRaceKeys = stackRaceKeys(resolvedRaceKeys);
-  $: lineRaceKeys = stackedRaceKeys.length ? stackedRaceKeys : ["Total"];
-
-  const formatChartValue = (value) => {
-    if (value === null || value === undefined) return "—";
-    if (typeof value !== "number" || !Number.isFinite(value)) return String(value);
-    if (isPercentageMetric) {
-      return `${numberFormatter.format(value * 100)}%`;
+    for (const row of allRows) {
+      const ag = normalizeAgency(String(row.agency || "").trim());
+      if (ag !== normalizedAgencyName) continue;
+      for (const col of cols) {
+        const v = sanitizeRateValue(row[col], isRateMetric);
+        if (v !== null && v > globalMax) globalMax = v;
+      }
     }
-    return numberFormatter.format(value);
+
+    for (const r of baselines) {
+      if (r.row_key !== metricKey) continue;
+      const v = sanitizeRateValue(r.mean__no_mshp, isRateMetric);
+      if (v !== null && v > globalMax) globalMax = v;
+    }
+
+    return globalMax > 0 ? Math.min(globalMax * 1.1, 100) : null;
+  })();
+
+  // Build filtered series for one column (race or "Total").
+  const buildPanel = (col, stopsCol, allRows, stopsRows, allYears, ctx) => {
+    const {
+      normalizedAgencyName, isRateMetric, minStopsThreshold, maxStopsThreshold,
+      showMSHP, sharedRateYMax, agencyStopsRow, agencyMaxTotalStops,
+    } = ctx;
+
+    const byAgency = new Map();
+    for (const row of allRows) {
+      const agency = String(row.agency || "").trim();
+      if (!agency) continue;
+      if (!byAgency.has(agency)) byAgency.set(agency, new Map());
+      const val = sanitizeRateValue(row[col], isRateMetric);
+      if (val !== null) byAgency.get(agency).set(Number(row.year), val);
+    }
+
+    // Max stops for the relevant column — used to filter noisy grey series.
+    const agencyMaxStops = new Map();
+    for (const row of stopsRows) {
+      const ag = normalizeAgency(String(row.agency || "").trim());
+      if (!ag) continue;
+      const v = Number(row[stopsCol] ?? NaN);
+      if (Number.isFinite(v)) agencyMaxStops.set(ag, Math.max(agencyMaxStops.get(ag) ?? 0, v));
+    }
+
+    const greySeries = [];
+    let selectedSeries = null;
+
+    for (const [agency, yearMap] of byAgency.entries()) {
+      const data = allYears.map((y) => ({ year: y, value: yearMap.get(y) ?? null }));
+      if (!data.some((p) => p.value !== null)) continue;
+
+      const normAgency = normalizeAgency(agency);
+      if (normAgency === normalizedAgencyName) {
+        selectedSeries = { agency, data };
+      } else {
+        const isMSHP = normAgency === MSHP_NORMALIZED;
+        const totalStops = agencyMaxTotalStops.get(normAgency) ?? 0;
+        const passesMin = totalStops >= minStopsThreshold;
+        const passesMax = maxStopsThreshold == null || totalStops <= maxStopsThreshold;
+        if (passesMin && passesMax && (showMSHP || !isMSHP)) {
+          greySeries.push({ agency, data });
+        }
+      }
+    }
+
+    const colStops = agencyStopsRow?.[stopsCol];
+    // Min-stops filter applies only to grey background series (above) — the
+    // selected agency is always drawn so its values show even at low volumes.
+    const skipPanel = false;
+
+    // Rate metrics: shared yMax (same across all panels for comparability).
+    // Count metrics: null → SpaghettiChart auto-ranges from visible series only.
+    const yMax = isRateMetric ? sharedRateYMax : null;
+
+    return { greySeries, selectedSeries, yMax, skipPanel, colStops };
   };
 
-  const buildStackedData = (rows) => {
-    if (!rows.length || !stackedRaceKeys.length) return [];
-    const result = [];
-    rows.forEach((row) => {
-      const year = row?.year;
-      if (!year) return;
-      const data = stackedRaceKeys.map((race) => ({
-        year: String(year),
-        race,
-        value: toNumber(getRaceValue(row, race)),
-      }));
-      let offset = 0;
-      data.forEach((entry) => {
-        const value = Number.isFinite(entry.value) ? entry.value : 0;
-        const start = offset;
-        const end = offset + value;
-        result.push({
-          year: entry.year,
-          race: entry.race,
-          value,
-          values: [start, end],
-          data,
-        });
-        offset = end;
-      });
-    });
-    return result;
+  // When opening the modal for an agency with very few recent stops, default
+  // the min-stops filter to 0 so its line isn't filtered out of count panels.
+  $: if (open && agencyStopsRow && agencyName && agencyName !== lastInitializedAgency) {
+    lastInitializedAgency = agencyName;
+    const total = Number(agencyStopsRow["Total"] ?? NaN);
+    minStopsThreshold = Number.isFinite(total) && total < 100 ? 0 : 100;
+    const agencyMax = agencyMaxTotalStops.get(normalizedAgencyName) ?? 0;
+    maxStopsThreshold = niceMaxStopsBucket(agencyMax);
+  }
+  $: if (!open) lastInitializedAgency = "";
+
+  $: panelCtx = {
+    normalizedAgencyName, isRateMetric, minStopsThreshold, maxStopsThreshold,
+    showMSHP, sharedRateYMax, agencyStopsRow, agencyMaxTotalStops,
   };
 
-  $: stackedData = buildStackedData(metricRowsSorted);
-  $: lineSeries = lineRaceKeys.map((race) => ({
+  // ── Statewide series (rate metrics) ───────────────────────────────────────
+
+  // baselines schema: { row_key, year, metric (race/category), count (# agencies),
+  //   mean, median, mean__no_mshp, median__no_mshp }
+  // col maps to the `metric` field ("Total", "White", "Black", etc.)
+  const buildStatewideSeries = (col, baselines, key) => {
+    const isRate = key.includes("-rate") || key.includes("-percentage");
+    return {
+      data: baselines
+        .filter((r) => r.row_key === key && r.metric === col)
+        .map((r) => ({ year: Number(r.year), value: sanitizeRateValue(r.mean__no_mshp, isRate) }))
+        .filter((p) => Number.isFinite(p.year))
+        .sort((a, b) => a.year - b.year),
+    };
+  };
+
+  $: totalStatewideSeries = buildStatewideSeries("Total", baselines, metricKey);
+
+  $: panelData = RACE_PANELS.map(({ race, label }) => ({
     race,
-    data: metricRowsSorted
-      .filter((row) => row?.year !== null && row?.year !== undefined)
-      .map((row) => ({
-        year: String(row?.year),
-        race,
-        value: toNumber(getRaceValue(row, race)),
-      })),
+    label,
+    color: raceColors[race] || "#64748b",
+    statewideSeries: buildStatewideSeries(race, baselines, metricKey),
+    ...buildPanel(race, race, allRows, stopsRows, allYears, panelCtx),
   }));
-  $: lineData = lineSeries.flatMap((series) => series.data);
-  $: lineValuesByYear = lineSeries.reduce((acc, series) => {
-    series.data.forEach((entry) => {
-      if (!entry.year) return;
-      if (!acc[entry.year]) acc[entry.year] = {};
-      acc[entry.year][series.race] = entry.value;
-    });
-    return acc;
-  }, {});
-  $: chartLegendKeys = chartType === "line" ? lineRaceKeys : stackedRaceKeys;
 
-  $: baselineEntries = Array.isArray(baselines)
-    ? baselines.filter((entry) => entry?.row_key === metricKey)
-    : [];
+  $: totalPanelData = allRows.length
+    ? { color: TOTAL_COLOR, ...buildPanel("Total", "Total", allRows, stopsRows, allYears, panelCtx) }
+    : null;
 
-  $: baselineYears = Array.from(new Set(baselineEntries.map((entry) => entry.year))).sort(
-    (a, b) => Number(b) - Number(a)
-  );
+  const numberFormatter = new Intl.NumberFormat(undefined, { maximumFractionDigits: 1 });
 
-  $: baselineByYear = baselineEntries.reduce((acc, entry) => {
-    const year = entry.year;
-    if (year === null || year === undefined) return acc;
-    if (!acc[year]) acc[year] = [];
-    acc[year].push(entry);
-    return acc;
-  }, {});
+  // ── Modal controls ─────────────────────────────────────────────────────────
 
-  $: agencyTotalsByYear = metricRows.reduce((acc, row) => {
-    const year = row?.year;
-    if (!year) return acc;
-    if (!acc[year]) acc[year] = {};
-    const metric = row;
-    if (metric === null || metric === undefined) return acc;
-    if (typeof metric === "number" || typeof metric === "string") {
-      acc[year].Total = (acc[year].Total ?? 0) + toNumber(metric);
-      return acc;
-    }
-    if (typeof metric !== "object" || Array.isArray(metric)) return acc;
-    baselineRaceOrder.forEach((race) => {
-      const lower = race.toLowerCase();
-      const value = metric[race] ?? metric[lower];
-      if (value === null || value === undefined) return;
-      acc[year][race] = (acc[year][race] ?? 0) + toNumber(value);
-    });
-    return acc;
-  }, {});
-
-  const sortBaselineMetrics = (a, b) => {
-    const orderA = baselineRaceOrder.indexOf(a.metric);
-    const orderB = baselineRaceOrder.indexOf(b.metric);
-    if (orderA !== -1 || orderB !== -1) {
-      if (orderA === -1) return 1;
-      if (orderB === -1) return -1;
-      return orderA - orderB;
-    }
-    return String(a.metric).localeCompare(String(b.metric));
-  };
-
-  const handleBackdrop = (event) => {
-    if (event.target === event.currentTarget) {
-      dispatch("close");
-    }
-  };
-
-  const handleKeydown = (event) => {
-    if (event.key === "Escape") {
-      dispatch("close");
-    }
-  };
-
-  const handleGlobalKeydown = (event) => {
-    if (!open) return;
-    if (event.key === "Escape") {
-      dispatch("close");
-    }
-  };
+  const handleBackdrop = (e) => { if (e.target === e.currentTarget) dispatch("close"); };
+  const handleGlobalKeydown = (e) => { if (open && e.key === "Escape") dispatch("close"); };
 
   $: if (open) {
-    if (typeof document !== "undefined") {
-      document.body.style.overflow = "hidden";
-    }
-    if (typeof requestAnimationFrame !== "undefined") {
-      requestAnimationFrame(() => dialogEl?.focus());
-    }
-    if (typeof window !== "undefined") {
-      window.addEventListener("keydown", handleGlobalKeydown);
-    }
+    if (typeof document !== "undefined") document.body.style.overflow = "hidden";
+    if (typeof window !== "undefined") window.addEventListener("keydown", handleGlobalKeydown);
+    if (typeof requestAnimationFrame !== "undefined") requestAnimationFrame(() => dialogEl?.focus());
   } else {
-    if (typeof document !== "undefined") {
-      document.body.style.overflow = "";
-    }
-    if (typeof window !== "undefined") {
-      window.removeEventListener("keydown", handleGlobalKeydown);
-    }
+    if (typeof document !== "undefined") document.body.style.overflow = "";
+    if (typeof window !== "undefined") window.removeEventListener("keydown", handleGlobalKeydown);
   }
 
   onDestroy(() => {
-    if (typeof document !== "undefined") {
-      document.body.style.overflow = "";
-    }
-    if (typeof window !== "undefined") {
-      window.removeEventListener("keydown", handleGlobalKeydown);
-    }
-  });
-
-  onMount(async () => {
-    try {
-      const [stackedModule, lineModule] = await Promise.all([
-        import("$lib/components/MetricChartStacked.svelte"),
-        import("$lib/components/MetricChartLines.svelte"),
-      ]);
-      ChartComponent = stackedModule.default;
-      LineComponent = lineModule.default;
-    } catch (error) {
-      chartLoadError = error;
-    }
+    if (typeof document !== "undefined") document.body.style.overflow = "";
+    if (typeof window !== "undefined") window.removeEventListener("keydown", handleGlobalKeydown);
   });
 </script>
 
@@ -327,52 +320,26 @@
   >
     <div
       bind:this={dialogEl}
-      class="w-full max-w-full rounded-none bg-white p-4 shadow-2xl focus:outline-none sm:max-w-4xl sm:rounded-2xl sm:p-6 overflow-y-auto overflow-x-hidden"
-      style="max-height: calc(100dvh - var(--site-header-height, 0px) - 2rem);"
+      class="h-full w-full max-w-full overflow-x-hidden overflow-y-auto rounded-none bg-white p-4 shadow-2xl focus:outline-none sm:h-auto sm:max-h-[calc(100dvh-var(--site-header-height,0px)-2rem)] sm:max-w-[90rem] sm:rounded-2xl sm:p-6"
       role="dialog"
       aria-modal="true"
       aria-labelledby="modal-title"
       tabindex="-1"
-      on:keydown={handleKeydown}
+      on:keydown={(e) => { if (e.key === "Escape") dispatch("close"); }}
     >
+
+      <!-- Header -->
       <div class="flex items-start justify-between gap-4">
         <div>
           {#if agencyName}
-            <p class="text-[11px] uppercase tracking-[0.22em] text-slate-400">
-              {agencyName}
-            </p>
+            <p class="text-base font-semibold text-slate-700">{agencyName}</p>
           {/if}
-          {#if !agencyName}
-            <p class="text-xs uppercase tracking-[0.2em] text-slate-500">
-              {modal_metric_label()}
-            </p>
-          {/if}
-          <h2 id="modal-title" class="mt-2 text-xl font-semibold text-slate-900">
+          <h2 id="modal-title" class="mt-1 text-xl font-semibold text-slate-900">
             {metricLabel || metricKey}
           </h2>
-          {#if metricKey}
-            <p class="mt-2 text-xs font-mono text-slate-500">
-              {metricKey}
-            </p>
-          {/if}
-          {#if tableLabel || sectionLabel}
-            <p class="mt-2 text-xs text-slate-500">
-              {#if tableLabel}
-                <span class="font-semibold text-slate-700">{agency_table_label()}:</span>
-                {tableLabel}
-              {/if}
-              {#if tableLabel && sectionLabel}
-                <span class="mx-2 text-slate-300">•</span>
-              {/if}
-              {#if sectionLabel}
-                <span class="font-semibold text-slate-700">{agency_section_label()}:</span>
-                {sectionLabel}
-              {/if}
-            </p>
-          {/if}
         </div>
         <button
-          class="rounded-lg border border-slate-200 px-3 py-1 text-sm font-semibold text-slate-600 hover:bg-slate-50"
+          class="shrink-0 rounded-lg border border-slate-200 px-3 py-1 text-sm font-semibold text-slate-600 hover:bg-slate-50"
           type="button"
           on:click={() => dispatch("close")}
         >
@@ -380,156 +347,171 @@
         </button>
       </div>
 
+      <!-- Spaghetti charts -->
       <div class="mt-6 rounded-xl border border-slate-200 bg-slate-50 p-4">
-        {#if chartType === "line"}
-          {#if lineData.length === 0}
-            <p class="text-sm text-slate-500">{modal_no_data()}</p>
-          {:else if chartLoadError}
-            <p class="text-sm text-slate-500">{modal_chart_unavailable()}</p>
-          {:else}
-            <div class="space-y-3">
-              <div class="h-[280px]">
-                {#if LineComponent}
-                  <svelte:component
-                    this={LineComponent}
-                    lineSeries={lineSeries}
-                    lineData={lineData}
-                    lineValuesByYear={lineValuesByYear}
-                    raceKeys={lineRaceKeys}
-                    raceLabel={raceLabel}
-                    raceColor={raceColor}
-                    formatChartValue={formatChartValue}
-                  />
+        {#if isLoading}
+          <div class="flex h-24 items-center justify-center text-sm text-slate-400">Loading…</div>
+        {:else if loadError}
+          <p class="text-sm text-rose-600">Could not load data ({loadError})</p>
+        {:else if allRows.length === 0}
+          <p class="text-sm text-slate-500">{modal_no_data()}</p>
+        {:else}
+          <!-- Filter / scale controls (count metrics only) -->
+          {#if !isRateMetric}
+            <div class="mb-4 flex flex-wrap items-center justify-end gap-3">
+              <!-- MSHP toggle -->
+              <button
+                type="button"
+                class="rounded border px-2.5 py-1 text-[11px] font-semibold transition {showMSHP ? 'border-slate-800 bg-slate-800 text-white' : 'border-slate-300 bg-white text-slate-600 hover:bg-slate-50'}"
+                on:click={() => showMSHP = !showMSHP}
+              >
+                {showMSHP ? m.chart_mshp_hide() : m.chart_mshp_show()}
+              </button>
+              <!-- Min stops -->
+              <div class="flex items-center gap-2">
+                <span class="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400">{m.chart_min_stops_label()}</span>
+                <div class="flex overflow-hidden rounded border border-slate-300 text-[11px] font-semibold">
+                  {#each [0, 100, 500, 1000, 5000] as preset, i}
+                    <button
+                      type="button"
+                      class="px-2.5 py-1 transition {minStopsThreshold === preset ? 'bg-slate-800 text-white' : 'bg-white text-slate-600 hover:bg-slate-50'} {i > 0 ? 'border-l border-slate-300' : ''}"
+                      on:click={() => minStopsThreshold = preset}
+                    >{preset >= 1000 ? `${preset / 1000}K` : preset}</button>
+                  {/each}
+                </div>
+              </div>
+              <!-- Max total stops -->
+              <div class="flex items-center gap-2">
+                <span class="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400">{m.chart_max_stops_label()}</span>
+                <div class="flex overflow-hidden rounded border border-slate-300 text-[11px] font-semibold">
+                  {#each [[null, null], [10000, '10K'], [25000, '25K'], [50000, '50K']] as [val, lbl], i}
+                    <button
+                      type="button"
+                      class="px-2.5 py-1 transition {maxStopsThreshold === val ? 'bg-slate-800 text-white' : 'bg-white text-slate-600 hover:bg-slate-50'} {i > 0 ? 'border-l border-slate-300' : ''}"
+                      on:click={() => maxStopsThreshold = val}
+                    >{lbl ?? m.chart_max_stops_all()}</button>
+                  {/each}
+                </div>
+              </div>
+              <!-- Scale toggle -->
+              <div class="flex items-center gap-2">
+                <span class="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400">{m.chart_scale_label()}</span>
+                <div class="flex overflow-hidden rounded border border-slate-300 text-[11px] font-semibold">
+                  <button
+                    type="button"
+                    class="px-2.5 py-1 transition {!useSqrtScale ? 'bg-slate-800 text-white' : 'bg-white text-slate-600 hover:bg-slate-50'}"
+                    on:click={() => useSqrtScale = false}
+                  >{m.chart_scale_linear()}</button>
+                  <button
+                    type="button"
+                    class="border-l border-slate-300 px-2.5 py-1 transition {useSqrtScale ? 'bg-slate-800 text-white' : 'bg-white text-slate-600 hover:bg-slate-50'}"
+                    on:click={() => useSqrtScale = true}
+                  >{m.chart_scale_sqrt()}</button>
+                </div>
+              </div>
+            </div>
+          {/if}
+
+          <!-- Total panel — own row, centered ~2/3 width -->
+          {#if totalPanelData}
+            <div class="mb-6 flex justify-center">
+              <div class="w-full lg:w-2/3">
+                <p class="mb-2 text-base font-semibold" style="color:{TOTAL_COLOR}">
+                  Total{metricLabel ? ' ' + metricLabel : ''}{#if totalPanelData.colStops != null && metricKey !== "stops"}&thinsp;<span class="font-normal normal-case tracking-normal text-slate-400">({agencyStopsRow?.year} total stops: {numberFormatter.format(totalPanelData.colStops)})</span>{/if}
+                </p>
+                {#if totalPanelData.skipPanel && !isRateMetric}
+                  <div class="flex h-[280px] items-center justify-center rounded-lg border border-slate-200 bg-white text-center text-[11px] text-slate-400">
+                    {m.chart_panel_skipped({ n: minStopsThreshold })}
+                  </div>
                 {:else}
-                  <div
-                    class="flex h-full items-center justify-center text-sm text-slate-500"
-                    aria-busy="true"
-                  >
-                    Loading chart…
+                  <div class="h-[280px]">
+                    {#if isRateMetric}
+                      <StatewideComparisonChart
+                        statewideSeries={totalStatewideSeries}
+                        selectedSeries={totalPanelData.selectedSeries}
+                        {allYears}
+                        yMax={totalPanelData.yMax}
+                        color={TOTAL_COLOR}
+                        {agencyName}
+                        height={280}
+                      />
+                    {:else}
+                      <SpaghettiChart
+                        greySeries={totalPanelData.greySeries}
+                        selectedSeries={totalPanelData.selectedSeries}
+                        {allYears}
+                        yMax={totalPanelData.yMax}
+                        useSqrt={useSqrtScale && !isRateMetric}
+                        {isRateMetric}
+                        color={TOTAL_COLOR}
+                        {agencyName}
+                        height={280}
+                      />
+                    {/if}
                   </div>
                 {/if}
               </div>
-              <div class="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-slate-600">
-                {#each chartLegendKeys as race}
-                  <span class="flex items-center gap-2">
-                    <span
-                      class="h-2.5 w-2.5 rounded-full"
-                      style={`background:${raceColor(race)}`}
-                    ></span>
-                    {raceLabel(race)}
-                  </span>
-                {/each}
-              </div>
             </div>
           {/if}
-        {:else if chartType === "bar"}
-          {#if stackedData.length === 0}
-            <p class="text-sm text-slate-500">{modal_no_data()}</p>
-          {:else if chartLoadError}
-            <p class="text-sm text-slate-500">{modal_chart_unavailable()}</p>
-          {:else if ChartComponent}
-            <div class="space-y-3">
-              <div class="h-[280px]">
-                <svelte:component
-                  this={ChartComponent}
-                  stackedData={stackedData}
-                  stackedRaceKeys={stackedRaceKeys}
-                  raceLabel={raceLabel}
-                  raceColor={raceColor}
-                  formatChartValue={formatChartValue}
-                />
-              </div>
-              <div class="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-slate-600">
-                {#each chartLegendKeys as race}
-                  <span class="flex items-center gap-2">
-                    <span
-                      class="h-2.5 w-2.5 rounded-full"
-                      style={`background:${raceColor(race)}`}
-                    ></span>
-                    {raceLabel(race)}
-                  </span>
-                {/each}
-              </div>
-            </div>
-          {:else}
-            <div
-              class="flex h-[280px] items-center justify-center text-sm text-slate-500"
-              aria-busy="true"
-            >
-              Loading chart…
-            </div>
-          {/if}
-        {:else}
-          <p class="text-sm text-slate-500">{modal_chart_unavailable()}</p>
-        {/if}
-      </div>
 
-      <div class="mt-6 rounded-xl border border-slate-200 bg-white p-4">
-        <div class="flex items-baseline justify-between gap-4">
-          <h3 class="text-sm font-semibold text-slate-900">
-            {modal_statewide_baselines_heading()}
-          </h3>
-          <p class="text-xs text-slate-400">{modal_statewide_baselines_subheading()}</p>
-        </div>
-        {#if baselineYears.length === 0}
-          <p class="mt-3 text-sm text-slate-500">{modal_no_baselines()}</p>
-        {:else}
-          <div class="mt-3 space-y-4">
-            {#each baselineYears as year}
-              {@const yearEntries = (baselineByYear[year] ?? []).slice().sort(sortBaselineMetrics)}
-              <div class="rounded-lg border border-slate-200">
-                <div class="border-b border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-600">
-                  {year}
-                </div>
-                <div class="overflow-x-auto">
-                  <table class="min-w-full table-auto border-separate border-spacing-0 text-xs text-slate-600">
-                    <thead class="bg-white text-[11px] uppercase tracking-wide text-slate-400">
-                      <tr>
-                        <th class="px-3 py-2 text-left font-semibold">
-                          {modal_baseline_race_header()}
-                        </th>
-                        <th class="px-3 py-2 text-left font-semibold">
-                          {agencyName || modal_baseline_agency_fallback()}
-                        </th>
-                        <th class="px-3 py-2 text-left font-semibold">
-                          {modal_baseline_mean_header()}
-                        </th>
-                        <th class="px-3 py-2 text-left font-semibold">
-                          {modal_baseline_median_header()}
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody class="divide-y divide-slate-100">
-                      {#each yearEntries as entry}
-                        <tr>
-                          <td class="px-3 py-2 font-medium text-slate-700">
-                            {raceLabel(entry.metric)}
-                          </td>
-                          <td class="px-3 py-2">
-                            {formatNumber(agencyTotalsByYear[year]?.[entry.metric], {
-                              isPercentage: isPercentageMetric,
-                            })}
-                          </td>
-                          <td class="px-3 py-2">
-                            {formatNumber(entry.mean__no_mshp, {
-                              isPercentage: isPercentageMetric,
-                            })}
-                          </td>
-                          <td class="px-3 py-2">
-                            {formatNumber(entry.median__no_mshp, {
-                              isPercentage: isPercentageMetric,
-                            })}
-                          </td>
-                        </tr>
-                      {/each}
-                    </tbody>
-                  </table>
-                </div>
+          <!-- Race panels — 3-column grid -->
+          <div class="grid grid-cols-1 gap-x-6 gap-y-7 sm:grid-cols-2 lg:grid-cols-3">
+            {#each panelData as panel}
+              <div>
+                <p class="mb-2 text-base font-semibold" style="color:{panel.color}">
+                  {panel.label()}{metricLabel ? ' ' + metricLabel : ''}{#if panel.colStops != null && metricKey !== "stops"}&thinsp;<span class="font-normal normal-case tracking-normal text-slate-400">({agencyStopsRow?.year} total stops: {numberFormatter.format(panel.colStops)})</span>{/if}
+                </p>
+                {#if panel.skipPanel && !isRateMetric}
+                  <div class="flex h-[280px] items-center justify-center rounded-lg border border-slate-200 bg-white text-center text-[11px] text-slate-400">
+                    {m.chart_panel_skipped({ n: minStopsThreshold })}
+                  </div>
+                {:else}
+                  <div class="h-[280px]">
+                    {#if isRateMetric}
+                      <StatewideComparisonChart
+                        statewideSeries={panel.statewideSeries}
+                        selectedSeries={panel.selectedSeries}
+                        {allYears}
+                        yMax={panel.yMax}
+                        color={panel.color}
+                        {agencyName}
+                        height={280}
+                      />
+                    {:else}
+                      <SpaghettiChart
+                        greySeries={panel.greySeries}
+                        selectedSeries={panel.selectedSeries}
+                        {allYears}
+                        yMax={panel.yMax}
+                        useSqrt={useSqrtScale && !isRateMetric}
+                        {isRateMetric}
+                        color={panel.color}
+                        {agencyName}
+                        height={280}
+                      />
+                    {/if}
+                  </div>
+                {/if}
               </div>
             {/each}
           </div>
+
+          {#if agencyName}
+            {#if isRateMetric}
+              <p class="mt-3 text-[10px] text-slate-400">
+                <span style="color:{TOTAL_COLOR}" class="font-semibold">{agencyName}</span>
+                {" — "}
+                <span>{m.chart_statewide_label()}</span>
+              </p>
+            {:else}
+              <p class="mt-3 text-[10px] text-slate-400">
+                {m.chart_count_legend({ agencyName })}
+              </p>
+            {/if}
+          {/if}
         {/if}
       </div>
+
     </div>
   </div>
 {/if}

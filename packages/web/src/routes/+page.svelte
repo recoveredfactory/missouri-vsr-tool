@@ -24,6 +24,7 @@
     home_chart_traffic_stops_label,
     home_chart_outcomes_heading,
     home_chart_outcomes_subheading,
+    home_chart_outcomes_note,
     home_outcome_warnings,
     home_outcome_citations,
     home_outcome_arrests,
@@ -39,6 +40,8 @@
     home_download_label_raw_stops,
     home_download_label_all_combined,
     home_download_label_vsr_statistics,
+    home_download_v2_heading,
+    home_download_v1_heading,
     home_download_about_note,
     home_about_link,
   } from "$lib/paraglide/messages";
@@ -87,33 +90,24 @@
     url: `${siteUrl}/`,
     inLanguage: ["en", "es"]
   };
-  const downloadManifest = data?.downloadManifest;
+  // Base URL without release path — used for v1 (pre-v2) download links
+  const dataBaseUrl = import.meta.env.PUBLIC_DATA_BASE_URL ?? "";
 
+  // Shared download helpers used for both v2 and v1 manifest-driven rendering
   $: downloadGroupMeta = {
-    csv: {
-      title: "CSV",
-      description: home_download_csv_description()
-    },
-    parquet: {
-      title: "Parquet",
-      description: home_download_parquet_description()
-    },
-    json: {
-      title: "JSON",
-      description: home_download_json_description()
-    }
+    csv:     { title: "CSV",     description: home_download_csv_description() },
+    parquet: { title: "Parquet", description: home_download_parquet_description() },
+    json:    { title: "JSON",    description: home_download_json_description() },
   };
 
   function getDownloadLabel(file) {
     if (file.group === "json" && /downloads\.json$/i.test(file.path)) {
       return home_download_label_all_combined();
     }
-    if (/vsr_statistics/i.test(file.path)) {
-      return home_download_label_vsr_statistics();
-    }
-    if (/agency_index/i.test(file.path)) return home_download_label_agency_list();
+    if (/vsr_statistics/i.test(file.path)) return home_download_label_vsr_statistics();
+    if (/agency_index/i.test(file.path))   return home_download_label_agency_list();
     if (/agency_comments/i.test(file.path)) return home_download_label_agency_comments();
-    if (/downloads/i.test(file.path)) return home_download_label_raw_stops();
+    if (/downloads/i.test(file.path))      return home_download_label_raw_stops();
     return file.path;
   }
 
@@ -122,10 +116,7 @@
     const units = ["B", "KB", "MB", "GB"];
     let value = bytes;
     let idx = 0;
-    while (value >= 1024 && idx < units.length - 1) {
-      value /= 1024;
-      idx += 1;
-    }
+    while (value >= 1024 && idx < units.length - 1) { value /= 1024; idx += 1; }
     const decimals = value >= 100 || idx === 0 ? 0 : 1;
     return `${value.toFixed(decimals)} ${units[idx]}`;
   }
@@ -136,25 +127,20 @@
     const orderedGroups = [];
     manifest.files.forEach((file) => {
       const group = file.group || "other";
-      if (!groups.has(group)) {
-        groups.set(group, []);
-        orderedGroups.push(group);
-      }
+      if (!groups.has(group)) { groups.set(group, []); orderedGroups.push(group); }
       groups.get(group).push(file);
     });
-    const preferredOrder = Object.keys(downloadGroupMeta);
-    const remaining = orderedGroups.filter((group) => !preferredOrder.includes(group));
-    const finalOrder = [
-      ...preferredOrder.filter((group) => groups.has(group)),
-      ...remaining
-    ];
-    return finalOrder.map((group) => ({
-      group,
-      files: groups.get(group)
-    }));
+    const preferred = ["csv", "parquet", "json"];
+    const remaining = orderedGroups.filter((g) => !preferred.includes(g));
+    return [...preferred.filter((g) => groups.has(g)), ...remaining]
+      .map((group) => ({ group, files: groups.get(group) }));
   }
 
-  $: downloadGroups = buildDownloadGroups(downloadManifest);
+  $: v2DownloadGroups = buildDownloadGroups(data?.v2DownloadManifest && {
+    ...data.v2DownloadManifest,
+    files: data.v2DownloadManifest.files?.filter((f) => f.path.startsWith(data.v2DownloadManifest.prefix)),
+  });
+  $: v1DownloadGroups = buildDownloadGroups(data?.v1DownloadManifest);
 
   function showTooltip(event, content) {
     const el = event.currentTarget || event.target;
@@ -320,9 +306,11 @@
                   <text x={padding.left - 8} y={padding.top + height/2 + 3} text-anchor="end" font-size="8" fill="#64748b" font-weight="600">{formatStopsAxis(stopsMax/2)}</text>
                   <text x={padding.left - 8} y={padding.top + height + 3} text-anchor="end" font-size="8" fill="#64748b" font-weight="600">0</text>
 
-                  <!-- X-axis year labels -->
+                  <!-- X-axis year labels: every 5th year + last -->
                   {#each years as year, i}
-                    <text x={padding.left + (i / (years.length - 1)) * width} y={padding.top + height + 16} text-anchor="middle" font-size="9" fill="#64748b">{year}</text>
+                    {#if year % 5 === 0 || i === years.length - 1}
+                      <text x={padding.left + (i / (years.length - 1)) * width} y={padding.top + height + 16} text-anchor="middle" font-size="9" fill="#64748b">{year}</text>
+                    {/if}
                   {/each}
 
                   <!-- Total Stops line -->
@@ -390,9 +378,11 @@
                   <text x={padding.left - 8} y={padding.top + height/2 + 3} text-anchor="end" font-size="8" fill="#64748b" font-weight="600">{formatStopsAxis(consentMax/2)}</text>
                   <text x={padding.left - 8} y={padding.top + height + 3} text-anchor="end" font-size="8" fill="#64748b" font-weight="600">0</text>
 
-                  <!-- X-axis year labels -->
+                  <!-- X-axis year labels: every 5th year + last -->
                   {#each years as year, i}
-                    <text x={padding.left + (i / (years.length - 1)) * width} y={padding.top + height + 16} text-anchor="middle" font-size="9" fill="#64748b">{year}</text>
+                    {#if year % 5 === 0 || i === years.length - 1}
+                      <text x={padding.left + (i / (years.length - 1)) * width} y={padding.top + height + 16} text-anchor="middle" font-size="9" fill="#64748b">{year}</text>
+                    {/if}
                   {/each}
 
                   <!-- Consent Searches line -->
@@ -598,9 +588,11 @@
                     <text x={padding3.left - 6} y={padding3.top + (1 - tick / yMax) * height3 + 3} text-anchor="end" font-size="8" fill="#64748b">{tick}%</text>
                   {/each}
 
-                  <!-- X-axis year labels -->
+                  <!-- X-axis year labels: every 5th year + last -->
                   {#each years3 as year, i}
-                    <text x={padding3.left + (i / (years3.length - 1)) * width3} y={padding3.top + height3 + 16} text-anchor="middle" font-size="9" fill="#64748b">{year}</text>
+                    {#if year % 5 === 0 || i === years3.length - 1}
+                      <text x={padding3.left + (i / (years3.length - 1)) * width3} y={padding3.top + height3 + 16} text-anchor="middle" font-size="9" fill="#64748b">{year}</text>
+                    {/if}
                   {/each}
 
                   <!-- Lines + data points for each outcome -->
@@ -644,6 +636,7 @@
                     </span>
                   {/each}
                 </div>
+                <p class="mt-2 text-center text-[10px] text-slate-500">{home_chart_outcomes_note()}</p>
               </div>
             {/if}
           </div>
@@ -664,9 +657,13 @@
         {home_download_description()}
       </p>
 
-      {#if downloadGroups.length}
+      <!-- v2 downloads — manifest-driven so JSON shows as one combined file -->
+      <p class="mb-3 text-center text-xs font-semibold uppercase tracking-widest text-slate-400">
+        {home_download_v2_heading()}
+      </p>
+      {#if v2DownloadGroups.length}
         <div class="grid gap-6 md:grid-cols-3">
-          {#each downloadGroups as downloadGroup}
+          {#each v2DownloadGroups as downloadGroup}
             <div class="flex flex-col rounded-lg border-2 border-slate-200 bg-slate-50 p-6 text-center">
               <h3 class="mb-2 text-xl font-bold text-slate-900">
                 {downloadGroupMeta[downloadGroup.group]?.title ?? downloadGroup.group.toUpperCase()}
@@ -674,21 +671,17 @@
               <p class="mb-4 min-h-[72px] text-sm text-slate-600">
                 {downloadGroupMeta[downloadGroup.group]?.description ?? home_download_format_fallback()}
               </p>
-              {#each downloadGroup.files as file, index (file.path)}
+              {#each downloadGroup.files as file, i (file.path)}
                 <a
                   href={withDataBase(`/data/downloads/${file.path}`)}
                   download
-                  on:click={() =>
-                    handleDownloadClick(file, withDataBase(`/data/downloads/${file.path}`))
-                  }
-                  class={`block rounded-lg bg-[#1b613c] px-5 py-2.5 text-sm font-semibold text-white no-underline transition-colors hover:bg-[#105430] ${
-                    index === downloadGroup.files.length - 1 ? "" : "mb-3"
-                  }`}
+                  on:click={() => handleDownloadClick(file, withDataBase(`/data/downloads/${file.path}`))}
+                  class={`block rounded-lg bg-[#1b613c] px-5 py-2.5 text-sm font-semibold text-white no-underline transition-colors hover:bg-[#105430] ${i < downloadGroup.files.length - 1 ? "mb-3" : ""}`}
                 >
                   <span class="block">{getDownloadLabel(file)}</span>
-                  <span class="mt-1 block text-[11px] font-medium text-white/85">
-                    {formatBytes(file.size_bytes)}
-                  </span>
+                  {#if file.size_bytes}
+                    <span class="mt-1 block text-[11px] font-medium text-white/85">{formatBytes(file.size_bytes)}</span>
+                  {/if}
                 </a>
               {/each}
             </div>
@@ -699,6 +692,35 @@
           <span class="text-sm text-slate-500">{home_download_loading()}</span>
         </div>
       {/if}
+
+      <!-- Previous release (v1, 2020–2024) — simple link list -->
+      <div class="mt-10 border-t border-slate-100 pt-6">
+        <p class="mb-3 text-center text-xs font-semibold uppercase tracking-widest text-slate-400">
+          {home_download_v1_heading()}
+        </p>
+        {#if v1DownloadGroups.length}
+          <div class="flex flex-wrap justify-center gap-x-6 gap-y-2">
+            {#each v1DownloadGroups as downloadGroup}
+              {#each downloadGroup.files as file (file.path)}
+                <a
+                  href="{dataBaseUrl}/downloads/{file.path}"
+                  download
+                  on:click={() => handleDownloadClick(file, `${dataBaseUrl}/downloads/${file.path}`)}
+                  class="text-sm text-slate-500 no-underline hover:text-slate-800"
+                >
+                  {getDownloadLabel(file)}
+                  <span class="font-mono text-xs uppercase text-slate-400">.{downloadGroup.group}</span>
+                  {#if file.size_bytes}
+                    <span class="text-xs text-slate-400">({formatBytes(file.size_bytes)})</span>
+                  {/if}
+                </a>
+              {/each}
+            {/each}
+          </div>
+        {:else}
+          <p class="text-center text-sm text-slate-400">{home_download_loading()}</p>
+        {/if}
+      </div>
 
       <p class="mt-8 text-center text-sm text-slate-600">
         {@html home_download_about_note({ link: `<a href="#about" class="text-[#1b613c] underline hover:text-[#105430]">${home_about_link()}</a>` })}

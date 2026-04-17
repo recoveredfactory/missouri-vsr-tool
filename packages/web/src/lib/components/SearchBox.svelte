@@ -32,7 +32,7 @@
     item?.agency_slug ||
     search_unknown_agency();
   const toStops = (item) =>
-    item?.all_stops_total ?? item?.["rates-by-race--totals--all-stops"];
+    item?.all_stops_total ?? item?.stops;
   const formatStops = (value) => {
     const numeric = typeof value === "string" ? Number(value) : value;
     if (!Number.isFinite(numeric)) return null;

@@ -105,9 +105,11 @@ export default $config({
     new sst.aws.SvelteKit("Web", {
       path: "packages/web",
       domain: webDomain,
+      warm: isProdStage ? 1 : 0,
       environment: {
         PUBLIC_DONATE_URL: env.PUBLIC_DONATE_URL ?? "",
         PUBLIC_DATA_BASE_URL: dataBaseUrl,
+        PUBLIC_DATA_RELEASE_PATH: env.PUBLIC_DATA_RELEASE_PATH ?? "",
       },
     });
 

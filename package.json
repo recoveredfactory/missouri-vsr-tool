@@ -7,7 +7,8 @@
     "deploy": "sst deploy",
     "diff": "sst diff",
     "remove": "sst remove",
-    "sync:data": "bash scripts/sync-data.sh"
+    "sync:data": "bash scripts/sync-data.sh",
+    "invalidate:cdn": "bash scripts/invalidate-cdn.sh"
   },
   "devDependencies": {
     "sst": "^3.17.25"

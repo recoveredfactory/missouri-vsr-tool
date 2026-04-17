@@ -22,10 +22,12 @@
   import { page } from "$app/stores";
   import { QuickScore } from "quick-score";
   import { getLocale, locales, setLocale } from "$lib/paraglide/runtime";
+  import { withDataBase } from "$lib/dataBase";
   import { onMount } from "svelte";
 
-  export let agencies = [];
   export let selectedAgencyLabel = "";
+
+  let agencies = [];
 
   let query = "";
   let results = [];
@@ -235,6 +237,12 @@
   };
 
   onMount(() => {
+    // Fetch agencies client-side so the index JSON doesn't bloat the initial HTML.
+    fetch(withDataBase("/data/dist/agency_index.json"))
+      .then((r) => (r.ok ? r.json() : []))
+      .then((data) => { agencies = data; })
+      .catch(() => {});
+
     const handlePointerDown = (event) => {
       if (!searchContainer || !results.length) return;
       if (searchContainer.contains(event.target)) return;
@@ -353,15 +361,15 @@
 
 <header
   bind:this={headerElement}
-  class="sticky top-0 z-50 border-b-6 border-b-[#1b613c] bg-white/95 backdrop-blur-sm shadow-sm"
+  class="sticky top-0 z-[70] border-b-6 border-b-[#1b613c] bg-white/95 backdrop-blur-sm shadow-sm"
 >
   <div class="mx-auto w-full max-w-7xl px-4 sm:px-6 md:w-[85%] md:px-0">
-    <div class="py-2 sm:py-2.5">
+    <div class="py-1.5 sm:py-2.5">
       <div class="flex items-center justify-between gap-3">
         <div class="min-w-0">
           <a
             href="/"
-            class="min-w-0 font-bold text-[#1b613c] no-underline text-[clamp(0.95rem,4vw,1.45rem)] leading-tight"
+            class="min-w-0 font-bold text-[#1b613c] no-underline text-[clamp(0.85rem,3.4vw,1.45rem)] leading-tight"
           >
             {home_header_title()}
           </a>
@@ -395,13 +403,13 @@
           {/if}
           <a
             href={donateUrl}
-            class="inline-flex h-9 items-center rounded-lg bg-[#1b613c] px-4 text-sm font-semibold text-white no-underline transition-colors hover:bg-[#105430]"
+            class="inline-flex h-8 items-center rounded-lg bg-[#1b613c] px-3 text-xs font-semibold text-white no-underline transition-colors hover:bg-[#105430] sm:h-9 sm:px-4 sm:text-sm"
           >
             {home_donate_button()}
           </a>
           <button
             type="button"
-            class="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 text-slate-600 md:hidden"
+            class="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-slate-600 sm:h-9 sm:w-9 md:hidden"
             aria-controls="mobile-site-menu"
             aria-expanded={mobileMenuOpen}
             aria-label={mobileMenuOpen ? nav_close_menu() : nav_open_menu()}
@@ -423,7 +431,7 @@
         </div>
       </div>
 
-      <div class="mt-2.5 grid grid-cols-1 gap-3 md:mt-2.5 md:grid-cols-[minmax(0,38rem)_auto] md:items-center md:gap-5">
+      <div class="mt-2 grid grid-cols-1 gap-2 md:mt-2.5 md:grid-cols-[minmax(0,38rem)_auto] md:items-center md:gap-5">
         <div class="relative w-full" bind:this={searchContainer}>
           <input
             type="search"
@@ -472,20 +480,20 @@
             </ul>
           {/if}
         </div>
-        <nav class="hidden items-center justify-end gap-2.5 text-sm md:flex">
-          <a href={homeAnchorHref("findings")} class="font-semibold text-[#1b613c] no-underline hover:text-[#105430]">
+        <nav class="-mx-4 flex items-center justify-end gap-4 overflow-x-auto px-4 text-xs font-semibold whitespace-nowrap md:mx-0 md:gap-2.5 md:overflow-visible md:px-0 md:text-sm">
+          <a href={homeAnchorHref("findings")} class="text-[#1b613c] no-underline hover:text-[#105430]">
             {nav_findings()}
           </a>
-          <span class="text-slate-300">•</span>
-          <a href={homeAnchorHref("agencies")} class="font-semibold text-[#1b613c] no-underline hover:text-[#105430]">
+          <span class="hidden text-slate-300 md:inline">•</span>
+          <a href={homeAnchorHref("agencies")} class="text-[#1b613c] no-underline hover:text-[#105430]">
             {nav_agencies()}
           </a>
-          <span class="text-slate-300">•</span>
-          <a href={homeAnchorHref("download")} class="font-semibold text-[#1b613c] no-underline hover:text-[#105430]">
+          <span class="hidden text-slate-300 md:inline">•</span>
+          <a href={homeAnchorHref("download")} class="text-[#1b613c] no-underline hover:text-[#105430]">
             {nav_download()}
           </a>
-          <span class="text-slate-300">•</span>
-          <a href={homeAnchorHref("about")} class="font-semibold text-[#1b613c] no-underline hover:text-[#105430]">
+          <span class="hidden text-slate-300 md:inline">•</span>
+          <a href={homeAnchorHref("about")} class="text-[#1b613c] no-underline hover:text-[#105430]">
             {nav_about()}
           </a>
         </nav>

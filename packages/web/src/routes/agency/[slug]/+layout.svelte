@@ -85,8 +85,8 @@
   let geocodeAddressResponse;
   let geocodeJurisdictionResponse;
   let baselines = [];
-  let rows = [];
-  let rowsByYear = {};
+  // loadedYears maps year string → per-year data (null = confirmed missing, undefined = not attempted)
+  let loadedYears = {};
   let years = [];
   let selectedYear = "";
   let selectedEntries = [];
@@ -122,7 +122,8 @@
     window.umami?.track?.(event, payload);
   };
 
-  $: agencyData = data.data;
+  // v2: latestYearData is SSR-loaded; other years are lazy-loaded client-side.
+  $: agencyData = data.latestYearData;
   $: baselines = Array.isArray(data.baselines) ? data.baselines : [];
   $: agencyCount = Number(data?.agencyCount) || 0;
   $: metadata = agencyData?.agency_metadata;
@@ -131,20 +132,22 @@
     geocode_jurisdiction_response: geocodeJurisdictionResponse,
   } = metadata || {});
 
-  $: rows = Array.isArray(agencyData?.rows) ? agencyData.rows : [];
-  $: rowsByYear = rows.reduce((acc, row) => {
-    const year = row?.year ?? "Unknown";
-    if (!acc[year]) acc[year] = [];
-    acc[year].push(row);
-    return acc;
-  }, {});
+  // Reset loadedYears on agency navigation; seed with the SSR-loaded latest year.
+  let _seededSlug = "";
+  $: {
+    if (data.slug !== _seededSlug) {
+      _seededSlug = data.slug;
+      loadedYears = { [String(data.latestYear)]: data.latestYearData };
+      selectedYear = String(data.latestYear);
+    } else if (data.latestYearData && !loadedYears[String(data.latestYear)]) {
+      loadedYears = { ...loadedYears, [String(data.latestYear)]: data.latestYearData };
+    }
+  }
 
   $: reportingAgencyCount = (() => {
     if (!selectedYear) return null;
-    const yearRows = rowsByYear?.[selectedYear] ?? [];
-    const totalRow = yearRows.find(
-      (row) => row?.row_key === "rates-by-race--totals--all-stops"
-    );
+    const yearRows = loadedYears[selectedYear]?.rows ?? [];
+    const totalRow = yearRows.find((row) => row?.row_key === "stops");
     const rankCountRaw = totalRow?.rank_count;
     const rankCount = typeof rankCountRaw === "string" ? Number(rankCountRaw) : rankCountRaw;
     if (Number.isFinite(rankCount) && rankCount > 0) return rankCount;
@@ -165,20 +168,54 @@
   $: agencyHrefEn = `${siteUrl}/en/agency/${data.slug}`;
   $: agencyHrefEs = `${siteUrl}/es/agency/${data.slug}`;
 
-  $: years = Object.keys(rowsByYear).sort((a, b) => {
-    const numA = Number(a);
-    const numB = Number(b);
-    if (Number.isFinite(numA) && Number.isFinite(numB)) return numB - numA;
-    return compareStrings(String(a), String(b));
-  });
+  // Years come from manifest, already sorted descending.
+  $: years = Array.isArray(data.years) ? data.years : [];
+  $: partialCoverageYears = new Set((data.partialCoverageYears ?? []).map(String));
 
-  $: if (years.length && (!selectedYear || !years.includes(selectedYear))) {
-    selectedYear = years[0];
+  // Per-agency year coverage. When the pipeline emits `agencyYears`, drive the
+  // year <select> from it; otherwise fall back to the statewide list.
+  $: agencyYears = Array.isArray(data.agencyYears) && data.agencyYears.length
+    ? data.agencyYears.slice().sort((a, b) => Number(b) - Number(a))
+    : years;
+
+  // Coverage gaps relative to the statewide year range (only when pipeline
+  // supplied us per-agency coverage — otherwise we can't tell).
+  $: agencyYearSet = new Set(agencyYears);
+  $: hasPerAgencyCoverage =
+    Array.isArray(data.agencyYears) && data.agencyYears.length > 0;
+  $: statewideLatestYear = years.length ? years[0] : null;
+  $: isMissingStatewideLatest =
+    hasPerAgencyCoverage &&
+    statewideLatestYear !== null &&
+    !agencyYearSet.has(statewideLatestYear);
+  $: interiorMissingYears = (() => {
+    if (!hasPerAgencyCoverage || !agencyYears.length) return [];
+    const agencyMinYear = Number(agencyYears[agencyYears.length - 1]);
+    const agencyMaxYear = Number(agencyYears[0]);
+    return years
+      .filter((y) => {
+        const n = Number(y);
+        return (
+          Number.isFinite(n) &&
+          n >= agencyMinYear &&
+          n <= agencyMaxYear &&
+          !agencyYearSet.has(y)
+        );
+      })
+      .slice()
+      .sort((a, b) => Number(a) - Number(b));
+  })();
+  $: hasCoverageNotice =
+    isMissingStatewideLatest || interiorMissingYears.length > 0;
+
+  $: if (agencyYears.length && (!selectedYear || !agencyYears.includes(selectedYear))) {
+    selectedYear = String(data.latestYear ?? agencyYears[0]);
   }
 
-  $: selectedEntries = selectedYear ? rowsByYear[selectedYear] ?? [] : [];
-  $: agencyComments = Array.isArray(agencyData?.agency_comments)
-    ? agencyData.agency_comments
+  $: rows = loadedYears[selectedYear]?.rows ?? [];
+  $: selectedEntries = loadedYears[selectedYear]?.rows ?? [];
+  $: agencyComments = Array.isArray(loadedYears[selectedYear]?.agency_comments)
+    ? loadedYears[selectedYear].agency_comments
     : [];
   $: selectedAgencyComment =
     agencyComments.find((entry) => String(entry?.year) === String(selectedYear)) ??
@@ -200,11 +237,8 @@
     : agency_comment_none();
   $: metricGroups = getMetricGroups(selectedEntries);
   $: {
-    const priorityGroups = [
-      "rates-by-race__totals",
-      "rates-by-race__rates",
-      "rates-by-race__population",
-    ];
+    // v2: canonical groups — core counts and rates first, then breakdown sections.
+    const priorityGroups = ["core-counts", "rates"];
     groupOrderMap = new Map();
     let nextIndex = 0;
     priorityGroups.forEach((key) => {
@@ -213,9 +247,7 @@
       }
     });
     metricGroups.forEach((metric) => {
-      const tableId = metric.base?.table_id ?? "";
-      const sectionId = metric.base?.section_id ?? "";
-      const key = `${tableId}__${sectionId}`;
+      const key = getCanonicalGroup(metric.key);
       if (!groupOrderMap.has(key)) {
         groupOrderMap.set(key, nextIndex++);
       }
@@ -224,20 +256,14 @@
   $: gridRows = metricGroups.map((metric) => {
     const isPercentageMetric = metric.key.endsWith("-percentage");
     const columns = normalizeMetric(metric.base, { isPercentage: isPercentageMetric });
-    const tableId = metric.base?.table_id ?? "";
-    const sectionId = metric.base?.section_id ?? "";
-    const groupLabelParts = [
-      tableLabelForId(tableId),
-      sectionLabelForId(sectionId),
-    ].filter(Boolean);
-    const groupLabel = groupLabelParts.length ? groupLabelParts.join(": ") : "—";
-    const groupId = `${tableId}__${sectionId}`;
+    const groupId = getCanonicalGroup(metric.key);
+    const groupLabel = sectionLabelForId(groupId) || humanizeId(groupId);
     const row = {
       id: metric.base?.row_id ?? metric.key,
       metricKey: metric.key,
       group_label: groupLabel,
       group_id: groupId,
-      metric: metricLabelForKey(metric.key, metric.base?.metric_id),
+      metric: metricLabelForKey(metric.key),
     };
 
     columnKeys.forEach((label) => {
@@ -319,20 +345,35 @@
 
   const expandDefaultGroups = () => setAllGroupsExpanded(true);
 
+  // toggle.click() steals focus to whichever group button was clicked, which
+  // makes the browser scroll that button into view — typing in the search box
+  // would jerk the page upward as groups expanded. Restore focus + scroll.
+  const preserveFocusAndScroll = (fn) => {
+    const prevActive = document.activeElement;
+    const prevScrollY = typeof window !== "undefined" ? window.scrollY : 0;
+    fn();
+    if (prevActive instanceof HTMLElement) {
+      try { prevActive.focus({ preventScroll: true }); } catch { prevActive.focus(); }
+    }
+    if (typeof window !== "undefined") window.scrollTo(window.scrollX, prevScrollY);
+  };
+
   const setAllGroupsExpanded = async (expand) => {
     if (typeof document === "undefined") return;
     await tick();
-    const groupRows = Array.from(document.querySelectorAll(".gridcraft-table .gc-tr__groupby"));
-    groupRows.forEach((row) => {
-      const toggle = row.querySelector("button");
-      if (!toggle) return;
-      const isCollapsed = row.querySelector(".feather-chevron-right");
-      const isExpanded = row.querySelector(".feather-chevron-down");
-      if (expand && isCollapsed) {
-        toggle.click();
-      } else if (!expand && isExpanded) {
-        toggle.click();
-      }
+    preserveFocusAndScroll(() => {
+      const groupRows = Array.from(document.querySelectorAll(".gridcraft-table .gc-tr__groupby"));
+      groupRows.forEach((row) => {
+        const toggle = row.querySelector("button");
+        if (!toggle) return;
+        const isCollapsed = row.querySelector(".feather-chevron-right");
+        const isExpanded = row.querySelector(".feather-chevron-down");
+        if (expand && isCollapsed) {
+          toggle.click();
+        } else if (!expand && isExpanded) {
+          toggle.click();
+        }
+      });
     });
   };
 
@@ -358,17 +399,19 @@
   const restoreGroupExpansion = async (desiredExpanded) => {
     if (typeof document === "undefined") return;
     await tick();
-    getGroupRows().forEach(({ groupId, row }) => {
-      if (!groupId || !row) return;
-      const toggle = row.querySelector("button");
-      if (!toggle) return;
-      const isCollapsed = row.querySelector(".feather-chevron-right");
-      const isExpanded = row.querySelector(".feather-chevron-down");
-      if (desiredExpanded.has(groupId) && isCollapsed) {
-        toggle.click();
-      } else if (!desiredExpanded.has(groupId) && isExpanded) {
-        toggle.click();
-      }
+    preserveFocusAndScroll(() => {
+      getGroupRows().forEach(({ groupId, row }) => {
+        if (!groupId || !row) return;
+        const toggle = row.querySelector("button");
+        if (!toggle) return;
+        const isCollapsed = row.querySelector(".feather-chevron-right");
+        const isExpanded = row.querySelector(".feather-chevron-down");
+        if (desiredExpanded.has(groupId) && isCollapsed) {
+          toggle.click();
+        } else if (!desiredExpanded.has(groupId) && isExpanded) {
+          toggle.click();
+        }
+      });
     });
   };
 
@@ -798,7 +841,8 @@
   $: phoneDisplay = rawPhone ? formatPhone(rawPhone) : "";
 
   $: {
-    const latestYear = years.find((year) => Number.isFinite(Number(year)));
+    const latestYear = data.latestYear ?? years[0];
+    const latestYearRows = loadedYears[String(latestYear)]?.rows ?? [];
     stopVolumeLead = "";
     stopVolumeSegmentLabel = "";
     stopVolumeSegmentPrefix = "";
@@ -808,34 +852,13 @@
     if (!latestYear) {
       stopVolumeLead = "";
     } else {
-      const yearValue = Number(latestYear);
-      const totalEntry = rows.find(
-        (row) =>
-          Number(row?.year) === yearValue &&
-          row?.row_key === "rates-by-race--totals--all-stops"
-      );
+      const totalEntry = latestYearRows.find((row) => row?.row_key === "stops");
       const percentileEntry =
-        rows.find(
-          (row) =>
-            Number(row?.year) === yearValue &&
-            row?.row_key === "rates-by-race--totals--all-stops-percentile"
-        ) ||
-        rows.find(
-          (row) =>
-            Number(row?.year) === yearValue &&
-            row?.row_key === "rates-by-race--totals--all-stops-percentile-no-mshp"
-        );
+        latestYearRows.find((row) => row?.row_key === "stops-percentile") ||
+        latestYearRows.find((row) => row?.row_key === "stops-percentile-no-mshp");
       const rankEntry =
-        rows.find(
-          (row) =>
-            Number(row?.year) === yearValue &&
-            row?.row_key === "rates-by-race--totals--all-stops-rank"
-        ) ||
-        rows.find(
-          (row) =>
-            Number(row?.year) === yearValue &&
-            row?.row_key === "rates-by-race--totals--all-stops-rank-no-mshp"
-        );
+        latestYearRows.find((row) => row?.row_key === "stops-rank") ||
+        latestYearRows.find((row) => row?.row_key === "stops-rank-no-mshp");
       const totalValue = getMetricValue(totalEntry, "Total");
       const totalNumeric = typeof totalValue === "string" ? Number(totalValue) : totalValue;
       if (!Number.isFinite(totalNumeric)) {
@@ -930,7 +953,19 @@
     "Other",
   ];
   const chartRaceKeys = columnKeys.filter((label) => label !== "Total");
-  const priorityPrefix = "rates--totals-";
+  // Rate keys and count keys with no '--' separator are canonically flat metrics.
+  const RATE_KEYS = new Set([
+    "search-rate", "arrest-rate", "contraband-hit-rate", "stop-rate",
+    "citation-rate", "stop-rate-residents",
+  ]);
+
+  const getCanonicalGroup = (canonicalKey) => {
+    if (!canonicalKey) return "";
+    const idx = canonicalKey.indexOf("--");
+    if (idx >= 0) return canonicalKey.slice(0, idx);
+    if (RATE_KEYS.has(canonicalKey) || canonicalKey.endsWith("-rate")) return "rates";
+    return "core-counts";
+  };
 
   const translationKeyForId = (prefix, id) =>
     `${prefix}_${id}`
@@ -1070,12 +1105,24 @@
       }
     });
 
+    const FLAT_KEY_ORDER = { stops: 0, citations: 1 };
+
     return Object.values(groups)
       .filter((group) => group.base !== undefined)
+      .filter((group) => !group.key.startsWith("rates-population"))
       .sort((a, b) => {
-        const aPriority = a.key.startsWith(priorityPrefix) ? 0 : 1;
-        const bPriority = b.key.startsWith(priorityPrefix) ? 0 : 1;
+        // v2: flat canonical keys (no '--') are core counts/rates — sort first.
+        const aPriority = a.key.includes("--") ? 1 : 0;
+        const bPriority = b.key.includes("--") ? 1 : 0;
         if (aPriority !== bPriority) return aPriority - bPriority;
+
+        // Explicit ordering for key flat metrics.
+        if (aPriority === 0) {
+          const aOrder = FLAT_KEY_ORDER[a.key] ?? 999;
+          const bOrder = FLAT_KEY_ORDER[b.key] ?? 999;
+          if (aOrder !== bOrder) return aOrder - bOrder;
+        }
+
         return compareStrings(a.key, b.key);
       });
   };
@@ -1163,13 +1210,27 @@
     }
   };
 
-  const selectYear = (year, source = "unknown") => {
-    selectedYear = year;
+  const selectYear = async (year, source = "unknown") => {
+    selectedYear = String(year);
     trackEvent("agency_year_select", {
       year,
       source,
       agency: agencyData?.agency ?? data.slug,
     });
+    // Lazy-load the year's data if not yet fetched.
+    if (loadedYears[selectedYear] === undefined) {
+      try {
+        const res = await fetch(
+          withDataBase(`/data/dist/agency_year/${data.slug}/${year}.json`)
+        );
+        loadedYears = {
+          ...loadedYears,
+          [selectedYear]: res.ok ? await res.json() : null,
+        };
+      } catch {
+        loadedYears = { ...loadedYears, [selectedYear]: null };
+      }
+    }
   };
 
   const handleMetricOpen = (metricKey) => {
@@ -1313,8 +1374,7 @@
 </svelte:head>
 
 <StickyHeader
-  agencies={data.agencies}
-  selectedAgencyLabel={agencyData?.agency ?? data.data?.agency ?? data.slug}
+  selectedAgencyLabel={agencyData?.agency ?? data.slug}
 />
 
 <main id="main-content" class="mx-auto w-full max-w-5xl bg-slate-50 px-4 pb-16 pt-12 sm:px-6">
@@ -1322,6 +1382,17 @@
     <h1 class="mt-3 text-3xl font-semibold tracking-tight text-slate-900 md:text-4xl">
       {agencyData?.agency ?? data.slug}
     </h1>
+    {#if hasCoverageNotice}
+      <p class="mt-3 text-xs text-slate-500">
+        {#if isMissingStatewideLatest}
+          {m.agency_coverage_no_data_latest({ year: String(statewideLatestYear) })}
+        {/if}
+        {#if interiorMissingYears.length}
+          {#if isMissingStatewideLatest}{" "}{/if}
+          {m.agency_coverage_missing_interior({ years: interiorMissingYears.join(", ") })}
+        {/if}
+      </p>
+    {/if}
   </header>
 
   <section class="mb-1 grid gap-4 md:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] md:items-start">
@@ -1485,27 +1556,33 @@
               <div class="text-2xl font-semibold text-slate-900 sm:text-3xl">
                 {agency_annual_stops_heading()}
               </div>
-              <div
-                role="tablist"
-                aria-label={agency_yearly_data_heading()}
-                class="mt-10 flex flex-wrap items-center gap-2"
-              >
-                {#each years as year}
-                  <button
-                    type="button"
-                    role="tab"
-                    aria-selected={year === selectedYear}
-                    class={`rounded-md border px-3 py-1.5 text-sm font-semibold tracking-wide transition sm:text-base ${
-                      year === selectedYear
-                        ? "border-slate-900 bg-slate-900 text-white"
-                        : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:text-slate-900"
-                    }`}
-                    on:click={() => selectYear(year, "top")}
-                  >
-                    {year}
-                  </button>
-                {/each}
+              <div class="mt-10 flex items-center gap-3">
+                <label
+                  for="year-select-top"
+                  class="text-sm font-semibold text-slate-600 uppercase tracking-wide"
+                >
+                  {agency_yearly_data_heading()}
+                </label>
+                <select
+                  id="year-select-top"
+                  value={selectedYear}
+                  on:change={(e) => selectYear(e.currentTarget.value, "top")}
+                  class="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm font-semibold text-slate-900 shadow-sm focus:border-slate-600 focus:outline-none focus:ring-1 focus:ring-slate-600"
+                >
+                  {#each agencyYears as year}
+                    <option value={year}>
+                      {year}{partialCoverageYears.has(year) ? " ⚠" : ""}
+                    </option>
+                  {/each}
+                </select>
               </div>
+              {#if partialCoverageYears.has(selectedYear)}
+                <p class="mt-3 text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded px-3 py-2 max-w-xl">
+                  Data for {selectedYear} is incomplete — approximately half of agencies are missing due to a known source PDF issue. Rankings and statewide totals are not available for this year.
+                </p>
+              {:else if loadedYears[selectedYear] === null}
+                <p class="mt-3 text-sm text-slate-500">No data available for {selectedYear}.</p>
+              {/if}
               <div class="mt-6 max-w-2xl">
                 <div class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">
                   {commentHeading}

@@ -4,12 +4,16 @@ const normalizeBaseUrl = (value: string) => {
 };
 
 const defaultDevBaseUrl = "https://data.vsr.recoveredfactory.net";
+const defaultDevReleasePath = "/releases/v2";
 
 const getBaseUrl = (overrideBase?: string) => {
   const envBase = normalizeBaseUrl(overrideBase ?? (import.meta.env.PUBLIC_DATA_BASE_URL ?? ""));
   if (envBase) return envBase;
   return import.meta.env.DEV ? defaultDevBaseUrl : "";
 };
+
+const getReleasePath = () =>
+  normalizeBaseUrl(import.meta.env.PUBLIC_DATA_RELEASE_PATH ?? (import.meta.env.DEV ? defaultDevReleasePath : ""));
 
 export const withDataBase = (path: string, overrideBase?: string) => {
   const baseUrl = getBaseUrl(overrideBase);
@@ -19,5 +23,5 @@ export const withDataBase = (path: string, overrideBase?: string) => {
   const strippedPath = normalizedPath.startsWith("/data/")
     ? normalizedPath.slice("/data".length)
     : normalizedPath;
-  return `${baseUrl}${strippedPath}`;
+  return `${baseUrl}${getReleasePath()}${strippedPath}`;
 };

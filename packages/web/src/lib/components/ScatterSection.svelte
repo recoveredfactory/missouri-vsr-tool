@@ -63,26 +63,20 @@
 
 <div class="mt-12">
   <div class="flex flex-col gap-3">
-    <div
-      role="tablist"
-      aria-label={agency_yearly_data_heading()}
-      class="mt-12 flex flex-wrap items-center gap-2"
-    >
-      {#each years as year}
-        <button
-          type="button"
-          role="tab"
-          aria-selected={year === selectedYear}
-          class={`rounded-md border px-3 py-1.5 text-sm font-semibold tracking-wide transition sm:text-base ${
-            year === selectedYear
-              ? "border-slate-900 bg-slate-900 text-white"
-              : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:text-slate-900"
-          }`}
-          on:click={() => onYearClick(year)}
-        >
-          {year}
-        </button>
-      {/each}
+    <div class="mt-12 flex items-center gap-3">
+      <label for="scatter-year-select" class="text-sm font-semibold uppercase tracking-wide text-slate-600">
+        {agency_yearly_data_heading()}
+      </label>
+      <select
+        id="scatter-year-select"
+        value={selectedYear}
+        on:change={(e) => onYearClick(e.currentTarget.value)}
+        class="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm font-semibold text-slate-900 shadow-sm focus:border-slate-600 focus:outline-none focus:ring-1 focus:ring-slate-600"
+      >
+        {#each years as year}
+          <option value={year}>{year}</option>
+        {/each}
+      </select>
     </div>
     <div class="relative left-1/2 mt-4 w-screen -translate-x-1/2 space-y-4 px-4 sm:px-6">
       <div class="grid gap-7 lg:gap-8 lg:grid-cols-3">
@@ -94,14 +88,14 @@
           showMeanLines={true}
           xLabel={agency_scatter_total_stops_label()}
           yLabel={agency_scatter_citations_label()}
-          xMetricKey="rates-by-race--totals--all-stops"
-          yMetricKey="rates-by-race--totals--citations"
+          xMetricKey="stops"
+          yMetricKey="citations"
           excludeAgencies={excludeAgencies}
           minStops={500}
           sizeByStops={true}
           stopsLabel={agency_scatter_total_stops_label()}
           minCount={50}
-          minCountKey="rates-by-race--totals--citations"
+          minCountKey="citations"
           minCountMessage={agency_scatter_min_citations_note()}
           note={agency_scatter_min_citations_note()}
           xScaleType="log"
@@ -117,8 +111,8 @@
           showMeanLines={true}
           xLabel={agency_scatter_total_stops_nonwhite_label()}
           yLabel={agency_scatter_citations_nonwhite_label()}
-          xMetricKey="rates-by-race--totals--all-stops"
-          yMetricKey="rates-by-race--totals--citations"
+          xMetricKey="stops"
+          yMetricKey="citations"
           xColumn="Non-white"
           yColumn="Non-white"
           excludeAgencies={excludeAgencies}
@@ -127,7 +121,7 @@
           stopsColumn="Non-white"
           stopsLabel={agency_scatter_total_stops_nonwhite_label()}
           minCount={25}
-          minCountKey="rates-by-race--totals--citations"
+          minCountKey="citations"
           minCountColumn="Non-white"
           minCountMessage={agency_scatter_min_citations_note_small()}
           note={agency_scatter_min_citations_note_small()}
@@ -144,8 +138,8 @@
           showMeanLines={true}
           xLabel={agency_scatter_total_stops_white_label()}
           yLabel={agency_scatter_citations_white_label()}
-          xMetricKey="rates-by-race--totals--all-stops"
-          yMetricKey="rates-by-race--totals--citations"
+          xMetricKey="stops"
+          yMetricKey="citations"
           xColumn="White"
           yColumn="White"
           excludeAgencies={excludeAgencies}
@@ -154,7 +148,7 @@
           stopsColumn="White"
           stopsLabel={agency_scatter_total_stops_white_label()}
           minCount={25}
-          minCountKey="rates-by-race--totals--citations"
+          minCountKey="citations"
           minCountColumn="White"
           minCountMessage={agency_scatter_min_citations_note_small()}
           note={agency_scatter_min_citations_note_small()}
@@ -173,20 +167,20 @@
           showMeanLines={true}
           xLabel={agency_scatter_citation_rate_label()}
           yLabel={agency_scatter_arrest_rate_label()}
-          xMetricKey="rates-by-race--totals--citations-rate"
-          yMetricKey="rates-by-race--totals--arrests-rate"
+          xMetricKey="citation-rate"
+          yMetricKey="arrest-rate"
           excludeAgencies={excludeAgencies}
           formatXAxisTick={formatPercentTick}
           formatYAxisTick={formatPercentTick}
-          xCountKey="rates-by-race--totals--citations"
-          yCountKey="rates-by-race--totals--arrests"
+          xCountKey="citations"
+          yCountKey="arrests"
           xCountLabel={agency_scatter_citations_label()}
           yCountLabel={agency_scatter_arrests_label()}
           minStops={500}
           sizeByStops={true}
           stopsLabel={agency_scatter_total_stops_label()}
           minCount={50}
-          minCountKey="rates-by-race--totals--citations"
+          minCountKey="citations"
           minCountMessage={agency_scatter_min_citations_note()}
           note={agency_scatter_min_citations_note()}
           excludeExactValue={100}
@@ -203,15 +197,15 @@
           showMeanLines={true}
           xLabel={agency_scatter_citation_rate_nonwhite_label()}
           yLabel={agency_scatter_arrest_rate_nonwhite_label()}
-          xMetricKey="rates-by-race--totals--citations-rate"
-          yMetricKey="rates-by-race--totals--arrests-rate"
+          xMetricKey="citation-rate"
+          yMetricKey="arrest-rate"
           xColumn="Non-white"
           yColumn="Non-white"
           excludeAgencies={excludeAgencies}
           formatXAxisTick={formatPercentTick}
           formatYAxisTick={formatPercentTick}
-          xCountKey="rates-by-race--totals--citations"
-          yCountKey="rates-by-race--totals--arrests"
+          xCountKey="citations"
+          yCountKey="arrests"
           xCountColumn="Non-white"
           yCountColumn="Non-white"
           xCountLabel={agency_scatter_citations_nonwhite_label()}
@@ -221,7 +215,7 @@
           stopsColumn="Non-white"
           stopsLabel={agency_scatter_total_stops_nonwhite_label()}
           minCount={25}
-          minCountKey="rates-by-race--totals--citations"
+          minCountKey="citations"
           minCountColumn="Non-white"
           minCountMessage={agency_scatter_min_citations_note_small()}
           note={agency_scatter_min_citations_note_small()}
@@ -239,15 +233,15 @@
           showMeanLines={true}
           xLabel={agency_scatter_citation_rate_white_label()}
           yLabel={agency_scatter_arrest_rate_white_label()}
-          xMetricKey="rates-by-race--totals--citations-rate"
-          yMetricKey="rates-by-race--totals--arrests-rate"
+          xMetricKey="citation-rate"
+          yMetricKey="arrest-rate"
           xColumn="White"
           yColumn="White"
           excludeAgencies={excludeAgencies}
           formatXAxisTick={formatPercentTick}
           formatYAxisTick={formatPercentTick}
-          xCountKey="rates-by-race--totals--citations"
-          yCountKey="rates-by-race--totals--arrests"
+          xCountKey="citations"
+          yCountKey="arrests"
           xCountColumn="White"
           yCountColumn="White"
           xCountLabel={agency_scatter_citations_white_label()}
@@ -257,7 +251,7 @@
           stopsColumn="White"
           stopsLabel={agency_scatter_total_stops_white_label()}
           minCount={25}
-          minCountKey="rates-by-race--totals--citations"
+          minCountKey="citations"
           minCountColumn="White"
           minCountMessage={agency_scatter_min_citations_note_small()}
           note={agency_scatter_min_citations_note_small()}
@@ -277,12 +271,12 @@
           showMeanLines={true}
           xLabel={agency_scatter_search_rate_label()}
           yLabel={agency_scatter_hit_rate_label()}
-          xMetricKey="rates-by-race--totals--searches-rate"
-          yMetricKey="rates-by-race--totals--contraband-hit-rate"
+          xMetricKey="search-rate"
+          yMetricKey="contraband-hit-rate"
           formatXAxisTick={formatPercentTick}
           formatYAxisTick={formatPercentTick}
-          xCountKey="rates-by-race--totals--searches"
-          yCountKey="rates-by-race--totals--contraband"
+          xCountKey="searches"
+          yCountKey="contraband-total"
           xCountLabel={agency_scatter_searches_label()}
           yCountLabel={agency_scatter_contraband_hits_label()}
           excludeAgencies={excludeAgencies}
@@ -290,7 +284,7 @@
           sizeByStops={true}
           stopsLabel={agency_scatter_total_stops_label()}
           minCount={25}
-          minCountKey="rates-by-race--totals--searches"
+          minCountKey="searches"
           excludeAboveX={50}
           minCountMessage={agency_scatter_min_searches_note()}
           note={agency_scatter_min_searches_note()}
@@ -303,14 +297,14 @@
           showMeanLines={true}
           xLabel={agency_scatter_search_rate_nonwhite_label()}
           yLabel={agency_scatter_hit_rate_nonwhite_label()}
-          xMetricKey="rates-by-race--totals--searches-rate"
-          yMetricKey="rates-by-race--totals--contraband-hit-rate"
+          xMetricKey="search-rate"
+          yMetricKey="contraband-hit-rate"
           xColumn="Non-white"
           yColumn="Non-white"
           formatXAxisTick={formatPercentTick}
           formatYAxisTick={formatPercentTick}
-          xCountKey="rates-by-race--totals--searches"
-          yCountKey="rates-by-race--totals--contraband"
+          xCountKey="searches"
+          yCountKey="contraband-total"
           xCountColumn="Non-white"
           yCountColumn="Non-white"
           xCountLabel={agency_scatter_searches_nonwhite_label()}
@@ -321,7 +315,7 @@
           stopsColumn="Non-white"
           stopsLabel={agency_scatter_total_stops_nonwhite_label()}
           minCount={25}
-          minCountKey="rates-by-race--totals--searches"
+          minCountKey="searches"
           minCountColumn="Non-white"
           excludeAboveX={50}
           minCountMessage={agency_scatter_min_searches_note_small()}
@@ -335,14 +329,14 @@
           showMeanLines={true}
           xLabel={agency_scatter_search_rate_white_label()}
           yLabel={agency_scatter_hit_rate_white_label()}
-          xMetricKey="rates-by-race--totals--searches-rate"
-          yMetricKey="rates-by-race--totals--contraband-hit-rate"
+          xMetricKey="search-rate"
+          yMetricKey="contraband-hit-rate"
           xColumn="White"
           yColumn="White"
           formatXAxisTick={formatPercentTick}
           formatYAxisTick={formatPercentTick}
-          xCountKey="rates-by-race--totals--searches"
-          yCountKey="rates-by-race--totals--contraband"
+          xCountKey="searches"
+          yCountKey="contraband-total"
           xCountColumn="White"
           yCountColumn="White"
           xCountLabel={agency_scatter_searches_white_label()}
@@ -353,7 +347,7 @@
           stopsColumn="White"
           stopsLabel={agency_scatter_total_stops_white_label()}
           minCount={25}
-          minCountKey="rates-by-race--totals--searches"
+          minCountKey="searches"
           minCountColumn="White"
           excludeAboveX={50}
           minCountMessage={agency_scatter_min_searches_note_small()}

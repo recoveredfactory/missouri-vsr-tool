@@ -3,6 +3,7 @@
   import { onMount } from "svelte";
   import { getLocale } from "$lib/paraglide/runtime.js";
   import { withDataBase } from "$lib/dataBase";
+  import { fetchSubsetIndex, fetchSubsetFor, type MetricYearSubset as SharedSubset } from "$lib/metricSubset";
   import {
     home_metric_table_label,
     home_metric_table_heading,
@@ -36,26 +37,22 @@
     row_key?: string;
   };
 
-  type MetricFileRow = {
-    agency?: string;
-    year?: number | string;
-    Total?: number | null;
-    White?: number | null;
-    Black?: number | null;
-    Hispanic?: number | null;
-    "Native American"?: number | null;
-    Asian?: number | null;
-    Other?: number | null;
-  };
-
-  type MetricFilePayload = {
-    row_key?: string;
-    rows?: MetricFileRow[];
+  type MetricYearSubset = {
+    agencies: string[];
+    years: Array<number | string>;
+    columns: string[];
+    rows: Record<string, Array<Array<number | null>>>;
   };
 
   type MetricOption = {
     value: string;
     label: string;
+  };
+
+  type MetricOptionGroup = {
+    groupId: string;
+    groupLabel: string;
+    options: MetricOption[];
   };
 
   type AgencyLink = {
@@ -80,9 +77,9 @@
     raw: Record<string, number>;
   };
 
-  export let agencies: AgencyIndexEntry[] = [];
+  let agencies: AgencyIndexEntry[] = [];
 
-  const baseTotalStopsRowKey = "rates-by-race--totals--all-stops";
+  const baseTotalStopsRowKey = "stops";
   const raceColumns = [
     "Total",
     "White",
@@ -102,7 +99,7 @@
     maximumFractionDigits: 2,
   });
 
-  const metricPayloadCache = new Map<string, Promise<MetricFilePayload>>();
+  const AGENCY_INDEX_URL = withDataBase("/data/dist/agency_index.json");
   const naturalTextSorter = new Intl.Collator(undefined, { numeric: true, sensitivity: "base" });
 
   const compareStrings = (a: string, b: string) => (a === b ? 0 : a < b ? -1 : 1);
@@ -144,20 +141,10 @@
     return typeof fn === "function" ? (fn as () => string)() : humanizeId(id);
   };
 
-  const metricLabelForRowKey = (rowKey: string) => {
-    const [tableId = "", sectionId = "", metricId = ""] = rowKey.split("--");
-    return `${humanizeId(tableId)}: ${humanizeId(sectionId)}: ${humanizeId(metricId)}`;
-  };
-
   const toDisplayValue = (value: number | null | undefined) => {
     const numeric = typeof value === "string" ? Number(value) : value;
     if (!Number.isFinite(numeric)) return "—";
     return valueFormatter.format(numeric);
-  };
-
-  const toSortableNumber = (value: number | string | null | undefined) => {
-    const numeric = typeof value === "string" ? Number(value) : value;
-    return Number.isFinite(numeric) ? Number(numeric) : Number.NEGATIVE_INFINITY;
   };
 
   const isRateMetricRowKey = (rowKey: string) => {
@@ -222,163 +209,137 @@
     return map;
   };
 
-  const rowKeyOptionsFromBaselines = (baselineEntries: BaselineEntry[]) => {
+  const rowKeyOptionsFromBaselines = (baselineEntries: BaselineEntry[]): MetricOptionGroup[] => {
     const keys = Array.from(
       new Set(
         baselineEntries
           .map((entry) => String(entry?.row_key || "").trim())
           .filter(Boolean),
       ),
-    );
+    ).filter((key) => !key.startsWith("rates-population"));
 
-    return keys
-      .map((value) => {
-        const [tableId = "", sectionId = "", metricId = ""] = value.split("--");
-        const tableLabel = labelForId("table", tableId) || humanizeId(tableId);
-        const sectionLabel = labelForId("section", sectionId) || humanizeId(sectionId);
-        const metricLabel = labelForId("metric", metricId) || humanizeId(metricId);
+    const RATE_KEYS = new Set([
+      "search-rate", "arrest-rate", "contraband-hit-rate", "stop-rate",
+      "citation-rate", "stop-rate-residents",
+    ]);
+    const getCanonicalGroup = (key: string) => {
+      const idx = key.indexOf("--");
+      if (idx >= 0) return key.slice(0, idx);
+      if (RATE_KEYS.has(key) || key.endsWith("-rate")) return "rates";
+      return "core-counts";
+    };
 
-        return {
-          value,
-          label: `${tableLabel}: ${sectionLabel}: ${metricLabel}`,
-          tableId,
-          sectionId,
-          metricId,
-          tableLabel,
-          sectionLabel,
-          metricLabel,
-        };
-      })
-      .sort((a, b) => {
-        const tableRank = (tableId: string) => {
-          if (tableId === "rates-by-race") return 0;
-          if (tableId === "search-statistics") return 1;
-          if (tableId === "number-of-stops-by-race") return 2;
-          if (tableId === "disparity-index") return 3;
-          return 99;
-        };
-        const sectionRank = (tableId: string, sectionId: string) => {
-          if (tableId !== "rates-by-race") return 99;
-          if (sectionId === "totals") return 0;
-          if (sectionId === "rates") return 1;
-          return 2;
-        };
+    const GROUP_PRIORITY: Record<string, number> = { "core-counts": 0, "rates": 1 };
+    const METRIC_PRIORITY: Record<string, number> = { stops: 0, citations: 1 };
 
-        const tableCmp = tableRank(a.tableId) - tableRank(b.tableId);
-        if (tableCmp !== 0) return tableCmp;
+    const groupsMap = new Map<string, MetricOptionGroup>();
 
-        const sectionPriorityCmp = sectionRank(a.tableId, a.sectionId) - sectionRank(b.tableId, b.sectionId);
-        if (sectionPriorityCmp !== 0) return sectionPriorityCmp;
+    for (const value of keys) {
+      const groupId = getCanonicalGroup(value);
+      const metricSuffix = value.includes("--") ? value.slice(value.indexOf("--") + 2) : value;
+      const groupLabel = labelForId("section", groupId) || humanizeId(groupId);
+      const metricLabel = labelForId("metric", metricSuffix) || humanizeId(metricSuffix);
 
-        const sectionCmp = naturalTextSorter.compare(a.sectionLabel, b.sectionLabel);
-        if (sectionCmp !== 0) return sectionCmp;
+      if (!groupsMap.has(groupId)) {
+        groupsMap.set(groupId, { groupId, groupLabel, options: [] });
+      }
+      groupsMap.get(groupId)!.options.push({ value, label: metricLabel });
+    }
 
-        const metricCmp = naturalTextSorter.compare(a.metricLabel, b.metricLabel);
-        if (metricCmp !== 0) return metricCmp;
-
-        return naturalTextSorter.compare(a.value, b.value);
-      })
-      .map(({ value, label }) => ({ value, label }));
-  };
-
-  const fetchMetricPayload = async (rowKey: string) => {
-    const cached = metricPayloadCache.get(rowKey);
-    if (cached) return cached;
-
-    const request = fetch(withDataBase(`/dist/metric_year/${rowKey}.json`))
-      .then(async (response) => {
-        if (!response.ok) {
-          throw new Error(`Unable to load metric data (${response.status}).`);
-        }
-        return (await response.json()) as MetricFilePayload;
-      })
-      .catch((error) => {
-        metricPayloadCache.delete(rowKey);
-        throw error;
+    // Sort options within each group: explicit priority first, then alphabetical by label.
+    for (const group of groupsMap.values()) {
+      group.options.sort((a, b) => {
+        const aOrder = METRIC_PRIORITY[a.value] ?? 999;
+        const bOrder = METRIC_PRIORITY[b.value] ?? 999;
+        if (aOrder !== bOrder) return aOrder - bOrder;
+        return naturalTextSorter.compare(a.label, b.label);
       });
+    }
 
-    metricPayloadCache.set(rowKey, request);
-    return request;
+    // Sort groups: core-counts first, rates second, then alphabetical.
+    return Array.from(groupsMap.values()).sort((a, b) => {
+      const aOrder = GROUP_PRIORITY[a.groupId] ?? 999;
+      const bOrder = GROUP_PRIORITY[b.groupId] ?? 999;
+      if (aOrder !== bOrder) return aOrder - bOrder;
+      return naturalTextSorter.compare(a.groupLabel, b.groupLabel);
+    });
   };
 
-  const yearsFromPayload = (payload: MetricFilePayload) => {
-    const years = Array.from(
-      new Set(
-        (Array.isArray(payload?.rows) ? payload.rows : [])
-          .map((row) => String(row?.year ?? ""))
-          .filter(Boolean),
-      ),
-    );
-
-    return years.sort((a, b) => Number(b) - Number(a));
+  // Fetch only the rows for the selected metric (+ `stops` for the Total Stops
+  // column). The shared loader caches per-metric so switching metrics fetches
+  // one small file instead of re-pulling the 12MB bundle.
+  const fetchSubsetForMetric = (rowKey: string) => {
+    const keys = rowKey === baseTotalStopsRowKey ? [baseTotalStopsRowKey] : [baseTotalStopsRowKey, rowKey];
+    return fetchSubsetFor(keys);
   };
+
+  const yearsFromPayload = (payload: MetricYearSubset) =>
+    Array.from(payload.years ?? [])
+      .map((y) => String(y))
+      .sort((a, b) => Number(b) - Number(a));
 
   const rowsForYear = (
-    metricPayload: MetricFilePayload,
-    totalStopsPayload: MetricFilePayload,
+    payload: MetricYearSubset,
+    metricRowKey: string,
     year: string,
     slugMap: Map<string, string>,
     locale: string,
     sortColumn: "Total" | "total_stops",
   ): TableRow[] => {
-    const metricYearRows = (Array.isArray(metricPayload?.rows) ? metricPayload.rows : []).filter(
-      (row) => String(row?.year ?? "") === String(year),
-    );
-    const totalYearRows = (Array.isArray(totalStopsPayload?.rows) ? totalStopsPayload.rows : []).filter(
-      (row) => String(row?.year ?? "") === String(year),
-    );
+    const yearNum = Number(year);
+    const colIdx = (col: string) => payload.columns.indexOf(col);
+    const getVal = (row: Array<number | null>, idx: number) => {
+      if (idx === -1 || idx >= row.length) return NaN;
+      const v = row[idx];
+      return v === null || v === undefined ? NaN : Number(v);
+    };
 
-    const metricMap = new Map<string, MetricFileRow>();
-    metricYearRows.forEach((row) => {
-      const key = normalizeText(String(row?.agency || ""));
-      if (!key) return;
-      metricMap.set(key, row);
-    });
+    const stopsData = payload.rows?.[baseTotalStopsRowKey] ?? [];
+    const stopsMap = new Map<number, number>();
+    for (const row of stopsData) {
+      if (!Array.isArray(row)) continue;
+      if (Number(payload.years?.[Number(row[1])]) !== yearNum) continue;
+      stopsMap.set(Number(row[0]), getVal(row, colIdx("Total")));
+    }
 
-    const totalMap = new Map<string, MetricFileRow>();
-    totalYearRows.forEach((row) => {
-      const key = normalizeText(String(row?.agency || ""));
-      if (!key) return;
-      totalMap.set(key, row);
-    });
+    const metricData =
+      metricRowKey === baseTotalStopsRowKey
+        ? stopsData
+        : (payload.rows?.[metricRowKey] ?? []);
+    const metricMap = new Map<number, Record<string, number>>();
+    for (const row of metricData) {
+      if (!Array.isArray(row)) continue;
+      if (Number(payload.years?.[Number(row[1])]) !== yearNum) continue;
+      const vals: Record<string, number> = {};
+      for (const col of raceColumns) {
+        vals[col] = getVal(row, colIdx(col));
+      }
+      metricMap.set(Number(row[0]), vals);
+    }
 
-    const agencyKeys = Array.from(new Set([...metricMap.keys(), ...totalMap.keys()]));
+    const allIdxs = new Set([...stopsMap.keys(), ...metricMap.keys()]);
 
-    return agencyKeys
-      .map((agencyKey) => {
-        const metricRow = metricMap.get(agencyKey);
-        const totalRow = totalMap.get(agencyKey);
-        const agencyName = String(metricRow?.agency || totalRow?.agency || "Unknown agency");
-        const agencySlug = slugMap.get(agencyKey) || toAgencySlug(agencyName);
+    return Array.from(allIdxs)
+      .map((aIdx) => {
+        const agencyName = payload.agencies?.[aIdx]?.trim() || "Unknown agency";
+        const agencySlug = slugMap.get(normalizeText(agencyName)) || toAgencySlug(agencyName);
+        const stopsTotal = stopsMap.get(aIdx) ?? NaN;
+        const metricVals = metricMap.get(aIdx) ?? {};
 
-        const totalStopsRaw = toSortableNumber(totalRow?.Total);
-        const metricTotalRaw = toSortableNumber(metricRow?.Total);
-
-        const raw = {
-          total_stops: totalStopsRaw,
-          Total: metricTotalRaw,
-          White: toSortableNumber(metricRow?.White),
-          Black: toSortableNumber(metricRow?.Black),
-          Hispanic: toSortableNumber(metricRow?.Hispanic),
-          "Native American": toSortableNumber(metricRow?.["Native American"]),
-          Asian: toSortableNumber(metricRow?.Asian),
-          Other: toSortableNumber(metricRow?.Other),
-        };
+        const raw: Record<string, number> = { total_stops: stopsTotal };
+        for (const col of raceColumns) raw[col] = metricVals[col] ?? NaN;
 
         return {
           id: `${agencyName}-${year}`,
-          agency: {
-            value: agencyName,
-            href: `/${locale}/agency/${agencySlug}`,
-          },
-          total_stops: toDisplayValue(totalRow?.Total),
-          Total: toDisplayValue(metricRow?.Total),
-          White: toDisplayValue(metricRow?.White),
-          Black: toDisplayValue(metricRow?.Black),
-          Hispanic: toDisplayValue(metricRow?.Hispanic),
-          "Native American": toDisplayValue(metricRow?.["Native American"]),
-          Asian: toDisplayValue(metricRow?.Asian),
-          Other: toDisplayValue(metricRow?.Other),
+          agency: { value: agencyName, href: `/${locale}/agency/${agencySlug}` },
+          total_stops: toDisplayValue(stopsTotal),
+          Total: toDisplayValue(metricVals["Total"]),
+          White: toDisplayValue(metricVals["White"]),
+          Black: toDisplayValue(metricVals["Black"]),
+          Hispanic: toDisplayValue(metricVals["Hispanic"]),
+          "Native American": toDisplayValue(metricVals["Native American"]),
+          Asian: toDisplayValue(metricVals["Asian"]),
+          Other: toDisplayValue(metricVals["Other"]),
           raw,
         };
       })
@@ -392,6 +353,7 @@
   let agencySlugMap = new Map<string, string>();
 
   let metricOptions: MetricOption[] = [];
+  let metricOptionGroups: MetricOptionGroup[] = [];
   let selectedMetric = baseTotalStopsRowKey;
   let yearOptions: string[] = [];
   let selectedYear = "";
@@ -522,12 +484,8 @@
     loadError = "";
 
     try {
-      const [metricPayload, totalStopsPayload] = await Promise.all([
-        fetchMetricPayload(rowKey),
-        fetchMetricPayload(baseTotalStopsRowKey),
-      ]);
-
-      const years = yearsFromPayload(metricPayload);
+      const payload = await fetchSubsetForMetric(rowKey);
+      const years = yearsFromPayload(payload);
       yearOptions = years;
 
       if (!keepYear || !years.includes(selectedYear)) {
@@ -536,14 +494,7 @@
 
       const sortColumn = rowKey === baseTotalStopsRowKey ? "total_stops" : "Total";
       tableRows = selectedYear
-        ? rowsForYear(
-            metricPayload,
-            totalStopsPayload,
-            selectedYear,
-            agencySlugMap,
-            currentLocale,
-            sortColumn,
-          )
+        ? rowsForYear(payload, rowKey, selectedYear, agencySlugMap, currentLocale, sortColumn)
         : [];
     } catch (error) {
       loadError =
@@ -561,13 +512,19 @@
     loadError = "";
 
     try {
-      const response = await fetch(withDataBase("/dist/statewide_slug_baselines.json"));
-      if (!response.ok) {
-        throw new Error(`Unable to load metric list (${response.status}).`);
-      }
-
-      const baselineEntries = (await response.json()) as BaselineEntry[];
-      metricOptions = rowKeyOptionsFromBaselines(baselineEntries);
+      // Fetch the subset index (row_key list only, no data rows) in parallel
+      // with agency index. Browser caches the agency index so StickyHeader's
+      // concurrent fetch doesn't double the work.
+      const [index] = await Promise.all([
+        fetchSubsetIndex(),
+        fetch(AGENCY_INDEX_URL)
+          .then((r) => (r.ok ? r.json() : []))
+          .then((data: AgencyIndexEntry[]) => { agencies = data; })
+          .catch(() => {}),
+      ]);
+      const keyEntries = index.row_keys.map((key) => ({ row_key: key }));
+      metricOptionGroups = rowKeyOptionsFromBaselines(keyEntries);
+      metricOptions = metricOptionGroups.flatMap((g) => g.options);
 
       if (!metricOptions.length) {
         throw new Error("No metrics available.");
@@ -646,8 +603,12 @@
           on:change={handleMetricChange}
           disabled={!metricOptions.length || isLoading}
         >
-          {#each metricOptions as option}
-            <option value={option.value}>{option.label}</option>
+          {#each metricOptionGroups as group}
+            <optgroup label={group.groupLabel}>
+              {#each group.options as option}
+                <option value={option.value}>{option.label}</option>
+              {/each}
+            </optgroup>
           {/each}
         </select>
         <p class="mt-2 pl-1 text-[0.72rem] font-medium text-slate-500 sm:text-xs">
@@ -700,23 +661,21 @@
     </div>
 
     {#if yearOptions.length}
-      <div role="tablist" aria-label={home_metric_year_selector_label()} class="mb-5 mt-2 flex flex-wrap items-center gap-2">
-        {#each yearOptions as year}
-          <button
-            type="button"
-            role="tab"
-            aria-selected={year === selectedYear}
-            class={`rounded-md border px-3 py-1.5 text-sm font-semibold tracking-wide transition sm:text-base ${
-              year === selectedYear
-                ? "border-slate-900 bg-slate-900 text-white"
-                : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:text-slate-900"
-            }`}
-            on:click={() => selectYear(year)}
-            disabled={isLoading}
-          >
-            {year}
-          </button>
-        {/each}
+      <div class="mb-5 mt-2 flex items-center gap-3">
+        <label class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500" for="home-year-select">
+          {home_metric_year_selector_label()}
+        </label>
+        <select
+          id="home-year-select"
+          value={selectedYear}
+          on:change={(e) => selectYear(e.currentTarget.value)}
+          disabled={isLoading}
+          class="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm font-semibold text-slate-900 focus:border-slate-500 focus:outline-none"
+        >
+          {#each yearOptions as year}
+            <option value={year}>{year}</option>
+          {/each}
+        </select>
       </div>
     {/if}
 
