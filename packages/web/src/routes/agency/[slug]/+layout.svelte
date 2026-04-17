@@ -1187,11 +1187,14 @@
 
   const openMetric = (metricKey, { updateRoute = true } = {}) => {
     if (!metricKey) return;
+    // Replace if already on a metric route so back goes to agency home (or
+    // wherever the user came from), not through every metric visited.
+    const alreadyOnMetric = typeof window !== "undefined" && window.location.pathname.includes("/metric/");
     activeMetricKey = metricKey;
     activeMetricLabel = metricLabelForKey(metricKey);
     if (updateRoute) {
       goto(buildMetricPath(metricKey), {
-        replaceState: false,
+        replaceState: alreadyOnMetric,
         keepfocus: true,
         noScroll: true,
       });
@@ -1278,10 +1281,18 @@
   };
 
 
+  let didInsertAgencyHome = false;
   const syncFromRoute = (metricKey) => {
     if (typeof window === "undefined" || !rows.length) return;
     const routeKey = getRouteMetricKey(metricKey);
     if (routeKey && hasMetricKey(routeKey)) {
+      // If landing directly on a metric URL, insert agency home into history
+      // so back navigates to the agency overview instead of the previous page.
+      if (!didInsertAgencyHome && !activeMetricKey) {
+        didInsertAgencyHome = true;
+        window.history.replaceState(window.history.state, "", baseAgencyPath());
+        window.history.pushState(window.history.state, "", buildMetricPath(routeKey));
+      }
       openMetric(routeKey, { updateRoute: false });
       return;
     }
