@@ -278,6 +278,11 @@
       .map((y) => String(y))
       .sort((a, b) => Number(b) - Number(a));
 
+  const buildAgencyHref = (locale: string, slug: string, metricKey: string) => {
+    const base = `/${locale}/agency/${slug}`;
+    return metricKey ? `${base}/metric/${encodeURIComponent(metricKey)}` : base;
+  };
+
   const rowsForYear = (
     payload: MetricYearSubset,
     metricRowKey: string,
@@ -331,7 +336,7 @@
 
         return {
           id: `${agencyName}-${year}`,
-          agency: { value: agencyName, href: `/${locale}/agency/${agencySlug}` },
+          agency: { value: agencyName, href: buildAgencyHref(locale, agencySlug, metricRowKey) },
           total_stops: toDisplayValue(stopsTotal),
           Total: toDisplayValue(metricVals["Total"]),
           White: toDisplayValue(metricVals["White"]),
@@ -358,6 +363,17 @@
   let yearOptions: string[] = [];
   let selectedYear = "";
   let agencySearch = "";
+
+  const syncSearchToUrl = (term: string) => {
+    if (typeof window === "undefined") return;
+    const url = new URL(window.location.href);
+    if (term) {
+      url.searchParams.set("q", term);
+    } else {
+      url.searchParams.delete("q");
+    }
+    window.history.replaceState(window.history.state, "", url.toString());
+  };
 
   let isLoading = true;
   let loadError = "";
@@ -578,6 +594,9 @@
   };
 
   onMount(() => {
+    const urlQ = new URL(window.location.href).searchParams.get("q");
+    if (urlQ) agencySearch = urlQ;
+
     gridFrameElement?.addEventListener("click", handleGridRowClick);
     void initialize();
 
@@ -657,6 +676,7 @@
         placeholder={home_metric_search_placeholder()}
         aria-label={home_metric_search_aria_label()}
         bind:value={agencySearch}
+        on:input={() => syncSearchToUrl(agencySearch)}
       />
     </div>
 

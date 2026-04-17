@@ -414,7 +414,7 @@
 
           <!-- Total panel — own row, centered ~2/3 width -->
           {#if totalPanelData}
-            <div class="mb-6 flex justify-center">
+            <div class="mb-10 flex justify-center">
               <div class="w-full lg:w-2/3">
                 <p class="mb-2 text-base font-semibold" style="color:{TOTAL_COLOR}">
                   Total{metricLabel ? ' ' + metricLabel : ''}{#if totalPanelData.colStops != null && metricKey !== "stops"}&thinsp;<span class="font-normal normal-case tracking-normal text-slate-400">({agencyStopsRow?.year} total stops: {numberFormatter.format(totalPanelData.colStops)})</span>{/if}
@@ -455,7 +455,7 @@
           {/if}
 
           <!-- Race panels — 3-column grid -->
-          <div class="grid grid-cols-1 gap-x-6 gap-y-7 sm:grid-cols-2 lg:grid-cols-3">
+          <div class="grid grid-cols-1 gap-x-6 gap-y-10 sm:grid-cols-2 lg:grid-cols-3">
             {#each panelData as panel}
               <div>
                 <p class="mb-2 text-base font-semibold" style="color:{panel.color}">
