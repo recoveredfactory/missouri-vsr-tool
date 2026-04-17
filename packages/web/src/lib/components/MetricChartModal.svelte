@@ -472,7 +472,7 @@
             {#each panelData as panel}
               <div>
                 <p class="mb-4 text-base font-semibold" style="color:{panel.color}">
-                  {panel.label()}{metricLabel ? ' ' + metricLabel : ''}{#if metricKey !== "stops"}<br/><span class="font-normal normal-case tracking-normal text-slate-400">{#if panel.colMetricValue != null}{metricLabel} ({agencyMetricRow?.year}): {numberFormatter.format(panel.colMetricValue)}{/if}{#if panel.colMetricValue != null && panel.colStops != null} <span class="mx-1">&middot;</span> {/if}{#if panel.colStops != null}Total stops ({agencyStopsRow?.year}): {numberFormatter.format(panel.colStops)}{/if}</span>{/if}
+                  {panel.label()}{metricLabel ? ' ' + metricLabel : ''}{#if metricKey !== "stops"}<br/><span class="font-normal normal-case tracking-normal text-slate-400">{#if panel.colMetricValue != null}{metricLabel} ({agencyMetricRow?.year}): {numberFormatter.format(panel.colMetricValue)}{/if}{#if panel.colMetricValue != null && panel.colStops != null} <span class="mx-1">&middot;</span> {/if}{#if panel.colStops != null}{panel.label()} stops ({agencyStopsRow?.year}): {numberFormatter.format(panel.colStops)}{/if}</span>{/if}
                 </p>
                 {#if panel.skipPanel && !isRateMetric}
                   <div class="flex h-[280px] items-center justify-center rounded-lg border border-slate-200 bg-white text-center text-[11px] text-slate-400">
