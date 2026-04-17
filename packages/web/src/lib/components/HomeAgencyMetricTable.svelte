@@ -365,15 +365,40 @@
   let selectedYear = "";
   let agencySearch = "";
 
-  const syncSearchToUrl = (term: string) => {
+  const syncStateToUrl = () => {
     if (typeof window === "undefined") return;
     const url = new URL(window.location.href);
-    if (term) {
-      url.searchParams.set("q", term);
-    } else {
-      url.searchParams.delete("q");
-    }
+    const setOrDelete = (key: string, value: string, defaultValue: string) => {
+      if (value && value !== defaultValue) {
+        url.searchParams.set(key, value);
+      } else {
+        url.searchParams.delete(key);
+      }
+    };
+    setOrDelete("q", agencySearch, "");
+    setOrDelete("metric", selectedMetric, baseTotalStopsRowKey);
+    setOrDelete("year", selectedYear, "");
+    setOrDelete("minStops", String(minTotalStops), "100");
     window.history.replaceState(window.history.state, "", url.toString());
+  };
+
+  const readStateFromUrl = (url?: URL) => {
+    const u = url ?? (typeof window !== "undefined" ? new URL(window.location.href) : null);
+    if (!u) return;
+    const q = u.searchParams.get("q") ?? "";
+    const metric = u.searchParams.get("metric") ?? "";
+    const year = u.searchParams.get("year") ?? "";
+    const minStopsParam = u.searchParams.get("minStops") ?? "";
+    if (q !== agencySearch) agencySearch = q;
+    if (metric) selectedMetric = metric;
+    if (year) selectedYear = year;
+    if (minStopsParam) {
+      const parsed = Number(minStopsParam);
+      if (Number.isFinite(parsed)) {
+        minTotalStops = Math.max(0, Math.round(parsed));
+        minTotalStopsInput = String(minTotalStops);
+      }
+    }
   };
 
   let isLoading = true;
@@ -476,12 +501,14 @@
     const next = Number.isFinite(parsed) ? Math.max(0, Math.round(parsed)) : 0;
     minTotalStops = next;
     minTotalStopsInput = String(next);
+    syncStateToUrl();
   };
 
   const setMinTotalStops = (value: number) => {
     const next = Math.max(0, Math.round(value));
     minTotalStops = next;
     minTotalStopsInput = String(next);
+    syncStateToUrl();
   };
 
   const handleMinStopsInput = (event: Event) => {
@@ -551,7 +578,8 @@
         selectedMetric = metricOptions[0].value;
       }
 
-      await loadMetricRows(selectedMetric, false);
+      // If a year was restored from the URL, keep it; otherwise use the default.
+      await loadMetricRows(selectedMetric, !!selectedYear);
     } catch (error) {
       loadError =
         error instanceof Error ? error.message : "Unable to initialize agencies table.";
@@ -567,11 +595,13 @@
     const target = event.currentTarget as HTMLSelectElement;
     selectedMetric = target.value;
     await loadMetricRows(selectedMetric, false);
+    syncStateToUrl();
   };
 
   const selectYear = async (year: string) => {
     selectedYear = year;
     await loadMetricRows(selectedMetric, true);
+    syncStateToUrl();
   };
 
   const handleGridRowClick = (event: MouseEvent) => {
@@ -595,13 +625,11 @@
   };
 
   afterNavigate(({ to }) => {
-    const urlQ = to?.url?.searchParams.get("q") ?? "";
-    if (urlQ !== agencySearch) agencySearch = urlQ;
+    if (to?.url) readStateFromUrl(to.url);
   });
 
   onMount(() => {
-    const urlQ = new URL(window.location.href).searchParams.get("q");
-    if (urlQ) agencySearch = urlQ;
+    readStateFromUrl();
 
     gridFrameElement?.addEventListener("click", handleGridRowClick);
     void initialize();
@@ -682,7 +710,7 @@
         placeholder={home_metric_search_placeholder()}
         aria-label={home_metric_search_aria_label()}
         bind:value={agencySearch}
-        on:input={() => syncSearchToUrl(agencySearch)}
+        on:input={() => syncStateToUrl()}
       />
     </div>
 
