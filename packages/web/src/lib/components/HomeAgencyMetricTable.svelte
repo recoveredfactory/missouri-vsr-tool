@@ -1,6 +1,7 @@
 <script lang="ts">
   import { Grid, PagingData, PlainTableCssTheme } from "@mediakular/gridcraft";
   import { onMount } from "svelte";
+  import { afterNavigate } from "$app/navigation";
   import { getLocale } from "$lib/paraglide/runtime.js";
   import { withDataBase } from "$lib/dataBase";
   import { fetchSubsetIndex, fetchSubsetFor, type MetricYearSubset as SharedSubset } from "$lib/metricSubset";
@@ -592,6 +593,11 @@
 
     window.location.assign(link.href);
   };
+
+  afterNavigate(({ to }) => {
+    const urlQ = to?.url?.searchParams.get("q") ?? "";
+    if (urlQ !== agencySearch) agencySearch = urlQ;
+  });
 
   onMount(() => {
     const urlQ = new URL(window.location.href).searchParams.get("q");
