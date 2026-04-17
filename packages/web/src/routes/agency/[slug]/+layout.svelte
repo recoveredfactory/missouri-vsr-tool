@@ -1187,8 +1187,9 @@
 
   const openMetric = (metricKey, { updateRoute = true } = {}) => {
     if (!metricKey) return;
-    // If already viewing a metric, replace so back always goes to agency home
-    const alreadyOnMetric = !!activeMetricKey;
+    // Replace if already on a metric route so back goes to agency home (or
+    // wherever the user came from), not through every metric visited.
+    const alreadyOnMetric = typeof window !== "undefined" && window.location.pathname.includes("/metric/");
     activeMetricKey = metricKey;
     activeMetricLabel = metricLabelForKey(metricKey);
     if (updateRoute) {
