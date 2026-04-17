@@ -466,6 +466,7 @@
             </div>
           {/if}
 
+          <hr class="mb-8 border-slate-200" />
           <!-- Race panels — 3-column grid -->
           <div class="grid grid-cols-1 gap-x-6 gap-y-10 sm:grid-cols-2 lg:grid-cols-3">
             {#each panelData as panel}
