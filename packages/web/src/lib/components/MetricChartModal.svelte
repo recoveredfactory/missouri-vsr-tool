@@ -276,16 +276,28 @@
 
   $: totalStatewideSeries = buildStatewideSeries("Total", baselines, metricKey);
 
+  // Most recent metric row for the selected agency — used for panel header values.
+  $: agencyMetricRow = (() => {
+    const agencyRows = allRows.filter(
+      (r) => normalizeAgency(String(r.agency || "")) === normalizedAgencyName
+    );
+    if (!agencyRows.length) return null;
+    return agencyRows.reduce((best, r) =>
+      Number(r.year) > Number(best.year) ? r : best
+    );
+  })();
+
   $: panelData = RACE_PANELS.map(({ race, label }) => ({
     race,
     label,
     color: raceColors[race] || "#64748b",
     statewideSeries: buildStatewideSeries(race, baselines, metricKey),
+    colMetricValue: agencyMetricRow?.[race] ?? null,
     ...buildPanel(race, race, allRows, stopsRows, allYears, panelCtx),
   }));
 
   $: totalPanelData = allRows.length
-    ? { color: TOTAL_COLOR, ...buildPanel("Total", "Total", allRows, stopsRows, allYears, panelCtx) }
+    ? { color: TOTAL_COLOR, colMetricValue: agencyMetricRow?.["Total"] ?? null, ...buildPanel("Total", "Total", allRows, stopsRows, allYears, panelCtx) }
     : null;
 
   const numberFormatter = new Intl.NumberFormat(undefined, { maximumFractionDigits: 1 });
@@ -414,10 +426,10 @@
 
           <!-- Total panel — own row, centered ~2/3 width -->
           {#if totalPanelData}
-            <div class="mb-6 flex justify-center">
+            <div class="mb-10 flex justify-center">
               <div class="w-full lg:w-2/3">
-                <p class="mb-2 text-base font-semibold" style="color:{TOTAL_COLOR}">
-                  Total{metricLabel ? ' ' + metricLabel : ''}{#if totalPanelData.colStops != null && metricKey !== "stops"}&thinsp;<span class="font-normal normal-case tracking-normal text-slate-400">({agencyStopsRow?.year} total stops: {numberFormatter.format(totalPanelData.colStops)})</span>{/if}
+                <p class="mb-4 text-base font-semibold" style="color:{TOTAL_COLOR}">
+                  Total{metricLabel ? ' ' + metricLabel : ''}{#if metricKey !== "stops"}<br/><span class="font-normal normal-case tracking-normal text-slate-400">{#if totalPanelData.colMetricValue != null}{metricLabel} ({agencyMetricRow?.year}): {numberFormatter.format(totalPanelData.colMetricValue)}{/if}{#if totalPanelData.colMetricValue != null && totalPanelData.colStops != null} <span class="mx-1">&middot;</span> {/if}{#if totalPanelData.colStops != null}Total stops ({agencyStopsRow?.year}): {numberFormatter.format(totalPanelData.colStops)}{/if}</span>{/if}
                 </p>
                 {#if totalPanelData.skipPanel && !isRateMetric}
                   <div class="flex h-[280px] items-center justify-center rounded-lg border border-slate-200 bg-white text-center text-[11px] text-slate-400">
@@ -454,12 +466,13 @@
             </div>
           {/if}
 
+          <hr class="mb-8 border-slate-200" />
           <!-- Race panels — 3-column grid -->
-          <div class="grid grid-cols-1 gap-x-6 gap-y-7 sm:grid-cols-2 lg:grid-cols-3">
+          <div class="grid grid-cols-1 gap-x-6 gap-y-10 sm:grid-cols-2 lg:grid-cols-3">
             {#each panelData as panel}
               <div>
-                <p class="mb-2 text-base font-semibold" style="color:{panel.color}">
-                  {panel.label()}{metricLabel ? ' ' + metricLabel : ''}{#if panel.colStops != null && metricKey !== "stops"}&thinsp;<span class="font-normal normal-case tracking-normal text-slate-400">({agencyStopsRow?.year} total stops: {numberFormatter.format(panel.colStops)})</span>{/if}
+                <p class="mb-4 text-base font-semibold" style="color:{panel.color}">
+                  {panel.label()}{metricLabel ? ' ' + metricLabel : ''}{#if metricKey !== "stops"}<br/><span class="font-normal normal-case tracking-normal text-slate-400">{#if panel.colMetricValue != null}{metricLabel} ({agencyMetricRow?.year}): {numberFormatter.format(panel.colMetricValue)}{/if}{#if panel.colMetricValue != null && panel.colStops != null} <span class="mx-1">&middot;</span> {/if}{#if panel.colStops != null}{panel.label()} stops ({agencyStopsRow?.year}): {numberFormatter.format(panel.colStops)}{/if}</span>{/if}
                 </p>
                 {#if panel.skipPanel && !isRateMetric}
                   <div class="flex h-[280px] items-center justify-center rounded-lg border border-slate-200 bg-white text-center text-[11px] text-slate-400">

@@ -9,7 +9,7 @@
   import NeighborsPanel from "$lib/components/NeighborsPanel.svelte";
   import ScatterSection from "$lib/components/ScatterSection.svelte";
   import StickyHeader from "$lib/components/StickyHeader.svelte";
-  import { goto } from "$app/navigation";
+  import { goto, afterNavigate } from "$app/navigation";
   import { page } from "$app/stores";
   import { onMount, tick } from "svelte";
   import * as m from "$lib/paraglide/messages";
@@ -1187,11 +1187,14 @@
 
   const openMetric = (metricKey, { updateRoute = true } = {}) => {
     if (!metricKey) return;
+    // Replace if already on a metric route so back goes to agency home (or
+    // wherever the user came from), not through every metric visited.
+    const alreadyOnMetric = typeof window !== "undefined" && window.location.pathname.includes("/metric/");
     activeMetricKey = metricKey;
     activeMetricLabel = metricLabelForKey(metricKey);
     if (updateRoute) {
       goto(buildMetricPath(metricKey), {
-        replaceState: false,
+        replaceState: alreadyOnMetric,
         keepfocus: true,
         noScroll: true,
       });
@@ -1277,6 +1280,21 @@
     });
   };
 
+
+  let didInsertAgencyHome = false;
+  // Only insert agency-home into history on true cold loads (SvelteKit's
+  // `type === "enter"`). SPA navigations (home → metric) already have the
+  // prior page as the back target; inserting here would pollute the stack.
+  afterNavigate(({ type, from }) => {
+    if (didInsertAgencyHome) return;
+    if (type !== "enter" && from !== null) return;
+    if (typeof window === "undefined" || !rows.length) return;
+    const routeKey = getRouteMetricKey($page?.params?.metricKey);
+    if (!routeKey || !hasMetricKey(routeKey)) return;
+    didInsertAgencyHome = true;
+    window.history.replaceState(window.history.state, "", baseAgencyPath());
+    window.history.pushState(window.history.state, "", buildMetricPath(routeKey));
+  });
 
   const syncFromRoute = (metricKey) => {
     if (typeof window === "undefined" || !rows.length) return;
