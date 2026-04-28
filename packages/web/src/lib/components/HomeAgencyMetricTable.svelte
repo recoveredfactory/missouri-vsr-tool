@@ -624,12 +624,36 @@
     window.location.assign(link.href);
   };
 
+  const hasTableStateParams = (url: URL) =>
+    ["q", "metric", "year", "minStops"].some((k) => url.searchParams.has(k));
+
+  const scrollToAgencyTable = () => {
+    if (typeof window === "undefined") return;
+    // Defer past layout/paint so async hero content doesn't throw off the
+    // measurement. scrollIntoView picks the nearest scrollable ancestor, which
+    // isn't always the document — compute absolute Y and scroll the window.
+    window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(() => {
+        const el = document.getElementById("agencies");
+        if (!el) return;
+        const y = el.getBoundingClientRect().top + window.scrollY;
+        window.scrollTo({ top: y, behavior: "instant" });
+      });
+    });
+  };
+
   afterNavigate(({ to }) => {
-    if (to?.url) readStateFromUrl(to.url);
+    if (to?.url) {
+      readStateFromUrl(to.url);
+      if (hasTableStateParams(to.url)) scrollToAgencyTable();
+    }
   });
 
   onMount(() => {
     readStateFromUrl();
+    if (typeof window !== "undefined" && hasTableStateParams(new URL(window.location.href))) {
+      scrollToAgencyTable();
+    }
 
     gridFrameElement?.addEventListener("click", handleGridRowClick);
     void initialize();

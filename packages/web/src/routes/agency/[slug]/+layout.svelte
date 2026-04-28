@@ -9,7 +9,7 @@
   import NeighborsPanel from "$lib/components/NeighborsPanel.svelte";
   import ScatterSection from "$lib/components/ScatterSection.svelte";
   import StickyHeader from "$lib/components/StickyHeader.svelte";
-  import { goto } from "$app/navigation";
+  import { goto, afterNavigate } from "$app/navigation";
   import { page } from "$app/stores";
   import { onMount, tick } from "svelte";
   import * as m from "$lib/paraglide/messages";
@@ -1282,17 +1282,24 @@
 
 
   let didInsertAgencyHome = false;
+  // Only insert agency-home into history on true cold loads (SvelteKit's
+  // `type === "enter"`). SPA navigations (home → metric) already have the
+  // prior page as the back target; inserting here would pollute the stack.
+  afterNavigate(({ type, from }) => {
+    if (didInsertAgencyHome) return;
+    if (type !== "enter" && from !== null) return;
+    if (typeof window === "undefined" || !rows.length) return;
+    const routeKey = getRouteMetricKey($page?.params?.metricKey);
+    if (!routeKey || !hasMetricKey(routeKey)) return;
+    didInsertAgencyHome = true;
+    window.history.replaceState(window.history.state, "", baseAgencyPath());
+    window.history.pushState(window.history.state, "", buildMetricPath(routeKey));
+  });
+
   const syncFromRoute = (metricKey) => {
     if (typeof window === "undefined" || !rows.length) return;
     const routeKey = getRouteMetricKey(metricKey);
     if (routeKey && hasMetricKey(routeKey)) {
-      // If landing directly on a metric URL, insert agency home into history
-      // so back navigates to the agency overview instead of the previous page.
-      if (!didInsertAgencyHome && !activeMetricKey) {
-        didInsertAgencyHome = true;
-        window.history.replaceState(window.history.state, "", baseAgencyPath());
-        window.history.pushState(window.history.state, "", buildMetricPath(routeKey));
-      }
       openMetric(routeKey, { updateRoute: false });
       return;
     }
