@@ -7,5 +7,9 @@ export const handle = async ({ event, resolve }) => {
     throw redirect(307, `/${locale}`);
   }
 
-  return resolve(event);
+  const locale =
+    event.url.pathname.split("/")[1] === "es" ? "es" : "en";
+  return resolve(event, {
+    transformPageChunk: ({ html }) => html.replace("%lang%", locale),
+  });
 };

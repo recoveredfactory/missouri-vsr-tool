@@ -741,7 +741,40 @@
     return value;
   };
   $: agencyType = cleanMetadataValue(metadata?.AgencyType);
-  $: boundaryData = data?.boundary ?? null;
+
+  // Boundary is fetched client-side to keep it off the SSR critical path.
+  // Watches the resolved agencyId and refetches on agency navigation.
+  let _boundaryAgencyId = "";
+  async function loadBoundary(agencyId) {
+    try {
+      const indexResp = await fetch(
+        withDataBase("/data/dist/agency_boundaries_index.json"),
+      );
+      const idx = indexResp.ok ? await indexResp.json() : null;
+      const slugs = Array.isArray(idx?.slugs) ? idx.slugs : null;
+      // If no index, fall through and try the geojson directly (legacy path).
+      if (slugs && !slugs.includes(agencyId)) return;
+      const resp = await fetch(
+        withDataBase(`/data/dist/agency_boundaries/${agencyId}.geojson`),
+      );
+      if (!resp.ok) return;
+      if (_boundaryAgencyId !== agencyId) return; // user navigated away mid-fetch
+      boundaryData = await resp.json();
+    } catch {
+      // boundary is non-critical; swallow
+    }
+  }
+  $: if (typeof window !== "undefined") {
+    const id =
+      agencyData?.agency_metadata?.agency_id ??
+      agencyData?.agency_metadata?.agency_slug ??
+      data.slug;
+    if (id && id !== _boundaryAgencyId) {
+      _boundaryAgencyId = id;
+      boundaryData = null;
+      void loadBoundary(id);
+    }
+  }
   $: {
     const typeKey = agencyType.toLowerCase();
     const cityValue =
