@@ -48,6 +48,7 @@
   import { raceColors, raceTextColors, outcomeColors } from "$lib/colors.js";
   import { withDataBase } from "$lib/dataBase";
   import { getLocale } from "$lib/paraglide/runtime";
+  import { onMount } from "svelte";
 
   export let data;
 
@@ -55,6 +56,47 @@
   $: statsData = data.statsData;
   $: historicalData = data.historicalData;
   $: historicalOutcomes = data.historicalOutcomes;
+
+  // About-the-data section: lazy-fetched from /about-data/{locale} when the
+  // section approaches the viewport. Removed from SSR to keep the homepage
+  // HTML payload small for FCP.
+  let aboutSectionEl;
+  let aboutDataHtml = "";
+  let aboutDataRequested = false;
+
+  async function loadAboutData() {
+    if (aboutDataRequested) return;
+    aboutDataRequested = true;
+    try {
+      const r = await fetch(`/about-data/${locale}`);
+      if (!r.ok) {
+        aboutDataRequested = false;
+        return;
+      }
+      aboutDataHtml = await r.text();
+    } catch {
+      aboutDataRequested = false;
+    }
+  }
+
+  onMount(() => {
+    if (!aboutSectionEl) return;
+    if (typeof IntersectionObserver === "undefined") {
+      void loadAboutData();
+      return;
+    }
+    const obs = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((e) => e.isIntersecting)) {
+          obs.disconnect();
+          void loadAboutData();
+        }
+      },
+      { rootMargin: "600px 0px 600px 0px" },
+    );
+    obs.observe(aboutSectionEl);
+    return () => obs.disconnect();
+  });
 
   // Tooltip state
   let tooltip = { show: false, x: 0, y: 0, content: "" };
@@ -745,10 +787,16 @@
   </section>
 
   <!-- About the Data -->
-  <section id="about" class="border-t border-slate-200 bg-slate-50 py-12">
+  <section
+    id="about"
+    class="border-t border-slate-200 bg-slate-50 py-12"
+    bind:this={aboutSectionEl}
+  >
     <div class="mx-auto max-w-4xl px-6">
-      <div class="content">
-        {@html data.aboutDataHtml}
+      <div class="content min-h-[200px]">
+        {#if aboutDataHtml}
+          {@html aboutDataHtml}
+        {/if}
       </div>
     </div>
   </section>
