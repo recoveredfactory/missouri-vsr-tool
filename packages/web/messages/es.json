@@ -421,6 +421,7 @@
   "home_287g_chip": "287(g)",
   "home_287g_chip_aria": "Participante del programa 287(g)",
   "home_287g_link": "Participantes del programa 287(g)",
+  "home_287g_filter_label": "Mostrar solo participantes del 287(g)",
   "program_287g_page_title": "Participación en el programa 287(g) en Missouri",
   "program_287g_page_heading": "Participación en el programa 287(g)",
   "program_287g_page_summary": "{count} agencias de Missouri han firmado Memorandos de Acuerdo del programa 287(g) con ICE a partir del {date}.",
@@ -443,5 +444,7 @@
   "program_287g_breakdown_row_search_rate": "Tasa de registro",
   "program_287g_breakdown_row_arrest_rate": "Tasa de arresto",
   "program_287g_breakdown_row_residency": "Paradas de residentes",
-  "program_287g_breakdown_row_nonresidency": "Paradas de no residentes"
+  "program_287g_breakdown_row_nonresidency": "Paradas de no residentes",
+  "program_287g_chart_window_label": "Últimos 10 años",
+  "program_287g_chart_statewide_label": "Referencia estatal"
 }

@@ -1493,6 +1493,48 @@
           .
         </p>
       {/if}
+      {#if data.program287g && Array.isArray(data.program287g.agreements) && data.program287g.agreements.length}
+        <section class="mb-4 rounded-md border border-slate-200 bg-slate-50 p-3">
+          <h3 class="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">
+            {agency_287g_heading()}
+          </h3>
+          <p class="mt-2 text-sm leading-relaxed text-slate-700">
+            <a
+              class="underline"
+              href={WIKIPEDIA_287G_URL}
+              target="_blank"
+              rel="noreferrer"
+            >{agency_287g_description_link()}</a>{agency_287g_description_post()}
+          </p>
+          <ul class="mt-3 space-y-1">
+            {#each data.program287g.agreements as agreement}
+              <li class="text-sm text-slate-700">
+                {#if agreement.support_type}
+                  <span class="font-medium">{agency_287g_support_type_label()}:</span>
+                  {" "}{agreement.support_type}
+                {/if}
+                {#if agreement.signed_date}
+                  <span class="ml-2 font-medium">{agency_287g_signed_label()}:</span>
+                  {" "}{formatLongDate(agreement.signed_date)}
+                {/if}
+                {#if agreement.moa_url}
+                  <a
+                    class="ml-2 underline"
+                    href={agreement.moa_url}
+                    target="_blank"
+                    rel="noreferrer"
+                  >{agency_287g_moa_link()}</a>
+                {/if}
+              </li>
+            {/each}
+          </ul>
+          {#if data.program287g.snapshot_date}
+            <p class="mt-2 text-xs text-slate-500">
+              {agency_287g_snapshot_provenance({ date: formatLongDate(data.program287g.snapshot_date) })}
+            </p>
+          {/if}
+        </section>
+      {/if}
       <dl class="divide-y divide-slate-100">
         {#if showJurisdiction}
           <div class="grid gap-1 py-1.5 grid-cols-[110px_1fr] items-start">
@@ -1568,48 +1610,6 @@
           </dd>
         </div>
       </dl>
-      {#if data.program287g && Array.isArray(data.program287g.agreements) && data.program287g.agreements.length}
-        <section class="mt-6 border-t border-slate-200 pt-4">
-          <h3 class="text-[11px] uppercase tracking-[0.2em] text-slate-400">
-            {agency_287g_heading()}
-          </h3>
-          <p class="mt-2 text-sm leading-relaxed text-slate-700">
-            <a
-              class="underline"
-              href={WIKIPEDIA_287G_URL}
-              target="_blank"
-              rel="noreferrer"
-            >{agency_287g_description_link()}</a>{agency_287g_description_post()}
-          </p>
-          <ul class="mt-3 space-y-2">
-            {#each data.program287g.agreements as agreement}
-              <li class="text-sm text-slate-700">
-                {#if agreement.support_type}
-                  <span class="font-medium">{agency_287g_support_type_label()}:</span>
-                  {" "}{agreement.support_type}
-                {/if}
-                {#if agreement.signed_date}
-                  <span class="ml-2 font-medium">{agency_287g_signed_label()}:</span>
-                  {" "}{formatLongDate(agreement.signed_date)}
-                {/if}
-                {#if agreement.moa_url}
-                  <a
-                    class="ml-2 underline"
-                    href={agreement.moa_url}
-                    target="_blank"
-                    rel="noreferrer"
-                  >{agency_287g_moa_link()}</a>
-                {/if}
-              </li>
-            {/each}
-          </ul>
-          {#if data.program287g.snapshot_date}
-            <p class="mt-3 text-xs text-slate-500">
-              {agency_287g_snapshot_provenance({ date: formatLongDate(data.program287g.snapshot_date) })}
-            </p>
-          {/if}
-        </section>
-      {/if}
       <div class="mt-4">
         <div class="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-slate-500">
           <a

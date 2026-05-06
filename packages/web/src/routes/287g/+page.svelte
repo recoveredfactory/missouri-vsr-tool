@@ -1,6 +1,6 @@
 <script lang="ts">
   import { getLocale } from "$lib/paraglide/runtime";
-  import Sparkline from "$lib/components/Sparkline.svelte";
+  import Spark287g from "$lib/components/Spark287g.svelte";
   import StickyHeader from "$lib/components/StickyHeader.svelte";
   import {
     program_287g_page_title,
@@ -9,7 +9,8 @@
     program_287g_chart_total_stops_label,
     program_287g_chart_hispanic_share_label,
     program_287g_chart_arrest_rate_label,
-    program_287g_chart_no_data,
+    program_287g_chart_window_label,
+    program_287g_chart_statewide_label,
     program_287g_totals_label,
     program_287g_totals_all_stops,
     program_287g_totals_hispanic_stops,
@@ -26,6 +27,7 @@
     agency_287g_signed_label,
     agency_287g_moa_link,
   } from "$lib/paraglide/messages";
+
   type RaceColumn = "Total" | "White" | "Black" | "Hispanic" | "Native American" | "Asian" | "Other";
   type RaceBreakdown = Partial<Record<RaceColumn, number | null>>;
   const RACE_COLUMNS: readonly RaceColumn[] = [
@@ -49,8 +51,10 @@
   $: locale = getLocale() || "en";
   $: localeBase = `/${locale}`;
 
-  const integerFormatter = new Intl.NumberFormat(undefined, {
-    maximumFractionDigits: 0,
+  const integerFormatter = new Intl.NumberFormat(undefined, { maximumFractionDigits: 0 });
+  const compactFormatter = new Intl.NumberFormat(undefined, {
+    notation: "compact",
+    maximumFractionDigits: 1,
   });
   const percentFormatter = new Intl.NumberFormat(undefined, {
     maximumFractionDigits: 1,
@@ -78,13 +82,9 @@
   const formatInteger = (value: number | null | undefined) =>
     typeof value === "number" && Number.isFinite(value) ? integerFormatter.format(value) : null;
 
-  const formatPercent = (value: number | null | undefined) =>
-    typeof value === "number" && Number.isFinite(value)
-      ? `${percentFormatter.format(value)}%`
-      : null;
+  const formatCompact = (value: number) => compactFormatter.format(value);
 
-  const recentValues = (series: Array<{ year: number; value: number | null }>) =>
-    series.slice(-SPARKLINE_YEAR_WINDOW).map((p) => p.value);
+  const formatPercentLabel = (value: number) => `${percentFormatter.format(value)}%`;
 
   const formatBreakdownInteger = (value: number | null | undefined) =>
     typeof value === "number" && Number.isFinite(value)
@@ -95,6 +95,31 @@
     typeof value === "number" && Number.isFinite(value)
       ? `${percentFormatter.format(value)}%`
       : "—";
+
+  const recentSeries = (series: Array<{ year: number; value: number | null }>) =>
+    series.slice(-SPARKLINE_YEAR_WINDOW);
+
+  const raceShareOfTotal = (
+    breakdown: RaceBreakdown,
+    race: RaceColumn,
+  ): number | null => {
+    const total = breakdown.Total;
+    const v = breakdown[race];
+    if (typeof total !== "number" || !total || typeof v !== "number") return null;
+    return (v / total) * 100;
+  };
+
+  // % of this race's stops that were residents (or non-residents).
+  const residencyShare = (
+    residencyBreakdown: RaceBreakdown,
+    stopsBreakdown: RaceBreakdown,
+    race: RaceColumn,
+  ): number | null => {
+    const denom = stopsBreakdown[race];
+    const numer = residencyBreakdown[race];
+    if (typeof denom !== "number" || !denom || typeof numer !== "number") return null;
+    return (numer / denom) * 100;
+  };
 
   $: countDisplay = integerFormatter.format(data.participants.length);
   $: anchorYear = data.latestYearAnchor;
@@ -108,6 +133,11 @@
     statewideShare !== null
       ? `${integerPercentFormatter.format(Math.max(0, statewideShare))}%`
       : null;
+
+  $: statewideHispanicShareWindow = recentSeries(data.statewideHispanicShareSeries ?? []);
+  $: statewideHispanicArrestRateWindow = recentSeries(
+    data.statewideHispanicArrestRateSeries ?? [],
+  );
 </script>
 
 <svelte:head>
@@ -155,22 +185,31 @@
     </div>
   {/if}
 
-  <div class="mt-8 space-y-6">
+  <p class="mt-6 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-500">
+    <span>{program_287g_chart_window_label()}</span>
+    <span class="inline-flex items-center gap-1.5">
+      <svg width="22" height="6" viewBox="0 0 22 6" aria-hidden="true">
+        <line x1="0" x2="22" y1="3" y2="3" stroke="#94a3b8" stroke-width="1" stroke-dasharray="3 3" />
+      </svg>
+      {program_287g_chart_statewide_label()}
+    </span>
+  </p>
+
+  <div class="mt-4 space-y-8">
     {#each data.participants as participant (participant.agency_slug)}
-      {@const totalStopsValues = recentValues(participant.totalStopsSeries)}
-      {@const hispanicShareValues = recentValues(participant.hispanicShareSeries)}
-      {@const arrestRateValues = recentValues(participant.hispanicArrestRateSeries)}
-      {@const latestTotalStops = formatInteger(participant.latestTotalStops)}
-      {@const latestHispanicShare = formatPercent(participant.latestHispanicShare)}
-      {@const latestHispanicArrestRate = formatPercent(participant.latestHispanicArrestRate)}
+      {@const totalStops = recentSeries(participant.totalStopsSeries)}
+      {@const hispanicShare = recentSeries(participant.hispanicShareSeries)}
+      {@const arrestRate = recentSeries(participant.hispanicArrestRateSeries)}
       {@const latestYear = participant.latestYear}
       {@const stopsByRace = participant.latestStopsByRace as RaceBreakdown}
       {@const searchByRace = participant.latestSearchRateByRace as RaceBreakdown}
       {@const arrestByRace = participant.latestArrestRateByRace as RaceBreakdown}
+      {@const residentByRace = participant.latestResidentStopsByRace as RaceBreakdown}
+      {@const nonResidentByRace = participant.latestNonResidentStopsByRace as RaceBreakdown}
 
-      <article class="rounded-lg border border-slate-200 bg-white p-5">
+      <article class="rounded-lg border border-slate-200 bg-white p-5 sm:p-6">
         <header>
-          <h2 class="text-lg font-semibold text-slate-900">
+          <h2 class="text-xl font-semibold text-slate-900">
             <a
               class="text-emerald-900 underline-offset-2 hover:underline"
               href={`${localeBase}/agency/${participant.agency_slug}`}
@@ -179,7 +218,7 @@
             </a>
           </h2>
           {#if participant.city || participant.county || participant.agency_type}
-            <p class="mt-0.5 text-xs text-slate-500">
+            <p class="mt-1 text-sm text-slate-500">
               {[participant.agency_type, participant.city, participant.county]
                 .filter(Boolean)
                 .join(" · ")}
@@ -210,104 +249,107 @@
           {/each}
         </ul>
 
-        <div class="mt-4 grid gap-4 sm:grid-cols-3">
+        <div class="mt-6 grid gap-6 lg:grid-cols-3">
           <div>
-            <div class="flex items-baseline justify-between gap-2">
-              <span class="text-[10px] uppercase tracking-[0.15em] text-slate-400">
-                {program_287g_chart_total_stops_label()}
-              </span>
-              <span class="text-sm font-semibold text-slate-900">
-                {latestTotalStops ?? program_287g_chart_no_data()}
-                {#if latestTotalStops && latestYear}
-                  <span class="text-[10px] font-normal text-slate-400">{latestYear}</span>
-                {/if}
-              </span>
+            <h3 class="text-sm font-semibold text-slate-700">
+              {program_287g_chart_total_stops_label()}
+            </h3>
+            <div class="mt-3">
+              <Spark287g
+                series={totalStops}
+                stroke="#1b613c"
+                formatValue={formatCompact}
+              />
             </div>
-            <Sparkline values={totalStopsValues} stroke="#1b613c" width={200} height={40} strokeWidth={1.5} />
           </div>
           <div>
-            <div class="flex items-baseline justify-between gap-2">
-              <span class="text-[10px] uppercase tracking-[0.15em] text-slate-400">
-                {program_287g_chart_hispanic_share_label()}
-              </span>
-              <span class="text-sm font-semibold text-slate-900">
-                {latestHispanicShare ?? program_287g_chart_no_data()}
-                {#if latestHispanicShare && latestYear}
-                  <span class="text-[10px] font-normal text-slate-400">{latestYear}</span>
-                {/if}
-              </span>
+            <h3 class="text-sm font-semibold text-slate-700">
+              {program_287g_chart_hispanic_share_label()}
+            </h3>
+            <div class="mt-3">
+              <Spark287g
+                series={hispanicShare}
+                referenceSeries={statewideHispanicShareWindow}
+                stroke="#7c2d12"
+                formatValue={formatPercentLabel}
+              />
             </div>
-            <Sparkline values={hispanicShareValues} stroke="#7c2d12" width={200} height={40} strokeWidth={1.5} />
           </div>
           <div>
-            <div class="flex items-baseline justify-between gap-2">
-              <span class="text-[10px] uppercase tracking-[0.15em] text-slate-400">
-                {program_287g_chart_arrest_rate_label()}
-              </span>
-              <span class="text-sm font-semibold text-slate-900">
-                {latestHispanicArrestRate ?? program_287g_chart_no_data()}
-                {#if latestHispanicArrestRate && latestYear}
-                  <span class="text-[10px] font-normal text-slate-400">{latestYear}</span>
-                {/if}
-              </span>
+            <h3 class="text-sm font-semibold text-slate-700">
+              {program_287g_chart_arrest_rate_label()}
+            </h3>
+            <div class="mt-3">
+              <Spark287g
+                series={arrestRate}
+                referenceSeries={statewideHispanicArrestRateWindow}
+                stroke="#1e3a8a"
+                formatValue={formatPercentLabel}
+              />
             </div>
-            <Sparkline values={arrestRateValues} stroke="#1e3a8a" width={200} height={40} strokeWidth={1.5} />
           </div>
         </div>
 
         {#if latestYear}
-          <div class="mt-5">
-            <h3 class="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">
+          <div class="mt-8 border-t border-slate-200 pt-6">
+            <h3 class="text-sm font-semibold text-slate-700">
               {program_287g_breakdown_heading({ year: latestYear })}
             </h3>
-            <div class="mt-2 -mx-5 overflow-x-auto px-5">
+            <div class="mt-3 -mx-5 overflow-x-auto px-5 sm:-mx-6 sm:px-6">
               <table class="min-w-full text-xs sm:text-sm">
                 <thead>
                   <tr class="border-b border-slate-200 text-left text-slate-500">
-                    <th class="py-1 pr-3 text-[10px] font-semibold uppercase tracking-wider"></th>
+                    <th class="py-1.5 pr-3 text-[10px] font-semibold uppercase tracking-wider"></th>
                     {#each RACE_COLUMNS as col}
-                      <th class="py-1 pl-3 text-right text-[10px] font-semibold uppercase tracking-wider">{col}</th>
+                      <th class="py-1.5 pl-3 text-right text-[10px] font-semibold uppercase tracking-wider">{col}</th>
                     {/each}
                   </tr>
                 </thead>
                 <tbody>
-                  <tr class="border-b border-slate-100">
-                    <td class="py-1 pr-3 font-medium text-slate-700">{program_287g_breakdown_row_stops()}</td>
+                  <tr class="border-b border-slate-100 align-top">
+                    <td class="py-2 pr-3 font-medium text-slate-700">{program_287g_breakdown_row_stops()}</td>
                     {#each RACE_COLUMNS as col}
-                      <td class="py-1 pl-3 text-right tabular-nums text-slate-900">
-                        {formatBreakdownInteger(stopsByRace[col])}
+                      <td class="py-2 pl-3 text-right tabular-nums">
+                        <div class="font-semibold text-slate-900">{formatBreakdownInteger(stopsByRace[col])}</div>
+                        {#if col !== "Total"}
+                          <div class="text-[10px] text-slate-500">{formatBreakdownPercent(raceShareOfTotal(stopsByRace, col))}</div>
+                        {/if}
+                      </td>
+                    {/each}
+                  </tr>
+                  <tr class="border-b border-slate-100 align-top">
+                    <td class="py-2 pr-3 font-medium text-slate-700">{program_287g_breakdown_row_residency()}</td>
+                    {#each RACE_COLUMNS as col}
+                      <td class="py-2 pl-3 text-right tabular-nums">
+                        <div class="text-slate-900">{formatBreakdownInteger(residentByRace[col])}</div>
+                        <div class="text-[10px] text-slate-500">{formatBreakdownPercent(residencyShare(residentByRace, stopsByRace, col))}</div>
+                      </td>
+                    {/each}
+                  </tr>
+                  <tr class="border-b border-slate-100 align-top">
+                    <td class="py-2 pr-3 font-medium text-slate-700">{program_287g_breakdown_row_nonresidency()}</td>
+                    {#each RACE_COLUMNS as col}
+                      <td class="py-2 pl-3 text-right tabular-nums">
+                        <div class="text-slate-900">{formatBreakdownInteger(nonResidentByRace[col])}</div>
+                        <div class="text-[10px] text-slate-500">{formatBreakdownPercent(residencyShare(nonResidentByRace, stopsByRace, col))}</div>
                       </td>
                     {/each}
                   </tr>
                   <tr class="border-b border-slate-100">
-                    <td class="py-1 pr-3 font-medium text-slate-700">{program_287g_breakdown_row_search_rate()}</td>
+                    <td class="py-2 pr-3 font-medium text-slate-700">{program_287g_breakdown_row_search_rate()}</td>
                     {#each RACE_COLUMNS as col}
-                      <td class="py-1 pl-3 text-right tabular-nums text-slate-900">
+                      <td class="py-2 pl-3 text-right tabular-nums text-slate-900">
                         {formatBreakdownPercent(searchByRace[col])}
                       </td>
                     {/each}
                   </tr>
-                  <tr class="border-b border-slate-100">
-                    <td class="py-1 pr-3 font-medium text-slate-700">{program_287g_breakdown_row_arrest_rate()}</td>
+                  <tr>
+                    <td class="py-2 pr-3 font-medium text-slate-700">{program_287g_breakdown_row_arrest_rate()}</td>
                     {#each RACE_COLUMNS as col}
-                      <td class="py-1 pl-3 text-right tabular-nums text-slate-900">
+                      <td class="py-2 pl-3 text-right tabular-nums text-slate-900">
                         {formatBreakdownPercent(arrestByRace[col])}
                       </td>
                     {/each}
-                  </tr>
-                  <tr class="border-b border-slate-100">
-                    <td class="py-1 pr-3 font-medium text-slate-700">{program_287g_breakdown_row_residency()}</td>
-                    <td class="py-1 pl-3 text-right tabular-nums text-slate-900">
-                      {formatBreakdownInteger(participant.latestResidentStops)}
-                    </td>
-                    <td colspan={RACE_COLUMNS.length - 1}></td>
-                  </tr>
-                  <tr>
-                    <td class="py-1 pr-3 font-medium text-slate-700">{program_287g_breakdown_row_nonresidency()}</td>
-                    <td class="py-1 pl-3 text-right tabular-nums text-slate-900">
-                      {formatBreakdownInteger(participant.latestNonResidentStops)}
-                    </td>
-                    <td colspan={RACE_COLUMNS.length - 1}></td>
                   </tr>
                 </tbody>
               </table>
@@ -318,7 +360,6 @@
         <!-- Editorial slot: per-agency writeup goes here. Will hook up to a
              writeups source later (e.g., /data/287g_writeups.json keyed by
              agency_slug). -->
-        <aside class="mt-5 min-h-[1px] border-t border-slate-100 pt-3 text-sm text-slate-500"></aside>
       </article>
     {/each}
   </div>

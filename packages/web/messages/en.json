@@ -416,6 +416,7 @@
   "home_287g_chip": "287(g)",
   "home_287g_chip_aria": "287(g) program participant",
   "home_287g_link": "287(g) program participants",
+  "home_287g_filter_label": "Show only 287(g) participants",
   "program_287g_page_title": "287(g) program participation in Missouri",
   "program_287g_page_heading": "287(g) program participation",
   "program_287g_page_summary": "{count} Missouri agencies have signed 287(g) Memoranda of Agreement with ICE as of {date}.",
@@ -438,5 +439,7 @@
   "program_287g_breakdown_row_search_rate": "Search rate",
   "program_287g_breakdown_row_arrest_rate": "Arrest rate",
   "program_287g_breakdown_row_residency": "Resident stops",
-  "program_287g_breakdown_row_nonresidency": "Non-resident stops"
+  "program_287g_breakdown_row_nonresidency": "Non-resident stops",
+  "program_287g_chart_window_label": "Last 10 years",
+  "program_287g_chart_statewide_label": "Statewide reference"
 }
