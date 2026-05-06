@@ -6,6 +6,7 @@
     nav_close_menu,
     nav_findings,
     nav_agencies,
+    nav_287g,
     nav_download,
     nav_about,
     nav_menu_label,
@@ -489,6 +490,10 @@
             {nav_agencies()}
           </a>
           <span class="hidden text-slate-300 md:inline">•</span>
+          <a href={`${localeBase}/287g`} class="text-[#1b613c] no-underline hover:text-[#105430]">
+            {nav_287g()}
+          </a>
+          <span class="hidden text-slate-300 md:inline">•</span>
           <a href={homeAnchorHref("download")} class="text-[#1b613c] no-underline hover:text-[#105430]">
             {nav_download()}
           </a>
@@ -534,6 +539,13 @@
             on:click={() => closeMenu("nav")}
           >
             {nav_agencies()}
+          </a>
+          <a
+            href={`${localeBase}/287g`}
+            class="block text-3xl font-semibold leading-tight text-slate-900 no-underline"
+            on:click={() => closeMenu("nav")}
+          >
+            {nav_287g()}
           </a>
           <a
             href={homeAnchorHref("download")}

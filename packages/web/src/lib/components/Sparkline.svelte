@@ -31,10 +31,11 @@
 </script>
 
 <svg
-  {width}
-  {height}
+  width={width}
+  height={height}
   viewBox={`0 0 ${width} ${height}`}
-  class="block overflow-visible"
+  preserveAspectRatio="xMinYMid meet"
+  class="block h-auto w-full max-w-full overflow-visible"
   aria-hidden="true"
 >
   <line

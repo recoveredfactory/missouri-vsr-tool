@@ -1,6 +1,7 @@
 <script lang="ts">
   import { getLocale } from "$lib/paraglide/runtime";
   import Sparkline from "$lib/components/Sparkline.svelte";
+  import StickyHeader from "$lib/components/StickyHeader.svelte";
   import {
     program_287g_page_title,
     program_287g_page_heading,
@@ -10,6 +11,9 @@
     program_287g_chart_hispanic_share_label,
     program_287g_chart_arrest_rate_label,
     program_287g_chart_no_data,
+    program_287g_totals_label,
+    program_287g_totals_stops,
+    program_287g_totals_hispanic_stops,
     agency_287g_description_link,
     agency_287g_description_post,
     agency_287g_support_type_label,
@@ -58,18 +62,19 @@
       : null;
 
   $: countDisplay = integerFormatter.format(data.participants.length);
+  $: totalStopsDisplay = formatInteger(data.totalStopsLatestSum) ?? "—";
+  $: totalHispanicStopsDisplay =
+    formatInteger(data.totalHispanicStopsLatestSum) ?? "—";
 </script>
 
 <svelte:head>
   <title>{program_287g_page_title()}</title>
 </svelte:head>
 
-<main class="mx-auto w-full max-w-5xl px-4 py-8 sm:px-6">
-  <a class="text-sm text-slate-500 underline" href={localeBase || "/"}>
-    {program_287g_page_back_link()}
-  </a>
+<StickyHeader />
 
-  <h1 class="mt-4 text-3xl font-bold text-slate-900 sm:text-4xl">
+<main id="main-content" class="mx-auto w-full max-w-5xl px-4 py-8 sm:px-6">
+  <h1 class="text-3xl font-bold text-slate-900 sm:text-4xl">
     {program_287g_page_heading()}
   </h1>
 
@@ -85,6 +90,19 @@
       date: formatLongDate(data.snapshotDate),
     })}
   </p>
+
+  {#if data.totalStopsLatestSum > 0}
+    <div class="mt-5 rounded-md border border-slate-200 bg-slate-50 p-4">
+      <p class="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">
+        {program_287g_totals_label()}
+      </p>
+      <p class="mt-1 text-base text-slate-900">
+        {program_287g_totals_stops({ stops: totalStopsDisplay })}
+        <span class="text-slate-500">·</span>
+        {program_287g_totals_hispanic_stops({ stops: totalHispanicStopsDisplay })}
+      </p>
+    </div>
+  {/if}
 
   <div class="mt-8 space-y-6">
     {#each data.participants as participant (participant.agency_slug)}
@@ -139,13 +157,13 @@
           {/each}
         </ul>
 
-        <div class="mt-4 grid gap-6 md:grid-cols-[auto_1fr]">
-          <div class="grid grid-cols-3 gap-3 md:gap-4">
+        <div class="mt-4 grid gap-6 lg:grid-cols-[auto_1fr]">
+          <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
             <div>
               <div class="text-[10px] uppercase tracking-[0.15em] text-slate-400">
                 {program_287g_chart_total_stops_label()}
               </div>
-              <Sparkline values={totalStopsValues} stroke="#1b613c" />
+              <Sparkline values={totalStopsValues} stroke="#1b613c" width={200} height={56} strokeWidth={1.75} />
               <div class="mt-1 text-sm font-semibold text-slate-900">
                 {latestTotalStops ?? program_287g_chart_no_data()}
               </div>
@@ -157,7 +175,7 @@
               <div class="text-[10px] uppercase tracking-[0.15em] text-slate-400">
                 {program_287g_chart_hispanic_share_label()}
               </div>
-              <Sparkline values={hispanicShareValues} stroke="#7c2d12" />
+              <Sparkline values={hispanicShareValues} stroke="#7c2d12" width={200} height={56} strokeWidth={1.75} />
               <div class="mt-1 text-sm font-semibold text-slate-900">
                 {latestHispanicShare ?? program_287g_chart_no_data()}
               </div>
@@ -169,7 +187,7 @@
               <div class="text-[10px] uppercase tracking-[0.15em] text-slate-400">
                 {program_287g_chart_arrest_rate_label()}
               </div>
-              <Sparkline values={arrestRateValues} stroke="#1e3a8a" />
+              <Sparkline values={arrestRateValues} stroke="#1e3a8a" width={200} height={56} strokeWidth={1.75} />
               <div class="mt-1 text-sm font-semibold text-slate-900">
                 {latestArrestRate ?? program_287g_chart_no_data()}
               </div>

@@ -332,6 +332,7 @@
   "nav_close_menu": "Close menu",
   "nav_findings": "Findings",
   "nav_agencies": "Agencies",
+  "nav_287g": "287(g)",
   "nav_download": "Download",
   "nav_about": "About",
   "nav_language_label": "Language",
@@ -426,6 +427,9 @@
   "program_287g_page_back_link": "← Back to homepage",
   "program_287g_chart_total_stops_label": "Total stops",
   "program_287g_chart_hispanic_share_label": "Hispanic share of stops",
-  "program_287g_chart_arrest_rate_label": "Arrest rate",
-  "program_287g_chart_no_data": "No data"
+  "program_287g_chart_arrest_rate_label": "Arrest rate, Hispanic drivers",
+  "program_287g_chart_no_data": "No data",
+  "program_287g_totals_label": "Combined latest-year totals",
+  "program_287g_totals_stops": "{stops} stops",
+  "program_287g_totals_hispanic_stops": "{stops} of Hispanic drivers"
 }

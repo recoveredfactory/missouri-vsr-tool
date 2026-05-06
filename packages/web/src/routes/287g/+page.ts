@@ -128,7 +128,7 @@ export async function load({ fetch }) {
           Array.from({ length: yearCount }, () => null as number | null),
         );
       }
-      const v = totalIdx >= 0 ? row[totalIdx] : null;
+      const v = hispanicIdx >= 0 ? row[hispanicIdx] : null;
       arrestRateByAgencyYear.get(aIdx)![yIdx] = typeof v === "number" ? v : null;
     }
   }
@@ -200,9 +200,41 @@ export async function load({ fetch }) {
     });
   }
 
-  participants.sort((a, b) =>
-    a.canonical_name.localeCompare(b.canonical_name, undefined, { sensitivity: "base" }),
-  );
+  participants.sort((a, b) => {
+    const aStops = a.latestTotalStops;
+    const bStops = b.latestTotalStops;
+    const aHas = typeof aStops === "number" && Number.isFinite(aStops);
+    const bHas = typeof bStops === "number" && Number.isFinite(bStops);
+    if (aHas && bHas && aStops !== bStops) return (bStops as number) - (aStops as number);
+    if (aHas && !bHas) return -1;
+    if (!aHas && bHas) return 1;
+    return a.canonical_name.localeCompare(b.canonical_name, undefined, { sensitivity: "base" });
+  });
 
-  return { participants, snapshotDate, years };
+  let totalStopsLatestSum = 0;
+  let totalHispanicStopsLatestSum = 0;
+  for (const p of participants) {
+    if (p.latestYear === null) continue;
+    const idx = years.indexOf(p.latestYear);
+    if (idx < 0) continue;
+    const stops = p.totalStopsSeries[idx]?.value;
+    if (typeof stops === "number" && Number.isFinite(stops)) totalStopsLatestSum += stops;
+    const hispanicShare = p.hispanicShareSeries[idx]?.value;
+    if (
+      typeof stops === "number" &&
+      Number.isFinite(stops) &&
+      typeof hispanicShare === "number" &&
+      Number.isFinite(hispanicShare)
+    ) {
+      totalHispanicStopsLatestSum += (stops * hispanicShare) / 100;
+    }
+  }
+
+  return {
+    participants,
+    snapshotDate,
+    years,
+    totalStopsLatestSum,
+    totalHispanicStopsLatestSum,
+  };
 }
