@@ -85,6 +85,7 @@
   const formatCompact = (value: number) => compactFormatter.format(value);
 
   const formatPercentLabel = (value: number) => `${percentFormatter.format(value)}%`;
+  const formatRateLabel = (value: number) => percentFormatter.format(value);
 
   const formatBreakdownInteger = (value: number | null | undefined) =>
     typeof value === "number" && Number.isFinite(value)
@@ -94,6 +95,11 @@
   const formatBreakdownPercent = (value: number | null | undefined) =>
     typeof value === "number" && Number.isFinite(value)
       ? `${percentFormatter.format(value)}%`
+      : "—";
+
+  const formatBreakdownRate = (value: number | null | undefined) =>
+    typeof value === "number" && Number.isFinite(value)
+      ? percentFormatter.format(value)
       : "—";
 
   const recentSeries = (series: Array<{ year: number; value: number | null }>) =>
@@ -146,7 +152,7 @@
 
 <StickyHeader />
 
-<main id="main-content" class="mx-auto w-full max-w-5xl px-4 py-8 sm:px-6">
+<main id="main-content" class="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6">
   <h1 class="text-3xl font-bold text-slate-900 sm:text-4xl">
     {program_287g_page_heading()}
   </h1>
@@ -195,7 +201,7 @@
     </span>
   </p>
 
-  <div class="mt-4 space-y-8">
+  <div class="mt-4 space-y-10">
     {#each data.participants as participant (participant.agency_slug)}
       {@const totalStops = recentSeries(participant.totalStopsSeries)}
       {@const hispanicShare = recentSeries(participant.hispanicShareSeries)}
@@ -207,7 +213,7 @@
       {@const residentByRace = participant.latestResidentStopsByRace as RaceBreakdown}
       {@const nonResidentByRace = participant.latestNonResidentStopsByRace as RaceBreakdown}
 
-      <article class="rounded-lg border border-slate-200 bg-white p-5 sm:p-6">
+      <article class="rounded-lg border border-slate-200 bg-white p-5 sm:p-7">
         <header>
           <h2 class="text-xl font-semibold text-slate-900">
             <a
@@ -249,12 +255,12 @@
           {/each}
         </ul>
 
-        <div class="mt-6 grid gap-6 lg:grid-cols-3">
+        <div class="mt-7 grid gap-8 lg:grid-cols-3">
           <div>
             <h3 class="text-sm font-semibold text-slate-700">
               {program_287g_chart_total_stops_label()}
             </h3>
-            <div class="mt-3">
+            <div class="mt-4">
               <Spark287g
                 series={totalStops}
                 stroke="#1b613c"
@@ -266,12 +272,13 @@
             <h3 class="text-sm font-semibold text-slate-700">
               {program_287g_chart_hispanic_share_label()}
             </h3>
-            <div class="mt-3">
+            <div class="mt-4">
               <Spark287g
                 series={hispanicShare}
                 referenceSeries={statewideHispanicShareWindow}
                 stroke="#7c2d12"
                 formatValue={formatPercentLabel}
+                minDomain={0}
               />
             </div>
           </div>
@@ -279,12 +286,13 @@
             <h3 class="text-sm font-semibold text-slate-700">
               {program_287g_chart_arrest_rate_label()}
             </h3>
-            <div class="mt-3">
+            <div class="mt-4">
               <Spark287g
                 series={arrestRate}
                 referenceSeries={statewideHispanicArrestRateWindow}
                 stroke="#1e3a8a"
-                formatValue={formatPercentLabel}
+                formatValue={formatRateLabel}
+                minDomain={0}
               />
             </div>
           </div>
@@ -339,7 +347,7 @@
                     <td class="py-2 pr-3 font-medium text-slate-700">{program_287g_breakdown_row_search_rate()}</td>
                     {#each RACE_COLUMNS as col}
                       <td class="py-2 pl-3 text-right tabular-nums text-slate-900">
-                        {formatBreakdownPercent(searchByRace[col])}
+                        {formatBreakdownRate(searchByRace[col])}
                       </td>
                     {/each}
                   </tr>
@@ -347,7 +355,7 @@
                     <td class="py-2 pr-3 font-medium text-slate-700">{program_287g_breakdown_row_arrest_rate()}</td>
                     {#each RACE_COLUMNS as col}
                       <td class="py-2 pl-3 text-right tabular-nums text-slate-900">
-                        {formatBreakdownPercent(arrestByRace[col])}
+                        {formatBreakdownRate(arrestByRace[col])}
                       </td>
                     {/each}
                   </tr>

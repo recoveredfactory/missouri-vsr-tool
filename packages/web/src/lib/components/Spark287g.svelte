@@ -2,16 +2,19 @@
   type Series = Array<{ year: number; value: number | null }>;
 
   export let series: Series = [];
-  /** Optional reference series rendered as a dashed grey line. Should use the same year axis. */
+  /** Optional reference series rendered as a dashed grey line. Shares the same year axis. */
   export let referenceSeries: Series | null = null;
   export let stroke = "#0f172a";
   export let referenceStroke = "#94a3b8";
-  /** Format the inline number labels (e.g. "1,234" or "12.4%"). */
+  /** Format the inline number labels (e.g. "1.2k" or "12.4%"). */
   export let formatValue: (value: number) => string = (v) => String(v);
-  /** SVG drawing area only — labels render outside via CSS. */
+  /** SVG drawing area dimensions in px. */
   export let width = 220;
-  export let height = 56;
-  export let strokeWidth = 1.75;
+  export let height = 96;
+  export let strokeWidth = 2.5;
+  /** Pin the y-domain min (e.g. 0). When null, uses series min. */
+  export let minDomain: number | null = null;
+  export let labelGutter = 56;
 
   $: cleaned = series.filter(
     (p) => typeof p.value === "number" && Number.isFinite(p.value as number),
@@ -21,7 +24,6 @@
     (p) => typeof p.value === "number" && Number.isFinite(p.value as number),
   ) as Array<{ year: number; value: number }>;
 
-  // x-domain: union of years in primary + reference series
   $: years = (() => {
     const set = new Set<number>();
     for (const p of cleaned) set.add(p.year);
@@ -34,27 +36,32 @@
     for (const p of cleaned) all.push(p.value);
     for (const p of refCleaned) all.push(p.value);
     if (!all.length) return { min: 0, max: 1 };
-    const min = Math.min(...all);
-    const max = Math.max(...all);
-    if (min === max) return { min: min - 0.5, max: max + 0.5 };
-    return { min, max };
+    let min = Math.min(...all);
+    let max = Math.max(...all);
+    if (minDomain !== null) min = Math.min(min, minDomain);
+    if (min === max) {
+      return { min: min - 0.5, max: max + 0.5 };
+    }
+    // Add a small headroom so the line never grazes the very top edge.
+    const span = max - min;
+    return { min, max: max + span * 0.08 };
   })();
 
-  const PAD = 4;
+  const PAD_Y = 6;
 
   $: xScale = (year: number) => {
-    if (years.length === 0) return PAD;
+    if (years.length === 0) return 0;
     if (years.length === 1) return width / 2;
     const minYear = years[0];
     const maxYear = years[years.length - 1];
     const t = (year - minYear) / (maxYear - minYear);
-    return PAD + t * (width - PAD * 2);
+    return t * width;
   };
 
   $: yScale = (value: number) => {
     const { min, max } = yDomain;
     const t = (value - min) / (max - min);
-    return PAD + (1 - t) * (height - PAD * 2);
+    return PAD_Y + (1 - t) * (height - PAD_Y * 2);
   };
 
   $: pathFor = (points: Array<{ year: number; value: number }>) =>
@@ -69,15 +76,24 @@
   $: referencePath = pathFor(refCleaned);
   $: firstPoint = cleaned[0] ?? null;
   $: lastPoint = cleaned[cleaned.length - 1] ?? null;
+
+  // Clamp label vertical center so it doesn't escape the chart box.
+  $: clampLabelY = (y: number) => Math.max(12, Math.min(height - 12, y));
 </script>
 
-<div class="flex w-full items-stretch gap-2">
-  <div class="flex flex-col items-end justify-center text-right text-[11px] leading-tight">
+<div
+  class="flex w-full items-stretch"
+  style="--gutter: {labelGutter}px; --chart-h: {height}px;"
+>
+  <div class="relative shrink-0" style="width: var(--gutter); height: var(--chart-h);">
     {#if firstPoint}
-      <span class="font-semibold text-slate-900 tabular-nums">{formatValue(firstPoint.value)}</span>
-      <span class="text-[10px] text-slate-400 tabular-nums">{firstPoint.year}</span>
-    {:else}
-      <span class="text-slate-300">—</span>
+      <div
+        class="absolute right-1.5 whitespace-nowrap text-right text-[11px] leading-tight"
+        style="top: {clampLabelY(yScale(firstPoint.value))}px; transform: translateY(-50%);"
+      >
+        <div class="font-semibold text-slate-900 tabular-nums">{formatValue(firstPoint.value)}</div>
+        <div class="text-[10px] text-slate-400 tabular-nums">{firstPoint.year}</div>
+      </div>
     {/if}
   </div>
   <svg
@@ -85,7 +101,8 @@
     height={height}
     viewBox={`0 0 ${width} ${height}`}
     preserveAspectRatio="none"
-    class="block h-auto min-w-0 flex-1 overflow-visible"
+    class="block min-w-0 flex-1 overflow-visible"
+    style="height: var(--chart-h);"
     aria-hidden="true"
   >
     <line
@@ -115,16 +132,19 @@
         stroke-linecap="round"
       />
       {#each cleaned as p}
-        <circle cx={xScale(p.year)} cy={yScale(p.value)} r="2" fill={stroke} />
+        <circle cx={xScale(p.year)} cy={yScale(p.value)} r="2.5" fill={stroke} />
       {/each}
     {/if}
   </svg>
-  <div class="flex flex-col items-start justify-center text-left text-[11px] leading-tight">
+  <div class="relative shrink-0" style="width: var(--gutter); height: var(--chart-h);">
     {#if lastPoint}
-      <span class="font-semibold text-slate-900 tabular-nums">{formatValue(lastPoint.value)}</span>
-      <span class="text-[10px] text-slate-400 tabular-nums">{lastPoint.year}</span>
-    {:else}
-      <span class="text-slate-300">—</span>
+      <div
+        class="absolute left-1.5 whitespace-nowrap text-left text-[11px] leading-tight"
+        style="top: {clampLabelY(yScale(lastPoint.value))}px; transform: translateY(-50%);"
+      >
+        <div class="font-semibold text-slate-900 tabular-nums">{formatValue(lastPoint.value)}</div>
+        <div class="text-[10px] text-slate-400 tabular-nums">{lastPoint.year}</div>
+      </div>
     {/if}
   </div>
 </div>
