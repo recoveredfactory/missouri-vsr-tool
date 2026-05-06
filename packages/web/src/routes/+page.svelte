@@ -44,6 +44,7 @@
     home_download_v1_heading,
     home_download_about_note,
     home_about_link,
+    home_287g_link,
   } from "$lib/paraglide/messages";
   import { raceColors, raceTextColors, outcomeColors } from "$lib/colors.js";
   import { withDataBase } from "$lib/dataBase";
@@ -688,6 +689,10 @@
   </section>
 
   <HomeAgencyMetricTable agencies={data.agencies} />
+
+  <div class="mx-auto mt-2 max-w-5xl px-4 pb-8 text-sm text-slate-600 sm:px-6">
+    <a class="underline" href={`/${locale}/287g`}>{home_287g_link()}</a>
+  </div>
 
   <!-- Download Section -->
   <section id="download" class="border-t border-slate-200 bg-white py-12">

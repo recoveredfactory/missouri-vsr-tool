@@ -53,7 +53,32 @@
     agency_stop_volume_rank_clause_highest,
     agency_stop_volume_rank_clause,
     agency_stop_volume_rank_clause_simple,
+    agency_287g_heading,
+    agency_287g_description_link,
+    agency_287g_description_post,
+    agency_287g_support_type_label,
+    agency_287g_signed_label,
+    agency_287g_moa_link,
+    agency_287g_snapshot_provenance,
   } from "$lib/paraglide/messages";
+
+  const WIKIPEDIA_287G_URL =
+    "https://en.wikipedia.org/wiki/Immigration_and_Nationality_Act_Section_287(g)";
+
+  const formatLongDate = (value) => {
+    if (!value) return "";
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return String(value);
+    try {
+      return new Intl.DateTimeFormat(getLocale() || undefined, {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      }).format(date);
+    } catch {
+      return date.toISOString().slice(0, 10);
+    }
+  };
 
   /** @type {import('./$types').LayoutData} */
   export let data;
@@ -1543,6 +1568,48 @@
           </dd>
         </div>
       </dl>
+      {#if data.program287g && Array.isArray(data.program287g.agreements) && data.program287g.agreements.length}
+        <section class="mt-6 border-t border-slate-200 pt-4">
+          <h3 class="text-[11px] uppercase tracking-[0.2em] text-slate-400">
+            {agency_287g_heading()}
+          </h3>
+          <p class="mt-2 text-sm leading-relaxed text-slate-700">
+            <a
+              class="underline"
+              href={WIKIPEDIA_287G_URL}
+              target="_blank"
+              rel="noreferrer"
+            >{agency_287g_description_link()}</a>{agency_287g_description_post()}
+          </p>
+          <ul class="mt-3 space-y-2">
+            {#each data.program287g.agreements as agreement}
+              <li class="text-sm text-slate-700">
+                {#if agreement.support_type}
+                  <span class="font-medium">{agency_287g_support_type_label()}:</span>
+                  {" "}{agreement.support_type}
+                {/if}
+                {#if agreement.signed_date}
+                  <span class="ml-2 font-medium">{agency_287g_signed_label()}:</span>
+                  {" "}{formatLongDate(agreement.signed_date)}
+                {/if}
+                {#if agreement.moa_url}
+                  <a
+                    class="ml-2 underline"
+                    href={agreement.moa_url}
+                    target="_blank"
+                    rel="noreferrer"
+                  >{agency_287g_moa_link()}</a>
+                {/if}
+              </li>
+            {/each}
+          </ul>
+          {#if data.program287g.snapshot_date}
+            <p class="mt-3 text-xs text-slate-500">
+              {agency_287g_snapshot_provenance({ date: formatLongDate(data.program287g.snapshot_date) })}
+            </p>
+          {/if}
+        </section>
+      {/if}
       <div class="mt-4">
         <div class="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-slate-500">
           <a

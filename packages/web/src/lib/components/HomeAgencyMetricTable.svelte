@@ -32,6 +32,7 @@
     name?: string;
     agency?: string;
     names?: string[];
+    program_287g?: { agreements?: unknown[] } | null;
   };
 
   type BaselineEntry = {
@@ -59,6 +60,7 @@
   type AgencyLink = {
     value: string;
     href: string;
+    program287g?: boolean;
   };
 
   type TableRow = {
@@ -66,6 +68,7 @@
     agency: {
       value: string;
       href: string;
+      program287g?: boolean;
     };
     total_stops: string;
     Total: string;
@@ -210,6 +213,19 @@
     return map;
   };
 
+  const buildProgram287gSlugSet = (agencyEntries: AgencyIndexEntry[]) => {
+    const set = new Set<string>();
+    agencyEntries.forEach((entry) => {
+      const slug = entry?.agency_slug || entry?.slug || entry?.id;
+      if (!slug) return;
+      const program = entry?.program_287g;
+      if (program && Array.isArray(program.agreements) && program.agreements.length) {
+        set.add(slug);
+      }
+    });
+    return set;
+  };
+
   const rowKeyOptionsFromBaselines = (baselineEntries: BaselineEntry[]): MetricOptionGroup[] => {
     const keys = Array.from(
       new Set(
@@ -289,6 +305,7 @@
     metricRowKey: string,
     year: string,
     slugMap: Map<string, string>,
+    program287gSlugs: Set<string>,
     locale: string,
     sortColumn: "Total" | "total_stops",
   ): TableRow[] => {
@@ -337,7 +354,11 @@
 
         return {
           id: `${agencyName}-${year}`,
-          agency: { value: agencyName, href: buildAgencyHref(locale, agencySlug, metricRowKey) },
+          agency: {
+            value: agencyName,
+            href: buildAgencyHref(locale, agencySlug, metricRowKey),
+            program287g: program287gSlugs.has(agencySlug),
+          },
           total_stops: toDisplayValue(stopsTotal),
           Total: toDisplayValue(metricVals["Total"]),
           White: toDisplayValue(metricVals["White"]),
@@ -357,6 +378,7 @@
 
   let currentLocale = "en";
   let agencySlugMap = new Map<string, string>();
+  let program287gSlugs = new Set<string>();
 
   let metricOptions: MetricOption[] = [];
   let metricOptionGroups: MetricOptionGroup[] = [];
@@ -479,6 +501,7 @@
   }
 
   $: agencySlugMap = buildAgencySlugMap(agencies || []);
+  $: program287gSlugs = buildProgram287gSlugSet(agencies || []);
   $: shouldHideOver100Rates = isRateMetricRowKey(selectedMetric);
   $: {
     const split = splitRowsByRateOverflow(tableRows, shouldHideOver100Rates);
@@ -538,7 +561,7 @@
 
       const sortColumn = rowKey === baseTotalStopsRowKey ? "total_stops" : "Total";
       tableRows = selectedYear
-        ? rowsForYear(payload, rowKey, selectedYear, agencySlugMap, currentLocale, sortColumn)
+        ? rowsForYear(payload, rowKey, selectedYear, agencySlugMap, program287gSlugs, currentLocale, sortColumn)
         : [];
     } catch (error) {
       loadError =
