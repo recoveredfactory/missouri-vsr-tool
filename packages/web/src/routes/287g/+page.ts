@@ -18,7 +18,7 @@ export type SeriesPoint = {
   value: number | null;
 };
 
-export const RACE_COLUMNS = [
+const RACE_COLUMNS = [
   "Total",
   "White",
   "Black",
