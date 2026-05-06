@@ -26,7 +26,17 @@
     agency_287g_signed_label,
     agency_287g_moa_link,
   } from "$lib/paraglide/messages";
-  import { RACE_COLUMNS, type RaceBreakdown } from "./+page";
+  type RaceColumn = "Total" | "White" | "Black" | "Hispanic" | "Native American" | "Asian" | "Other";
+  type RaceBreakdown = Partial<Record<RaceColumn, number | null>>;
+  const RACE_COLUMNS: readonly RaceColumn[] = [
+    "Total",
+    "White",
+    "Black",
+    "Hispanic",
+    "Native American",
+    "Asian",
+    "Other",
+  ] as const;
 
   /** @type {import('./$types').PageData} */
   export let data;
