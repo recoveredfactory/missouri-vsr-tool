@@ -434,7 +434,14 @@
   "program_287g_chart_hispanic_share_label": "Proporción hispana de paradas",
   "program_287g_chart_arrest_rate_label": "Tasa de arresto, conductores hispanos",
   "program_287g_chart_no_data": "Sin datos",
-  "program_287g_totals_label": "Totales combinados del año más reciente",
-  "program_287g_totals_stops": "{stops} paradas",
-  "program_287g_totals_hispanic_stops": "{stops} de conductores hispanos"
+  "program_287g_totals_label": "Paradas combinadas en {year} por estas {count} agencias",
+  "program_287g_totals_all_stops": "{stops} paradas en total",
+  "program_287g_totals_hispanic_stops": "{stops} paradas de conductores hispanos",
+  "program_287g_totals_share_of_state": "≈ {pct} de todas las paradas de Missouri en {year}",
+  "program_287g_breakdown_heading": "Desglose de {year}",
+  "program_287g_breakdown_row_stops": "Paradas",
+  "program_287g_breakdown_row_search_rate": "Tasa de registro",
+  "program_287g_breakdown_row_arrest_rate": "Tasa de arresto",
+  "program_287g_breakdown_row_residency": "Paradas de residentes",
+  "program_287g_breakdown_row_nonresidency": "Paradas de no residentes"
 }

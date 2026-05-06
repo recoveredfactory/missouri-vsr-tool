@@ -429,7 +429,14 @@
   "program_287g_chart_hispanic_share_label": "Hispanic share of stops",
   "program_287g_chart_arrest_rate_label": "Arrest rate, Hispanic drivers",
   "program_287g_chart_no_data": "No data",
-  "program_287g_totals_label": "Combined latest-year totals",
-  "program_287g_totals_stops": "{stops} stops",
-  "program_287g_totals_hispanic_stops": "{stops} of Hispanic drivers"
+  "program_287g_totals_label": "Combined {year} stops by these {count} agencies",
+  "program_287g_totals_all_stops": "{stops} stops total",
+  "program_287g_totals_hispanic_stops": "{stops} stops of Hispanic drivers",
+  "program_287g_totals_share_of_state": "≈ {pct} of all Missouri stops in {year}",
+  "program_287g_breakdown_heading": "{year} breakdown",
+  "program_287g_breakdown_row_stops": "Stops",
+  "program_287g_breakdown_row_search_rate": "Search rate",
+  "program_287g_breakdown_row_arrest_rate": "Arrest rate",
+  "program_287g_breakdown_row_residency": "Resident stops",
+  "program_287g_breakdown_row_nonresidency": "Non-resident stops"
 }

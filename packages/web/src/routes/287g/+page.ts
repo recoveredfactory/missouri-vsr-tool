@@ -18,6 +18,20 @@ export type SeriesPoint = {
   value: number | null;
 };
 
+export const RACE_COLUMNS = [
+  "Total",
+  "White",
+  "Black",
+  "Hispanic",
+  "Native American",
+  "Asian",
+  "Other",
+] as const;
+
+export type RaceColumn = (typeof RACE_COLUMNS)[number];
+
+export type RaceBreakdown = Partial<Record<RaceColumn, number | null>>;
+
 export type Participant = {
   agency_slug: string;
   canonical_name: string;
@@ -27,11 +41,17 @@ export type Participant = {
   agreements: Agreement[];
   totalStopsSeries: SeriesPoint[];
   hispanicShareSeries: SeriesPoint[];
-  arrestRateSeries: SeriesPoint[];
+  hispanicArrestRateSeries: SeriesPoint[];
   latestYear: number | null;
   latestTotalStops: number | null;
+  latestHispanicStops: number | null;
   latestHispanicShare: number | null;
-  latestArrestRate: number | null;
+  latestHispanicArrestRate: number | null;
+  latestStopsByRace: RaceBreakdown;
+  latestSearchRateByRace: RaceBreakdown;
+  latestArrestRateByRace: RaceBreakdown;
+  latestResidentStops: number | null;
+  latestNonResidentStops: number | null;
 };
 
 type SubsetIndex = {
@@ -60,16 +80,41 @@ const normalizeName = (s: string) =>
     .replace(/[^a-z0-9]+/g, " ")
     .trim();
 
+const numberOrNull = (v: unknown): number | null =>
+  typeof v === "number" && Number.isFinite(v) ? v : null;
+
 export async function load({ fetch }) {
-  const [agencyEntries, subsetIndex, stopsFile, arrestRateFile] = await Promise.all([
+  const subsetUrl = (key: string) =>
+    withDataBase(`/data/dist/metric_year_subset/${key}.json`);
+
+  const [
+    agencyEntries,
+    subsetIndex,
+    stopsFile,
+    arrestRateFile,
+    searchRateFile,
+    residentStopsFile,
+    nonResidentStopsFile,
+  ] = await Promise.all([
     fetchJson<Array<Record<string, any>>>(fetch, withDataBase("/data/dist/agency_index.json")),
     fetchJson<SubsetIndex>(fetch, withDataBase("/data/dist/metric_year_subset/_index.json")),
-    fetchJson<SubsetMetricFile>(fetch, withDataBase("/data/dist/metric_year_subset/stops.json")),
-    fetchJson<SubsetMetricFile>(fetch, withDataBase("/data/dist/metric_year_subset/arrest-rate.json")),
+    fetchJson<SubsetMetricFile>(fetch, subsetUrl("stops")),
+    fetchJson<SubsetMetricFile>(fetch, subsetUrl("arrest-rate")),
+    fetchJson<SubsetMetricFile>(fetch, subsetUrl("search-rate")),
+    fetchJson<SubsetMetricFile>(fetch, subsetUrl("resident-stops")),
+    fetchJson<SubsetMetricFile>(fetch, subsetUrl("non-resident-stops")),
   ]);
 
   if (!agencyEntries) {
-    return { participants: [] as Participant[], snapshotDate: "", years: [] as number[] };
+    return {
+      participants: [] as Participant[],
+      snapshotDate: "",
+      years: [] as number[],
+      totalStopsLatestSum: 0,
+      totalHispanicStopsLatestSum: 0,
+      statewideTotalStopsLatest: 0,
+      latestYearAnchor: null as number | null,
+    };
   }
 
   const years: number[] = Array.isArray(subsetIndex?.years)
@@ -88,48 +133,82 @@ export async function load({ fetch }) {
     subsetIndex?.columns ? subsetIndex.columns.indexOf(col) : -1;
   const totalIdx = colIdx("Total");
   const hispanicIdx = colIdx("Hispanic");
+  const raceColIdx: Record<RaceColumn, number> = {
+    Total: colIdx("Total"),
+    White: colIdx("White"),
+    Black: colIdx("Black"),
+    Hispanic: colIdx("Hispanic"),
+    "Native American": colIdx("Native American"),
+    Asian: colIdx("Asian"),
+    Other: colIdx("Other"),
+  };
 
-  const stopsByAgencyYear = new Map<
-    number,
-    Array<{ total: number | null; hispanic: number | null }>
-  >();
-  if (stopsFile?.rows) {
-    for (const row of stopsFile.rows) {
+  // For each metric file, build agency_idx -> year_idx -> RaceBreakdown.
+  const indexMetric = (
+    file: SubsetMetricFile | null,
+  ): Map<number, Array<RaceBreakdown | null>> => {
+    const map = new Map<number, Array<RaceBreakdown | null>>();
+    if (!file?.rows) return map;
+    for (const row of file.rows) {
       if (!Array.isArray(row)) continue;
       const aIdx = Number(row[0]);
       const yIdx = Number(row[1]);
       if (!Number.isFinite(aIdx) || !Number.isFinite(yIdx)) continue;
-      if (!stopsByAgencyYear.has(aIdx)) {
-        stopsByAgencyYear.set(
+      if (!map.has(aIdx)) {
+        map.set(
           aIdx,
-          Array.from({ length: yearCount }, () => ({ total: null, hispanic: null })),
+          Array.from({ length: yearCount }, () => null),
         );
       }
-      const slot = stopsByAgencyYear.get(aIdx)![yIdx];
-      if (slot) {
-        const total = totalIdx >= 0 ? row[totalIdx] : null;
-        const hispanic = hispanicIdx >= 0 ? row[hispanicIdx] : null;
-        slot.total = typeof total === "number" ? total : null;
-        slot.hispanic = typeof hispanic === "number" ? hispanic : null;
+      const breakdown: RaceBreakdown = {};
+      for (const col of RACE_COLUMNS) {
+        const idx = raceColIdx[col];
+        if (idx >= 0) breakdown[col] = numberOrNull(row[idx]);
       }
+      map.get(aIdx)![yIdx] = breakdown;
+    }
+    return map;
+  };
+
+  const stopsBy = indexMetric(stopsFile);
+  const arrestRateBy = indexMetric(arrestRateFile);
+  const searchRateBy = indexMetric(searchRateFile);
+  const residentStopsBy = indexMetric(residentStopsFile);
+  const nonResidentStopsBy = indexMetric(nonResidentStopsFile);
+
+  // Anchor year: latest year that any 287(g) participant has stops data for.
+  // This is what the totals + breakdown numbers reference.
+  const participatingSlugs = new Set<string>();
+  for (const entry of agencyEntries) {
+    const program: Program287g | undefined = entry?.program_287g;
+    if (program && Array.isArray(program.agreements) && program.agreements.length) {
+      const subsetIdx = subsetAgencyIdxByName.get(
+        normalizeName(String(entry.canonical_name ?? entry.agency_slug ?? "")),
+      );
+      if (subsetIdx !== undefined) participatingSlugs.add(String(subsetIdx));
     }
   }
 
-  const arrestRateByAgencyYear = new Map<number, Array<number | null>>();
-  if (arrestRateFile?.rows) {
-    for (const row of arrestRateFile.rows) {
-      if (!Array.isArray(row)) continue;
-      const aIdx = Number(row[0]);
-      const yIdx = Number(row[1]);
-      if (!Number.isFinite(aIdx) || !Number.isFinite(yIdx)) continue;
-      if (!arrestRateByAgencyYear.has(aIdx)) {
-        arrestRateByAgencyYear.set(
-          aIdx,
-          Array.from({ length: yearCount }, () => null as number | null),
-        );
+  let anchorYearIdx = -1;
+  for (let i = years.length - 1; i >= 0 && anchorYearIdx === -1; i -= 1) {
+    for (const sIdx of participatingSlugs) {
+      const breakdown = stopsBy.get(Number(sIdx))?.[i];
+      if (breakdown && typeof breakdown.Total === "number") {
+        anchorYearIdx = i;
+        break;
       }
-      const v = hispanicIdx >= 0 ? row[hispanicIdx] : null;
-      arrestRateByAgencyYear.get(aIdx)![yIdx] = typeof v === "number" ? v : null;
+    }
+  }
+  const latestYearAnchor = anchorYearIdx >= 0 ? years[anchorYearIdx] : null;
+
+  // Statewide stops total for the anchor year.
+  let statewideTotalStopsLatest = 0;
+  if (anchorYearIdx >= 0 && stopsFile?.rows) {
+    for (const row of stopsFile.rows) {
+      if (!Array.isArray(row)) continue;
+      if (Number(row[1]) !== anchorYearIdx) continue;
+      const v = totalIdx >= 0 ? row[totalIdx] : null;
+      if (typeof v === "number" && Number.isFinite(v)) statewideTotalStopsLatest += v;
     }
   }
 
@@ -148,40 +227,69 @@ export async function load({ fetch }) {
     const canonicalName = String(entry.canonical_name ?? entry.agency_slug ?? "");
     const subsetIdx = subsetAgencyIdxByName.get(normalizeName(canonicalName));
 
-    const stopsRows = subsetIdx !== undefined ? stopsByAgencyYear.get(subsetIdx) ?? null : null;
+    const stopsRows = subsetIdx !== undefined ? stopsBy.get(subsetIdx) ?? null : null;
     const arrestRows =
-      subsetIdx !== undefined ? arrestRateByAgencyYear.get(subsetIdx) ?? null : null;
+      subsetIdx !== undefined ? arrestRateBy.get(subsetIdx) ?? null : null;
+    const searchRows =
+      subsetIdx !== undefined ? searchRateBy.get(subsetIdx) ?? null : null;
+    const residentRows =
+      subsetIdx !== undefined ? residentStopsBy.get(subsetIdx) ?? null : null;
+    const nonResidentRows =
+      subsetIdx !== undefined ? nonResidentStopsBy.get(subsetIdx) ?? null : null;
 
     const totalStopsSeries: SeriesPoint[] = years.map((year, i) => ({
       year,
-      value: stopsRows?.[i]?.total ?? null,
+      value: stopsRows?.[i]?.Total ?? null,
     }));
 
     const hispanicShareSeries: SeriesPoint[] = years.map((year, i) => {
       const slot = stopsRows?.[i];
-      if (!slot || slot.total === null || !slot.total || slot.hispanic === null) {
+      const total = slot?.Total ?? null;
+      const hispanic = slot?.Hispanic ?? null;
+      if (typeof total !== "number" || !total || typeof hispanic !== "number") {
         return { year, value: null };
       }
-      return { year, value: (slot.hispanic / slot.total) * 100 };
+      return { year, value: (hispanic / total) * 100 };
     });
 
-    const arrestRateSeries: SeriesPoint[] = years.map((year, i) => ({
+    const hispanicArrestRateSeries: SeriesPoint[] = years.map((year, i) => ({
       year,
-      value: arrestRows?.[i] ?? null,
+      value: arrestRows?.[i]?.Hispanic ?? null,
     }));
 
+    // Latest year with any data across the three sparkline series.
     let latestIdx = -1;
     for (let i = years.length - 1; i >= 0; i -= 1) {
       if (
         totalStopsSeries[i].value !== null ||
         hispanicShareSeries[i].value !== null ||
-        arrestRateSeries[i].value !== null
+        hispanicArrestRateSeries[i].value !== null
       ) {
         latestIdx = i;
         break;
       }
     }
     const latestYear = latestIdx >= 0 ? years[latestIdx] : null;
+
+    const stopsBreakdown: RaceBreakdown = (latestIdx >= 0 && stopsRows?.[latestIdx]) || {};
+    const searchBreakdown: RaceBreakdown = (latestIdx >= 0 && searchRows?.[latestIdx]) || {};
+    const arrestBreakdown: RaceBreakdown = (latestIdx >= 0 && arrestRows?.[latestIdx]) || {};
+
+    const latestResidentStops =
+      latestIdx >= 0 ? residentRows?.[latestIdx]?.Total ?? null : null;
+    const latestNonResidentStops =
+      latestIdx >= 0 ? nonResidentRows?.[latestIdx]?.Total ?? null : null;
+
+    const latestTotalStops = latestIdx >= 0 ? totalStopsSeries[latestIdx].value : null;
+    const latestHispanicShare =
+      latestIdx >= 0 ? hispanicShareSeries[latestIdx].value : null;
+    const latestHispanicArrestRate =
+      latestIdx >= 0 ? hispanicArrestRateSeries[latestIdx].value : null;
+    const latestHispanicStops =
+      typeof latestTotalStops === "number" &&
+      typeof latestHispanicShare === "number"
+        ? (latestTotalStops * latestHispanicShare) / 100
+        : null;
 
     participants.push({
       agency_slug: String(entry.agency_slug ?? ""),
@@ -192,20 +300,27 @@ export async function load({ fetch }) {
       agreements,
       totalStopsSeries,
       hispanicShareSeries,
-      arrestRateSeries,
+      hispanicArrestRateSeries,
       latestYear,
-      latestTotalStops: latestIdx >= 0 ? totalStopsSeries[latestIdx].value : null,
-      latestHispanicShare: latestIdx >= 0 ? hispanicShareSeries[latestIdx].value : null,
-      latestArrestRate: latestIdx >= 0 ? arrestRateSeries[latestIdx].value : null,
+      latestTotalStops,
+      latestHispanicStops,
+      latestHispanicShare,
+      latestHispanicArrestRate,
+      latestStopsByRace: stopsBreakdown,
+      latestSearchRateByRace: searchBreakdown,
+      latestArrestRateByRace: arrestBreakdown,
+      latestResidentStops,
+      latestNonResidentStops,
     });
   }
 
+  // Sort by latest-year Hispanic stops, descending; nulls last; alphabetical tiebreak.
   participants.sort((a, b) => {
-    const aStops = a.latestTotalStops;
-    const bStops = b.latestTotalStops;
-    const aHas = typeof aStops === "number" && Number.isFinite(aStops);
-    const bHas = typeof bStops === "number" && Number.isFinite(bStops);
-    if (aHas && bHas && aStops !== bStops) return (bStops as number) - (aStops as number);
+    const aHas = typeof a.latestHispanicStops === "number" && Number.isFinite(a.latestHispanicStops);
+    const bHas = typeof b.latestHispanicStops === "number" && Number.isFinite(b.latestHispanicStops);
+    if (aHas && bHas && a.latestHispanicStops !== b.latestHispanicStops) {
+      return (b.latestHispanicStops as number) - (a.latestHispanicStops as number);
+    }
     if (aHas && !bHas) return -1;
     if (!aHas && bHas) return 1;
     return a.canonical_name.localeCompare(b.canonical_name, undefined, { sensitivity: "base" });
@@ -214,20 +329,9 @@ export async function load({ fetch }) {
   let totalStopsLatestSum = 0;
   let totalHispanicStopsLatestSum = 0;
   for (const p of participants) {
-    if (p.latestYear === null) continue;
-    const idx = years.indexOf(p.latestYear);
-    if (idx < 0) continue;
-    const stops = p.totalStopsSeries[idx]?.value;
-    if (typeof stops === "number" && Number.isFinite(stops)) totalStopsLatestSum += stops;
-    const hispanicShare = p.hispanicShareSeries[idx]?.value;
-    if (
-      typeof stops === "number" &&
-      Number.isFinite(stops) &&
-      typeof hispanicShare === "number" &&
-      Number.isFinite(hispanicShare)
-    ) {
-      totalHispanicStopsLatestSum += (stops * hispanicShare) / 100;
-    }
+    if (typeof p.latestTotalStops === "number") totalStopsLatestSum += p.latestTotalStops;
+    if (typeof p.latestHispanicStops === "number")
+      totalHispanicStopsLatestSum += p.latestHispanicStops;
   }
 
   return {
@@ -236,5 +340,7 @@ export async function load({ fetch }) {
     years,
     totalStopsLatestSum,
     totalHispanicStopsLatestSum,
+    statewideTotalStopsLatest,
+    latestYearAnchor,
   };
 }
