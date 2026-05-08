@@ -32,6 +32,19 @@ export type RaceColumn = (typeof RACE_COLUMNS)[number];
 
 export type RaceBreakdown = Partial<Record<RaceColumn, number | null>>;
 
+export type RaceTriple = "White" | "Black" | "Hispanic";
+export type RaceSeries = Record<RaceTriple, SeriesPoint[]>;
+
+export type RaceQuad = "White" | "Black" | "Hispanic" | "Other";
+export type RaceQuadSeries = Record<RaceQuad, SeriesPoint[]>;
+
+const RACE_TRIPLE: readonly RaceTriple[] = ["White", "Black", "Hispanic"] as const;
+
+export type SuppressionNote = {
+  metric: "search-rate" | "arrest-rate";
+  year: number;
+};
+
 export type Participant = {
   agency_slug: string;
   canonical_name: string;
@@ -40,18 +53,53 @@ export type Participant = {
   county?: string;
   agreements: Agreement[];
   totalStopsSeries: SeriesPoint[];
-  hispanicShareSeries: SeriesPoint[];
-  hispanicArrestRateSeries: SeriesPoint[];
+  stopsCompositionSeries: RaceQuadSeries;
+  searchRateByRaceSeries: RaceSeries;
+  arrestRateByRaceSeries: RaceSeries;
+  licenseStopRateByRaceSeries: RaceSeries;
+  suppressedOutliers: SuppressionNote[];
   latestYear: number | null;
   latestTotalStops: number | null;
   latestHispanicStops: number | null;
-  latestHispanicShare: number | null;
-  latestHispanicArrestRate: number | null;
   latestStopsByRace: RaceBreakdown;
   latestSearchRateByRace: RaceBreakdown;
   latestArrestRateByRace: RaceBreakdown;
   latestResidentStopsByRace: RaceBreakdown;
   latestNonResidentStopsByRace: RaceBreakdown;
+};
+
+/**
+ * Per-race rates above this many per 100 stops are treated as data-entry
+ * outliers (e.g. St. Charles arrest rate ~95 in one year for a single race).
+ * Applied to arrest-rate and search-rate; license-stop-rate can legitimately
+ * be high so it is not capped.
+ */
+const RACE_RATE_OUTLIER_THRESHOLD = 50;
+
+const sanitizeRateSeries = (
+  rs: RaceSeries,
+  metric: SuppressionNote["metric"],
+): { series: RaceSeries; notes: SuppressionNote[] } => {
+  const suppressedYears = new Set<number>();
+  const out: RaceSeries = { White: [], Black: [], Hispanic: [] };
+  for (const race of RACE_TRIPLE) {
+    for (const p of rs[race]) {
+      if (
+        typeof p.value === "number" &&
+        Number.isFinite(p.value) &&
+        p.value > RACE_RATE_OUTLIER_THRESHOLD
+      ) {
+        suppressedYears.add(p.year);
+        out[race].push({ year: p.year, value: null });
+      } else {
+        out[race].push({ year: p.year, value: p.value });
+      }
+    }
+  }
+  const notes: SuppressionNote[] = Array.from(suppressedYears)
+    .sort((a, b) => a - b)
+    .map((year) => ({ metric, year }));
+  return { series: out, notes };
 };
 
 type SubsetIndex = {
@@ -95,6 +143,7 @@ export async function load({ fetch }) {
     searchRateFile,
     residentStopsFile,
     nonResidentStopsFile,
+    licenseStopRateFile,
   ] = await Promise.all([
     fetchJson<Array<Record<string, any>>>(fetch, withDataBase("/data/dist/agency_index.json")),
     fetchJson<SubsetIndex>(fetch, withDataBase("/data/dist/metric_year_subset/_index.json")),
@@ -103,6 +152,7 @@ export async function load({ fetch }) {
     fetchJson<SubsetMetricFile>(fetch, subsetUrl("search-rate")),
     fetchJson<SubsetMetricFile>(fetch, subsetUrl("resident-stops")),
     fetchJson<SubsetMetricFile>(fetch, subsetUrl("non-resident-stops")),
+    fetchJson<SubsetMetricFile>(fetch, subsetUrl("license-stop-rate")),
   ]);
 
   const emptyReturn = {
@@ -113,8 +163,10 @@ export async function load({ fetch }) {
     totalHispanicStopsLatestSum: 0,
     statewideTotalStopsLatest: 0,
     latestYearAnchor: null as number | null,
-    statewideHispanicShareSeries: [] as SeriesPoint[],
-    statewideHispanicArrestRateSeries: [] as SeriesPoint[],
+    supportTypeCounts: [] as Array<{ type: string; count: number }>,
+    statewideSearchRateSeries: [] as SeriesPoint[],
+    statewideArrestRateSeries: [] as SeriesPoint[],
+    statewideLicenseStopRateSeries: [] as SeriesPoint[],
   };
 
   if (!agencyEntries) return emptyReturn;
@@ -172,45 +224,69 @@ export async function load({ fetch }) {
   const searchRateBy = indexMetric(searchRateFile);
   const residentStopsBy = indexMetric(residentStopsFile);
   const nonResidentStopsBy = indexMetric(nonResidentStopsFile);
+  const licenseStopRateBy = indexMetric(licenseStopRateFile);
 
-  // Statewide Hispanic share: sum(Hispanic stops) / sum(Total stops) per year.
-  // Statewide Hispanic arrest rate: weighted by Hispanic stops.
-  const statewideHispanicShareSeries: SeriesPoint[] = years.map((year, yIdx) => {
-    let totalSum = 0;
-    let hispSum = 0;
-    for (const breakdowns of stopsBy.values()) {
-      const slot = breakdowns[yIdx];
-      if (!slot) continue;
-      const t = slot.Total;
-      const h = slot.Hispanic;
-      if (typeof t === "number" && typeof h === "number") {
-        totalSum += t;
-        hispSum += h;
+  // Statewide weighted-by-stops rate series (Total column).
+  const statewideRateSeries = (
+    rateBy: Map<number, Array<RaceBreakdown | null>>,
+  ): SeriesPoint[] =>
+    years.map((year, yIdx) => {
+      let weightSum = 0;
+      let weighted = 0;
+      for (const [aIdx, stopsRows] of stopsBy.entries()) {
+        const stopSlot = stopsRows[yIdx];
+        const rateSlot = rateBy.get(aIdx)?.[yIdx];
+        if (!stopSlot || !rateSlot) continue;
+        const stops = stopSlot.Total;
+        const rate = rateSlot.Total;
+        if (typeof stops === "number" && stops > 0 && typeof rate === "number") {
+          weightSum += stops;
+          weighted += stops * rate;
+        }
       }
-    }
-    return { year, value: totalSum > 0 ? (hispSum / totalSum) * 100 : null };
+      return { year, value: weightSum > 0 ? weighted / weightSum : null };
+    });
+
+  /**
+   * SSR HTML payload trimming: the page only ever renders a 10-year window
+   * (`SPARKLINE_YEAR_WINDOW`). Slicing to the last 12 years before returning
+   * keeps the response payload below Lambda's 6 MB cap.
+   */
+  const SERIES_TAIL_YEARS = 12;
+  const tailWindow = <T,>(series: T[]): T[] =>
+    series.length > SERIES_TAIL_YEARS ? series.slice(-SERIES_TAIL_YEARS) : series;
+  const tailRaceSeries = (rs: RaceSeries): RaceSeries => ({
+    White: tailWindow(rs.White),
+    Black: tailWindow(rs.Black),
+    Hispanic: tailWindow(rs.Hispanic),
+  });
+  const tailQuadSeries = (rs: RaceQuadSeries): RaceQuadSeries => ({
+    White: tailWindow(rs.White),
+    Black: tailWindow(rs.Black),
+    Hispanic: tailWindow(rs.Hispanic),
+    Other: tailWindow(rs.Other),
   });
 
-  const statewideHispanicArrestRateSeries: SeriesPoint[] = years.map((year, yIdx) => {
-    let weightSum = 0;
-    let weightedRateSum = 0;
-    for (const [aIdx, stopsRows] of stopsBy.entries()) {
-      const stopSlot = stopsRows[yIdx];
-      const rateSlot = arrestRateBy.get(aIdx)?.[yIdx];
-      if (!stopSlot || !rateSlot) continue;
-      const stops = stopSlot.Hispanic;
-      const rate = rateSlot.Hispanic;
-      if (
-        typeof stops === "number" &&
-        stops > 0 &&
-        typeof rate === "number"
-      ) {
-        weightSum += stops;
-        weightedRateSum += stops * rate;
+  const statewideSearchRateSeries = tailWindow(statewideRateSeries(searchRateBy));
+  const statewideArrestRateSeries = tailWindow(statewideRateSeries(arrestRateBy));
+  const statewideLicenseStopRateSeries = tailWindow(statewideRateSeries(licenseStopRateBy));
+
+  const buildRaceSeries = (
+    rows: Array<RaceBreakdown | null> | null,
+  ): RaceSeries => {
+    const out: RaceSeries = { White: [], Black: [], Hispanic: [] };
+    for (let i = 0; i < years.length; i += 1) {
+      const slot = rows?.[i] ?? null;
+      for (const race of RACE_TRIPLE) {
+        const v = slot ? slot[race] : null;
+        out[race].push({
+          year: years[i],
+          value: typeof v === "number" && Number.isFinite(v) ? v : null,
+        });
       }
     }
-    return { year, value: weightSum > 0 ? weightedRateSum / weightSum : null };
-  });
+    return out;
+  };
 
   // Anchor year: latest year that any 287(g) participant has stops data for.
   const participatingSubsetIdxs = new Set<number>();
@@ -266,34 +342,64 @@ export async function load({ fetch }) {
     const searchRows = subsetIdx !== undefined ? searchRateBy.get(subsetIdx) ?? null : null;
     const residentRows = subsetIdx !== undefined ? residentStopsBy.get(subsetIdx) ?? null : null;
     const nonResidentRows = subsetIdx !== undefined ? nonResidentStopsBy.get(subsetIdx) ?? null : null;
+    const licenseStopRateRows =
+      subsetIdx !== undefined ? licenseStopRateBy.get(subsetIdx) ?? null : null;
 
     const totalStopsSeries: SeriesPoint[] = years.map((year, i) => ({
       year,
       value: stopsRows?.[i]?.Total ?? null,
     }));
 
-    const hispanicShareSeries: SeriesPoint[] = years.map((year, i) => {
+    const stopsCompositionSeries: RaceQuadSeries = {
+      White: [],
+      Black: [],
+      Hispanic: [],
+      Other: [],
+    };
+    for (let i = 0; i < years.length; i += 1) {
       const slot = stopsRows?.[i];
       const total = slot?.Total ?? null;
-      const hispanic = slot?.Hispanic ?? null;
-      if (typeof total !== "number" || !total || typeof hispanic !== "number") {
-        return { year, value: null };
+      const w = slot?.White ?? null;
+      const b = slot?.Black ?? null;
+      const hsp = slot?.Hispanic ?? null;
+      const valid =
+        typeof total === "number" &&
+        total > 0 &&
+        typeof w === "number" &&
+        typeof b === "number" &&
+        typeof hsp === "number";
+      const yr = years[i];
+      if (!valid) {
+        stopsCompositionSeries.White.push({ year: yr, value: null });
+        stopsCompositionSeries.Black.push({ year: yr, value: null });
+        stopsCompositionSeries.Hispanic.push({ year: yr, value: null });
+        stopsCompositionSeries.Other.push({ year: yr, value: null });
+        continue;
       }
-      return { year, value: (hispanic / total) * 100 };
-    });
+      const other = Math.max(0, (total as number) - (w as number) - (b as number) - (hsp as number));
+      stopsCompositionSeries.White.push({ year: yr, value: w as number });
+      stopsCompositionSeries.Black.push({ year: yr, value: b as number });
+      stopsCompositionSeries.Hispanic.push({ year: yr, value: hsp as number });
+      stopsCompositionSeries.Other.push({ year: yr, value: other });
+    }
 
-    const hispanicArrestRateSeries: SeriesPoint[] = years.map((year, i) => ({
-      year,
-      value: arrestRows?.[i]?.Hispanic ?? null,
-    }));
+    const rawSearchRate = buildRaceSeries(searchRows);
+    const rawArrestRate = buildRaceSeries(arrestRows);
+    const licenseStopRateByRaceSeries = buildRaceSeries(licenseStopRateRows);
+
+    const searchSan = sanitizeRateSeries(rawSearchRate, "search-rate");
+    const arrestSan = sanitizeRateSeries(rawArrestRate, "arrest-rate");
+    const searchRateByRaceSeries = searchSan.series;
+    const arrestRateByRaceSeries = arrestSan.series;
+    const suppressedOutliers: SuppressionNote[] = [
+      ...searchSan.notes,
+      ...arrestSan.notes,
+    ].sort((a, b) => a.year - b.year || a.metric.localeCompare(b.metric));
 
     let latestIdx = -1;
     for (let i = years.length - 1; i >= 0; i -= 1) {
-      if (
-        totalStopsSeries[i].value !== null ||
-        hispanicShareSeries[i].value !== null ||
-        hispanicArrestRateSeries[i].value !== null
-      ) {
+      const slot = stopsRows?.[i];
+      if (slot && typeof slot.Total === "number") {
         latestIdx = i;
         break;
       }
@@ -306,16 +412,10 @@ export async function load({ fetch }) {
     const residentBreakdown: RaceBreakdown = (latestIdx >= 0 && residentRows?.[latestIdx]) || {};
     const nonResidentBreakdown: RaceBreakdown = (latestIdx >= 0 && nonResidentRows?.[latestIdx]) || {};
 
-    const latestTotalStops = latestIdx >= 0 ? totalStopsSeries[latestIdx].value : null;
-    const latestHispanicShare =
-      latestIdx >= 0 ? hispanicShareSeries[latestIdx].value : null;
-    const latestHispanicArrestRate =
-      latestIdx >= 0 ? hispanicArrestRateSeries[latestIdx].value : null;
+    const latestTotalStops =
+      typeof stopsBreakdown.Total === "number" ? stopsBreakdown.Total : null;
     const latestHispanicStops =
-      typeof latestTotalStops === "number" &&
-      typeof latestHispanicShare === "number"
-        ? (latestTotalStops * latestHispanicShare) / 100
-        : null;
+      typeof stopsBreakdown.Hispanic === "number" ? stopsBreakdown.Hispanic : null;
 
     participants.push({
       agency_slug: String(entry.agency_slug ?? ""),
@@ -324,14 +424,15 @@ export async function load({ fetch }) {
       city: entry.city ?? "",
       county: entry.county ?? "",
       agreements,
-      totalStopsSeries,
-      hispanicShareSeries,
-      hispanicArrestRateSeries,
+      totalStopsSeries: tailWindow(totalStopsSeries),
+      stopsCompositionSeries: tailQuadSeries(stopsCompositionSeries),
+      searchRateByRaceSeries: tailRaceSeries(searchRateByRaceSeries),
+      arrestRateByRaceSeries: tailRaceSeries(arrestRateByRaceSeries),
+      licenseStopRateByRaceSeries: tailRaceSeries(licenseStopRateByRaceSeries),
+      suppressedOutliers,
       latestYear,
       latestTotalStops,
       latestHispanicStops,
-      latestHispanicShare,
-      latestHispanicArrestRate,
       latestStopsByRace: stopsBreakdown,
       latestSearchRateByRace: searchBreakdown,
       latestArrestRateByRace: arrestBreakdown,
@@ -359,6 +460,18 @@ export async function load({ fetch }) {
       totalHispanicStopsLatestSum += p.latestHispanicStops;
   }
 
+  const supportTypeCountMap = new Map<string, number>();
+  for (const p of participants) {
+    for (const a of p.agreements) {
+      const t = (a.support_type || "").trim();
+      if (!t) continue;
+      supportTypeCountMap.set(t, (supportTypeCountMap.get(t) ?? 0) + 1);
+    }
+  }
+  const supportTypeCounts = Array.from(supportTypeCountMap.entries())
+    .map(([type, count]) => ({ type, count }))
+    .sort((a, b) => b.count - a.count);
+
   return {
     participants,
     snapshotDate,
@@ -367,7 +480,9 @@ export async function load({ fetch }) {
     totalHispanicStopsLatestSum,
     statewideTotalStopsLatest,
     latestYearAnchor,
-    statewideHispanicShareSeries,
-    statewideHispanicArrestRateSeries,
+    supportTypeCounts,
+    statewideSearchRateSeries,
+    statewideArrestRateSeries,
+    statewideLicenseStopRateSeries,
   };
 }

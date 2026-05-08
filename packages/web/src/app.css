@@ -47,6 +47,22 @@
   }
 }
 
+/* 287(g) sparkline dots — class hoists static styles out of inline attrs to keep
+   the SSR HTML payload under Lambda's 6 MB cap. */
+.spark287-dot {
+  position: absolute;
+  pointer-events: none;
+  display: block;
+  border-radius: 9999px;
+  transform: translate(-50%, -50%);
+  width: 5px;
+  height: 5px;
+}
+.spark287-dot--total {
+  width: 6px;
+  height: 6px;
+}
+
 .page-fade {
   opacity: 1;
   animation: page-fade-in 180ms ease;
