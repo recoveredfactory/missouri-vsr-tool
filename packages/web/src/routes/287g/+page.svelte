@@ -21,6 +21,8 @@
     program_287g_race_short_hispanic,
     program_287g_race_short_other,
     program_287g_jump_to_label,
+    program_287g_rolling_avg_label,
+    program_287g_rolling_avg_title,
     program_287g_back_to_top,
     program_287g_outlier_note_one,
     program_287g_outlier_note_many,
@@ -120,8 +122,38 @@
       ? percentFormatter.format(value)
       : "—";
 
-  const recentSeries = (series: Array<{ year: number; value: number | null }>) =>
-    series.slice(-SPARKLINE_YEAR_WINDOW);
+  type SeriesPoint = { year: number; value: number | null };
+
+  /**
+   * 3-year rolling average. For each year, averages itself with up to two prior
+   * years (whatever is available); requires at least 2 of the 3 to be valid so
+   * we don't render a "rolling average" of a single point.
+   */
+  const rollingAverage = (series: SeriesPoint[]): SeriesPoint[] => {
+    return series.map((p, i) => {
+      const window = series.slice(Math.max(0, i - 2), i + 1);
+      const valid = window.filter(
+        (s) => typeof s.value === "number" && Number.isFinite(s.value),
+      ) as Array<{ year: number; value: number }>;
+      if (valid.length < 2) return { year: p.year, value: null };
+      const sum = valid.reduce((acc, s) => acc + s.value, 0);
+      return { year: p.year, value: sum / valid.length };
+    });
+  };
+
+  let rollingAvg = false;
+
+  /**
+   * Apply rolling avg (if enabled) over the full upstream window, THEN slice to
+   * the displayed 10-year tail — so the leftmost displayed year still benefits
+   * from the prior years' data when smoothed.
+   *
+   * Reactive on `rollingAvg` so all charts re-derive their series when toggled.
+   */
+  $: recentSeries = (series: SeriesPoint[]) => {
+    const base = rollingAvg ? rollingAverage(series) : series;
+    return base.slice(-SPARKLINE_YEAR_WINDOW);
+  };
 
   const raceShareOfTotal = (
     breakdown: RaceBreakdown,
@@ -163,13 +195,15 @@
   type RaceQuad = "White" | "Black" | "Hispanic" | "Other";
   type RaceQuadSeries = Record<RaceQuad, Array<{ year: number; value: number | null }>>;
 
-  const recentRaceSeries = (rs: RaceSeries): RaceSeries => ({
+  // Reactive on `recentSeries` (which is reactive on `rollingAvg`) so toggling
+  // smoothing re-derives all per-race chart inputs throughout the page.
+  $: recentRaceSeries = (rs: RaceSeries): RaceSeries => ({
     White: recentSeries(rs.White),
     Black: recentSeries(rs.Black),
     Hispanic: recentSeries(rs.Hispanic),
   });
 
-  const recentRaceQuadSeries = (rs: RaceQuadSeries): RaceQuadSeries => ({
+  $: recentRaceQuadSeries = (rs: RaceQuadSeries): RaceQuadSeries => ({
     White: recentSeries(rs.White),
     Black: recentSeries(rs.Black),
     Hispanic: recentSeries(rs.Hispanic),
@@ -224,6 +258,10 @@
   $: stickyTopPx = `${headerHeight}px`;
   $: scrollMargin = `${headerHeight + 16}px`;
 
+  /** True once the agency bar has actually stuck to its sticky position. */
+  let stickyStuck = false;
+  let stickySentinel: HTMLElement | undefined;
+
   onMount(() => {
     if (typeof window === "undefined") return;
 
@@ -244,12 +282,26 @@
         if (headerObserver) headerObserver.disconnect();
       };
     }
+
+    // Sentinel above the sticky bar: once it scrolls out of view, the bar is stuck.
+    let stickyObserver: IntersectionObserver | null = null;
+    if (stickySentinel) {
+      stickyObserver = new IntersectionObserver(
+        ([entry]) => {
+          stickyStuck = !entry.isIntersecting && entry.boundingClientRect.top < 0;
+        },
+        { threshold: [0, 1] },
+      );
+      stickyObserver.observe(stickySentinel);
+    }
+
     const articles = Array.from(
       document.querySelectorAll<HTMLElement>("article[id^='agency-']"),
     );
     if (!articles.length) {
       return () => {
         if (headerObserver) headerObserver.disconnect();
+        if (stickyObserver) stickyObserver.disconnect();
       };
     }
     const visibility = new Map<string, number>();
@@ -282,6 +334,7 @@
     return () => {
       observer.disconnect();
       if (headerObserver) headerObserver.disconnect();
+      if (stickyObserver) stickyObserver.disconnect();
     };
   });
 
@@ -380,25 +433,41 @@
   {/if}
 
   {#if agencyJumpList.length}
+    <div bind:this={stickySentinel} class="mt-6 h-px"></div>
     <div
-      class="sticky z-30 -mx-4 mt-6 border-y border-slate-200 bg-white/95 px-4 py-2 backdrop-blur sm:-mx-6 sm:px-6"
+      class="sticky z-30 -mx-4 border-y px-4 py-2 backdrop-blur transition-colors duration-150 sm:-mx-6 sm:px-6 {stickyStuck
+        ? 'border-slate-300 bg-slate-100/95 shadow-md'
+        : 'border-slate-200 bg-white/95'}"
       style="top: {stickyTopPx};"
     >
-      <div class="flex flex-wrap items-baseline gap-x-2 gap-y-1 text-sm">
-        <label for="agency-jump" class="font-medium text-slate-700">
-          {program_287g_jump_to_label()}:
-        </label>
-        <select
-          id="agency-jump"
-          class="min-w-0 max-w-full flex-1 rounded border border-slate-300 bg-white px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-700 sm:flex-none"
-          bind:value={jumpSelected}
-          on:change={handleJump}
+      <div class="flex flex-wrap items-baseline gap-x-4 gap-y-1 text-sm">
+        <div class="flex min-w-0 flex-1 items-baseline gap-x-2 gap-y-1 sm:flex-none">
+          <label for="agency-jump" class="font-medium text-slate-700">
+            {program_287g_jump_to_label()}:
+          </label>
+          <select
+            id="agency-jump"
+            class="min-w-0 max-w-full flex-1 rounded border border-slate-300 bg-white px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-700 sm:flex-none"
+            bind:value={jumpSelected}
+            on:change={handleJump}
+          >
+            <option value="">—</option>
+            {#each agencyJumpList as a (a.slug)}
+              <option value={a.slug}>{a.label}</option>
+            {/each}
+          </select>
+        </div>
+        <label
+          class="inline-flex cursor-pointer items-center gap-1.5 text-xs text-slate-600"
+          title={program_287g_rolling_avg_title()}
         >
-          <option value="">—</option>
-          {#each agencyJumpList as a (a.slug)}
-            <option value={a.slug}>{a.label}</option>
-          {/each}
-        </select>
+          <input
+            type="checkbox"
+            bind:checked={rollingAvg}
+            class="h-3.5 w-3.5 rounded border-slate-300 text-emerald-700 focus:ring-emerald-700"
+          />
+          {program_287g_rolling_avg_label()}
+        </label>
       </div>
     </div>
   {/if}
