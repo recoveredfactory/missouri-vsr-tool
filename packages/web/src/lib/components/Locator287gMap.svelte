@@ -45,6 +45,13 @@
   import { browser } from "$app/environment";
 
   export let agencySlug: string;
+  /**
+   * Slugs of all 287(g) participants. Each path with a matching id gets a
+   * `.participant` class added and is moved to the end of its parent group
+   * so it paints on top of the non-participant base layer (SVG has no
+   * z-index — paint order is document order).
+   */
+  export let participantSlugs: string[] = [];
 
   let container: HTMLDivElement | undefined;
   let visible = false;
@@ -80,11 +87,30 @@
       const cloned = fragment.cloneNode(true) as DocumentFragment;
       const svg = cloned.querySelector("svg");
       if (!svg) return;
-      const safe = cssEscape(agencySlug);
-      svg.querySelector(`#agency-${safe}`)?.classList.add("locator-current");
-      svg
-        .querySelector(`circle.centroid[data-slug="${safe}"]`)
-        ?.classList.add("locator-current");
+
+      // Tag 287(g) participants and reorder them to the end of their parent
+      // group so they paint on top of the non-participant base layer.
+      for (const slug of participantSlugs) {
+        const safeSlug = cssEscape(slug);
+        const path = svg.querySelector(`#agency-${safeSlug}`);
+        if (path) {
+          path.classList.add("participant");
+          path.parentElement?.appendChild(path);
+        }
+      }
+
+      // Highlight the current agency last so it paints over everything.
+      const safeCurrent = cssEscape(agencySlug);
+      const currentPath = svg.querySelector(`#agency-${safeCurrent}`);
+      if (currentPath) {
+        currentPath.classList.add("locator-current");
+        currentPath.parentElement?.appendChild(currentPath);
+      }
+
+      // State outline paints on top of every fill so the border reads cleanly.
+      const statePath = svg.querySelector(".state");
+      if (statePath) svg.appendChild(statePath);
+
       container.replaceChildren(svg);
     });
   }
@@ -107,38 +133,36 @@
     height: 100%;
     display: block;
   }
-  /* MO outline: pale background — agency polygons provide structure on top. */
+  /* MO outline: just the state border, no fill. */
   .locator287g-frame :global(.state) {
-    fill: #f1f5f9;
+    fill: none;
+    stroke: #475569;
+    stroke-width: 1;
+    vector-effect: non-scaling-stroke;
+    stroke-linejoin: round;
+  }
+  /* Non-participant agencies: undifferentiated light-gray basemap, no stroke. */
+  .locator287g-frame :global(.agency) {
+    fill: #e2e8f0;
     stroke: none;
   }
-  /* All jurisdictions: light gray fill with white separators. */
-  .locator287g-frame :global(.agency) {
-    fill: #cbd5e1;
+  /* 287(g) participants: darker fill, white separators, painted above the base. */
+  .locator287g-frame :global(.agency.participant) {
+    fill: #94a3b8;
     stroke: #ffffff;
     stroke-width: 0.6;
     vector-effect: non-scaling-stroke;
     stroke-linejoin: round;
   }
-  /* Tiny dot at each agency centroid. r is in viewBox units (viewBox ~5.2×4.6). */
-  .locator287g-frame :global(circle.centroid) {
-    fill: #475569;
-    r: 0.035;
-  }
-  /* Current agency on this card: bright blue fill + dark outline. */
+  /* Current agency on this card: bright blue + dark outline, on top. */
   .locator287g-frame :global(.agency.locator-current) {
     fill: #2563eb;
     stroke: #1e3a8a;
     stroke-width: 1.6;
     vector-effect: non-scaling-stroke;
   }
-  /* Highlighted centroid for the current agency: a bigger pin with a
-   * white ring so it pops even when the polygon is tiny. */
-  .locator287g-frame :global(circle.centroid.locator-current) {
-    fill: #1d4ed8;
-    stroke: #ffffff;
-    stroke-width: 1.5;
-    vector-effect: non-scaling-stroke;
-    r: 0.09;
+  /* Centroids hidden for now — keeping them in the source SVG for later. */
+  .locator287g-frame :global(circle.centroid) {
+    display: none;
   }
 </style>

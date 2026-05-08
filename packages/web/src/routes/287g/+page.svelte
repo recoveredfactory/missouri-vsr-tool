@@ -181,6 +181,7 @@
 
   $: countDisplay = integerFormatter.format(data.participants.length);
   $: anchorYear = data.latestYearAnchor;
+  $: participantSlugs = data.participants.map((p) => p.agency_slug);
   $: totalStopsDisplay = formatInteger(data.totalStopsLatestSum) ?? "—";
   $: totalHispanicStopsDisplay = formatInteger(data.totalHispanicStopsLatestSum) ?? "—";
   $: statewideShare =
@@ -606,7 +607,10 @@
               {/each}
             </ul>
           </div>
-          <Locator287gMap agencySlug={participant.agency_slug} />
+          <Locator287gMap
+            agencySlug={participant.agency_slug}
+            {participantSlugs}
+          />
         </div>
 
         <div class="mt-8 grid gap-10 sm:grid-cols-2">
