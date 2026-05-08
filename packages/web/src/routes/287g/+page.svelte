@@ -4,6 +4,7 @@
   import SparkRaces287g from "$lib/components/SparkRaces287g.svelte";
   import ShareChart287g from "$lib/components/ShareChart287g.svelte";
   import StickyHeader from "$lib/components/StickyHeader.svelte";
+  import Locator287gMap from "$lib/components/Locator287gMap.svelte";
   import { raceColors } from "$lib/colors.js";
   import {
     program_287g_page_title,
@@ -35,10 +36,13 @@
     program_287g_totals_caveat,
     program_287g_models_heading,
     program_287g_models_subhead,
+    program_287g_card_total_stops_line,
     program_287g_breakdown_heading,
     program_287g_breakdown_row_stops,
     program_287g_breakdown_row_search_rate,
     program_287g_breakdown_row_arrest_rate,
+    program_287g_breakdown_row_license_stop_rate,
+    program_287g_breakdown_row_contraband_hit_rate,
     program_287g_breakdown_row_residency,
     program_287g_breakdown_row_nonresidency,
     agency_287g_description_link,
@@ -141,21 +145,31 @@
     });
   };
 
-  let rollingAvg = false;
+  let rollingAvg = true;
 
   /**
-   * Apply rolling avg (if enabled) over the full upstream window, THEN slice to
-   * the displayed 10-year tail — so the leftmost displayed year still benefits
-   * from the prior years' data when smoothed.
-   *
-   * Reactive on `rollingAvg` so all charts re-derive their series when toggled.
+   * Apply rolling avg (if requested) over the full upstream window, THEN slice
+   * to the displayed 10-year tail — so the leftmost displayed year still
+   * benefits from the prior years' data when smoothed.
    */
-  $: recentSeries = (series: SeriesPoint[]) => {
-    const base = rollingAvg ? rollingAverage(series) : series;
+  const applyRolling = (series: SeriesPoint[], rolling: boolean): SeriesPoint[] => {
+    const base = rolling ? rollingAverage(series) : series;
     return base.slice(-SPARKLINE_YEAR_WINDOW);
   };
+  const applyRollingRace = (rs: RaceSeries, rolling: boolean): RaceSeries => ({
+    White: applyRolling(rs.White, rolling),
+    Black: applyRolling(rs.Black, rolling),
+    Hispanic: applyRolling(rs.Hispanic, rolling),
+  });
+  const applyRollingRaceQuad = (rs: RaceQuadSeries, rolling: boolean): RaceQuadSeries => ({
+    White: applyRolling(rs.White, rolling),
+    Black: applyRolling(rs.Black, rolling),
+    Hispanic: applyRolling(rs.Hispanic, rolling),
+    Other: applyRolling(rs.Other, rolling),
+  });
 
-  const raceShareOfTotal = (
+  // % of this row's total accounted for by `race`. For Total column returns 100.
+  const inRowShare = (
     breakdown: RaceBreakdown,
     race: RaceColumn,
   ): number | null => {
@@ -163,18 +177,6 @@
     const v = breakdown[race];
     if (typeof total !== "number" || !total || typeof v !== "number") return null;
     return (v / total) * 100;
-  };
-
-  // % of this race's stops that were residents (or non-residents).
-  const residencyShare = (
-    residencyBreakdown: RaceBreakdown,
-    stopsBreakdown: RaceBreakdown,
-    race: RaceColumn,
-  ): number | null => {
-    const denom = stopsBreakdown[race];
-    const numer = residencyBreakdown[race];
-    if (typeof denom !== "number" || !denom || typeof numer !== "number") return null;
-    return (numer / denom) * 100;
   };
 
   $: countDisplay = integerFormatter.format(data.participants.length);
@@ -195,20 +197,34 @@
   type RaceQuad = "White" | "Black" | "Hispanic" | "Other";
   type RaceQuadSeries = Record<RaceQuad, Array<{ year: number; value: number | null }>>;
 
-  // Reactive on `recentSeries` (which is reactive on `rollingAvg`) so toggling
-  // smoothing re-derives all per-race chart inputs throughout the page.
-  $: recentRaceSeries = (rs: RaceSeries): RaceSeries => ({
-    White: recentSeries(rs.White),
-    Black: recentSeries(rs.Black),
-    Hispanic: recentSeries(rs.Hispanic),
-  });
+  /** Shared across all stops-share cards: picking a race here flips every card. */
+  let selectedShareRace: RaceQuad = "Hispanic";
 
-  $: recentRaceQuadSeries = (rs: RaceQuadSeries): RaceQuadSeries => ({
-    White: recentSeries(rs.White),
-    Black: recentSeries(rs.Black),
-    Hispanic: recentSeries(rs.Hispanic),
-    Other: recentSeries(rs.Other),
-  });
+  /**
+   * Per-participant chart series, derived at the page level so the reactive
+   * directly tracks `rollingAvg`. Doing this inside a keyed `{#each}` via
+   * `{@const}` is unreliable — the const may not re-evaluate on outer state
+   * changes, so child `series` props keep stale identities and the tween's
+   * `set()` isn't triggered.
+   */
+  type ParticipantView = {
+    participant: (typeof data.participants)[number];
+    totalStops: SeriesPoint[];
+    stopsComp: RaceQuadSeries;
+    searchRace: RaceSeries;
+    arrestRace: RaceSeries;
+    licenseRace: RaceSeries;
+  };
+  $: participantViews = data.participants.map(
+    (p: (typeof data.participants)[number]): ParticipantView => ({
+      participant: p,
+      totalStops: applyRolling(p.totalStopsSeries, rollingAvg),
+      stopsComp: applyRollingRaceQuad(p.stopsCompositionSeries as RaceQuadSeries, rollingAvg),
+      searchRace: applyRollingRace(p.searchRateByRaceSeries as RaceSeries, rollingAvg),
+      arrestRace: applyRollingRace(p.arrestRateByRaceSeries as RaceSeries, rollingAvg),
+      licenseRace: applyRollingRace(p.licenseStopRateByRaceSeries as RaceSeries, rollingAvg),
+    }),
+  );
 
   $: raceShortLabels = {
     White: program_287g_race_short_white(),
@@ -331,6 +347,7 @@
       },
     );
     for (const a of articles) observer.observe(a);
+
     return () => {
       observer.disconnect();
       if (headerObserver) headerObserver.disconnect();
@@ -338,9 +355,9 @@
     };
   });
 
-  $: statewideSearchRateWindow = recentSeries(data.statewideSearchRateSeries ?? []);
-  $: statewideArrestRateWindow = recentSeries(data.statewideArrestRateSeries ?? []);
-  $: statewideLicenseStopRateWindow = recentSeries(data.statewideLicenseStopRateSeries ?? []);
+  $: statewideSearchRateWindow = applyRolling(data.statewideSearchRateSeries ?? [], rollingAvg);
+  $: statewideArrestRateWindow = applyRolling(data.statewideArrestRateSeries ?? [], rollingAvg);
+  $: statewideLicenseStopRateWindow = applyRolling(data.statewideLicenseStopRateSeries ?? [], rollingAvg);
 
   type SuppressionNote = { metric: "search-rate" | "arrest-rate"; year: number };
   const formatSuppressionNote = (notes: SuppressionNote[]): string => {
@@ -367,38 +384,43 @@
     {program_287g_page_heading()}
   </h1>
 
-  <p class="mt-4 text-base leading-relaxed text-slate-700">
+  <p class="mt-5 text-lg leading-relaxed text-slate-700">
     <a class="underline" href={WIKIPEDIA_287G_URL} target="_blank" rel="noreferrer"
       >{agency_287g_description_link()}</a
     >{agency_287g_description_post()}
   </p>
 
-  <p class="mt-3 text-base text-slate-700">
+  <p class="mt-3 text-lg text-slate-700">
     {program_287g_page_summary({
       count: countDisplay,
       date: formatLongDate(data.snapshotDate),
     })}
   </p>
 
-  <p class="mt-3 text-base leading-relaxed text-slate-700">
-    {program_287g_page_clarification()}
+  <!--
+    `program_287g_page_clarification` contains anchor tags, so it's rendered
+    as HTML. Inline `[&_a]:` styles give the embedded links the same look as
+    the explicit `<a class="underline">` above.
+  -->
+  <p class="mt-3 text-lg leading-relaxed text-slate-700 [&_a]:underline [&_a:hover]:text-slate-900">
+    {@html program_287g_page_clarification()}
   </p>
 
   {#if data.supportTypeCounts && data.supportTypeCounts.length}
     {@const totalAgencies = data.participants.length}
-    <section class="mt-6">
-      <h2 class="text-base font-semibold text-slate-900">{program_287g_models_heading()}</h2>
-      <p class="mt-1 text-xs text-slate-500">{program_287g_models_subhead()}</p>
-      <ul class="mt-3 space-y-2">
+    <section class="mt-8">
+      <h2 class="text-lg font-semibold text-slate-900">{program_287g_models_heading()}</h2>
+      <p class="mt-1 text-sm text-slate-500">{program_287g_models_subhead()}</p>
+      <ul class="mt-3 space-y-2.5">
         {#each data.supportTypeCounts as model}
           <li>
-            <div class="flex items-baseline justify-between gap-3 text-sm">
+            <div class="flex items-baseline justify-between gap-3 text-base">
               <span class="font-medium text-slate-800">{model.type}</span>
               <span class="tabular-nums text-slate-600">
                 {integerFormatter.format(model.count)}/{integerFormatter.format(totalAgencies)}
               </span>
             </div>
-            <div class="mt-1 h-2 w-full overflow-hidden rounded-sm bg-slate-100">
+            <div class="mt-1 h-2.5 w-full overflow-hidden rounded-sm bg-slate-100">
               <div
                 class="h-full bg-emerald-800"
                 style="width: {totalAgencies > 0 ? (model.count / totalAgencies) * 100 : 0}%"
@@ -411,43 +433,43 @@
   {/if}
 
   {#if data.totalStopsLatestSum > 0 && anchorYear !== null}
-    <div class="mt-6 rounded-md border border-slate-200 bg-slate-50 p-4">
-      <p class="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">
+    <div class="mt-8 rounded-md border border-slate-200 bg-slate-50 p-5 sm:p-6">
+      <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
         {program_287g_totals_label({ year: anchorYear, count: countDisplay })}
       </p>
-      <p class="mt-1 text-base text-slate-900">
+      <p class="mt-1.5 text-lg text-slate-900">
         {program_287g_totals_all_stops({ stops: totalStopsDisplay })}
         <span class="text-slate-400">·</span>
         {program_287g_totals_hispanic_stops({ stops: totalHispanicStopsDisplay })}
       </p>
       {#if statewideShareDisplay}
-        <p class="mt-1 text-sm text-slate-600">
+        <p class="mt-1 text-base text-slate-600">
           {program_287g_totals_share_of_state({
             pct: statewideShareDisplay,
             year: anchorYear,
           })}
         </p>
       {/if}
-      <p class="mt-2 text-xs italic text-slate-500">{program_287g_totals_caveat()}</p>
+      <p class="mt-2.5 text-sm italic text-slate-500">{program_287g_totals_caveat()}</p>
     </div>
   {/if}
 
   {#if agencyJumpList.length}
     <div bind:this={stickySentinel} class="mt-6 h-px"></div>
     <div
-      class="sticky z-30 -mx-4 border-y px-4 py-2 backdrop-blur transition-colors duration-150 sm:-mx-6 sm:px-6 {stickyStuck
+      class="sticky z-30 border-y backdrop-blur transition-colors duration-150 {stickyStuck
         ? 'border-slate-300 bg-slate-100/95 shadow-md'
         : 'border-slate-200 bg-white/95'}"
-      style="top: {stickyTopPx};"
+      style="top: {stickyTopPx}; width: 100vw; margin-inline: calc(50% - 50vw);"
     >
-      <div class="flex flex-wrap items-baseline gap-x-4 gap-y-1 text-sm">
-        <div class="flex min-w-0 flex-1 items-baseline gap-x-2 gap-y-1 sm:flex-none">
+      <div class="mx-auto flex max-w-6xl flex-wrap items-center gap-x-5 gap-y-1.5 px-4 py-2.5 text-base sm:px-6">
+        <div class="flex min-w-0 flex-1 items-center gap-x-2 gap-y-1 sm:flex-none">
           <label for="agency-jump" class="font-medium text-slate-700">
             {program_287g_jump_to_label()}:
           </label>
           <select
             id="agency-jump"
-            class="min-w-0 max-w-full flex-1 rounded border border-slate-300 bg-white px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-700 sm:flex-none"
+            class="min-w-0 max-w-full flex-1 rounded border border-slate-300 bg-white px-2.5 py-1.5 text-base focus:outline-none focus:ring-2 focus:ring-emerald-700 sm:flex-none"
             bind:value={jumpSelected}
             on:change={handleJump}
           >
@@ -458,13 +480,13 @@
           </select>
         </div>
         <label
-          class="inline-flex cursor-pointer items-center gap-1.5 text-xs text-slate-600"
+          class="inline-flex cursor-pointer items-center gap-1.5 text-sm text-slate-600"
           title={program_287g_rolling_avg_title()}
         >
           <input
             type="checkbox"
             bind:checked={rollingAvg}
-            class="h-3.5 w-3.5 rounded border-slate-300 text-emerald-700 focus:ring-emerald-700"
+            class="h-4 w-4 rounded border-slate-300 text-emerald-700 focus:ring-emerald-700"
           />
           {program_287g_rolling_avg_label()}
         </label>
@@ -472,233 +494,267 @@
     </div>
   {/if}
 
-  <p class="mt-6 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-500">
+  <p class="mt-7 flex flex-wrap items-center gap-x-5 gap-y-1.5 text-sm text-slate-600">
     <span>{program_287g_chart_window_label()}</span>
     <span class="inline-flex items-center gap-1.5">
       <span
-        class="inline-block h-[2px] w-5 rounded-sm"
+        class="inline-block h-[3px] w-6 rounded-sm"
         style="background: {raceColors.White};"
       ></span>
       <span style="color: {raceColors.White};" class="font-semibold">{raceShortLabels.White}</span>
     </span>
     <span class="inline-flex items-center gap-1.5">
       <span
-        class="inline-block h-[2px] w-5 rounded-sm"
+        class="inline-block h-[3px] w-6 rounded-sm"
         style="background: {raceColors.Black};"
       ></span>
       <span style="color: {raceColors.Black};" class="font-semibold">{raceShortLabels.Black}</span>
     </span>
     <span class="inline-flex items-center gap-1.5">
       <span
-        class="inline-block h-[2px] w-5 rounded-sm"
+        class="inline-block h-[3px] w-6 rounded-sm"
         style="background: {raceColors.Hispanic};"
       ></span>
       <span style="color: {raceColors.Hispanic};" class="font-semibold">{raceShortLabels.Hispanic}</span>
     </span>
     <span class="inline-flex items-center gap-1.5">
-      <svg width="22" height="6" viewBox="0 0 22 6" aria-hidden="true">
-        <line x1="0" x2="22" y1="3" y2="3" stroke="#94a3b8" stroke-width="1.25" stroke-dasharray="3 3" />
+      <svg width="26" height="6" viewBox="0 0 26 6" aria-hidden="true">
+        <line x1="0" x2="26" y1="3" y2="3" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="3 3" />
       </svg>
       {program_287g_chart_statewide_label()}
     </span>
   </p>
 
-  <div class="mt-4 space-y-10">
-    {#each data.participants as participant (participant.agency_slug)}
-      {@const totalStops = recentSeries(participant.totalStopsSeries)}
-      {@const stopsComp = recentRaceQuadSeries(participant.stopsCompositionSeries as RaceQuadSeries)}
-      {@const searchRace = recentRaceSeries(participant.searchRateByRaceSeries as RaceSeries)}
-      {@const arrestRace = recentRaceSeries(participant.arrestRateByRaceSeries as RaceSeries)}
-      {@const licenseRace = recentRaceSeries(participant.licenseStopRateByRaceSeries as RaceSeries)}
+  <div class="mt-5 space-y-12">
+    {#each participantViews as view (view.participant.agency_slug)}
+      {@const participant = view.participant}
       {@const latestYear = participant.latestYear}
       {@const stopsByRace = participant.latestStopsByRace as RaceBreakdown}
       {@const searchByRace = participant.latestSearchRateByRace as RaceBreakdown}
       {@const arrestByRace = participant.latestArrestRateByRace as RaceBreakdown}
+      {@const licenseStopRateByRace = participant.latestLicenseStopRateByRace as RaceBreakdown}
+      {@const contrabandHitRateByRace = participant.latestContrabandHitRateByRace as RaceBreakdown}
       {@const residentByRace = participant.latestResidentStopsByRace as RaceBreakdown}
       {@const nonResidentByRace = participant.latestNonResidentStopsByRace as RaceBreakdown}
+      {@const isStateAgency = participant.agency_type === "State Agency"}
+      {@const locationParts = isStateAgency
+        ? [participant.agency_type]
+        : [participant.agency_type, participant.city, participant.county].filter(Boolean)}
 
       <article
         id="agency-{participant.agency_slug}"
-        class="rounded-lg border border-slate-200 bg-white p-5 sm:p-7"
+        class="-mx-4 border-y border-slate-200 bg-white p-4 sm:mx-0 sm:rounded-lg sm:border sm:p-8"
         style="scroll-margin-top: {scrollMargin};"
       >
-        <header>
-          <h2 class="text-xl font-semibold text-slate-900">
-            <a
-              class="text-emerald-900 underline-offset-2 hover:underline"
-              href={`${localeBase}/agency/${participant.agency_slug}`}
-            >
-              {participant.canonical_name}
-            </a>
-          </h2>
-          {#if participant.city || participant.county || participant.agency_type}
-            <p class="mt-1 text-sm text-slate-500">
-              {[participant.agency_type, participant.city, participant.county]
-                .filter(Boolean)
-                .join(" · ")}
-            </p>
-          {/if}
-        </header>
+        <div class="flex flex-row items-stretch gap-3 sm:gap-6">
+          <div class="min-w-0 flex-1 space-y-5">
+            <header>
+              <h2 class="text-2xl font-semibold text-slate-900 sm:text-3xl">
+                <a
+                  class="text-emerald-900 underline-offset-2 hover:underline"
+                  href={`${localeBase}/agency/${participant.agency_slug}`}
+                >
+                  {participant.canonical_name}
+                </a>
+              </h2>
+              {#if typeof participant.latestTotalStops === "number" && latestYear}
+                <p class="mt-2 text-xl font-semibold tracking-tight text-slate-900 sm:text-2xl">
+                  {program_287g_card_total_stops_line({
+                    stops: integerFormatter.format(participant.latestTotalStops),
+                    year: latestYear,
+                  })}
+                </p>
+              {/if}
+              {#if locationParts.length}
+                <p class="mt-1.5 text-base text-slate-500">
+                  {locationParts.join(" · ")}
+                </p>
+              {/if}
+            </header>
 
-        <ul class="mt-4 space-y-2">
-          {#each participant.agreements as agreement}
-            <li class="rounded-md border border-slate-200 bg-slate-50 px-3 py-2">
-              <dl class="grid grid-cols-[max-content_1fr] gap-x-3 gap-y-1 text-sm">
-                {#if agreement.support_type}
-                  <dt class="text-xs font-semibold uppercase tracking-wider text-slate-500">
-                    {agency_287g_support_type_label()}
-                  </dt>
-                  <dd class="text-slate-900">{agreement.support_type}</dd>
-                {/if}
-                {#if agreement.signed_date}
-                  <dt class="text-xs font-semibold uppercase tracking-wider text-slate-500">
-                    {agency_287g_signed_label()}
-                  </dt>
-                  <dd class="text-slate-900">{formatLongDate(agreement.signed_date)}</dd>
-                {/if}
-                {#if agreement.moa_url}
-                  <dt class="text-xs font-semibold uppercase tracking-wider text-slate-500">
-                    MOA
-                  </dt>
-                  <dd>
-                    <a
-                      class="text-emerald-900 underline"
-                      href={agreement.moa_url}
-                      target="_blank"
-                      rel="noreferrer">{agency_287g_moa_link()}</a
-                    >
-                  </dd>
-                {/if}
-              </dl>
-            </li>
-          {/each}
-        </ul>
+            <ul class="space-y-2.5">
+              {#each participant.agreements as agreement}
+                <li class="rounded-md border border-slate-200 bg-slate-50 px-4 py-3">
+                  <dl class="grid grid-cols-[max-content_1fr] gap-x-4 gap-y-1.5 text-base">
+                    {#if agreement.support_type}
+                      <dt class="text-xs font-semibold uppercase tracking-wider text-slate-500">
+                        {agency_287g_support_type_label()}
+                      </dt>
+                      <dd class="text-slate-900">{agreement.support_type}</dd>
+                    {/if}
+                    {#if agreement.signed_date}
+                      <dt class="text-xs font-semibold uppercase tracking-wider text-slate-500">
+                        {agency_287g_signed_label()}
+                      </dt>
+                      <dd class="text-slate-900">{formatLongDate(agreement.signed_date)}</dd>
+                    {/if}
+                    {#if agreement.moa_url}
+                      <dt class="text-xs font-semibold uppercase tracking-wider text-slate-500">
+                        MOA
+                      </dt>
+                      <dd>
+                        <a
+                          class="text-emerald-900 underline"
+                          href={agreement.moa_url}
+                          target="_blank"
+                          rel="noreferrer">{agency_287g_moa_link()}</a
+                        >
+                      </dd>
+                    {/if}
+                  </dl>
+                </li>
+              {/each}
+            </ul>
+          </div>
+          <Locator287gMap agencySlug={participant.agency_slug} />
+        </div>
 
-        <div class="mt-7 grid gap-8 sm:grid-cols-2">
+        <div class="mt-8 grid gap-10 sm:grid-cols-2">
           <div>
-            <h3 class="text-base font-semibold text-slate-900">
+            <h3 class="text-lg font-semibold text-slate-900">
               {program_287g_chart_total_stops_label()}
             </h3>
             <div class="mt-4">
               <Spark287gTotal
-                series={totalStops}
+                series={view.totalStops}
                 stroke="#1b613c"
                 formatValue={formatCompact}
                 showZeroBreak={true}
+                unitLabel="stops"
               />
             </div>
           </div>
           <div>
-            <ShareChart287g comp={stopsComp} {recentSeries} />
+            <ShareChart287g
+              comp={view.stopsComp}
+              bind:selectedRace={selectedShareRace}
+            />
           </div>
           <div>
-            <h3 class="text-base font-semibold text-slate-900">
+            <h3 class="text-lg font-semibold text-slate-900">
               {program_287g_chart_search_rate_by_race_label()}
             </h3>
             <div class="mt-4">
               <SparkRaces287g
-                seriesByRace={searchRace}
+                seriesByRace={view.searchRace}
                 referenceSeries={statewideSearchRateWindow}
                 labelsByRace={raceShortLabels}
                 formatValue={formatRateLabel}
                 minDomain={0}
+                unitLabel="per 100"
               />
             </div>
           </div>
           <div>
-            <h3 class="text-base font-semibold text-slate-900">
+            <h3 class="text-lg font-semibold text-slate-900">
               {program_287g_chart_arrest_rate_by_race_label()}
             </h3>
             <div class="mt-4">
               <SparkRaces287g
-                seriesByRace={arrestRace}
+                seriesByRace={view.arrestRace}
                 referenceSeries={statewideArrestRateWindow}
                 labelsByRace={raceShortLabels}
                 formatValue={formatRateLabel}
                 minDomain={0}
+                unitLabel="per 100"
               />
             </div>
           </div>
           <div>
-            <h3 class="text-base font-semibold text-slate-900">
+            <h3 class="text-lg font-semibold text-slate-900">
               {program_287g_chart_license_stop_rate_by_race_label()}
             </h3>
             <div class="mt-4">
               <SparkRaces287g
-                seriesByRace={licenseRace}
+                seriesByRace={view.licenseRace}
                 referenceSeries={statewideLicenseStopRateWindow}
                 labelsByRace={raceShortLabels}
                 formatValue={formatRateLabel}
                 minDomain={0}
+                unitLabel="per 100"
               />
             </div>
           </div>
         </div>
 
         {#if participant.suppressedOutliers && participant.suppressedOutliers.length}
-          <p class="mt-4 text-xs italic text-slate-500">
+          <p class="mt-5 text-sm italic text-slate-500">
             {formatSuppressionNote(participant.suppressedOutliers as SuppressionNote[])}
           </p>
         {/if}
 
         {#if latestYear}
           <div class="mt-8 border-t border-slate-200 pt-6">
-            <h3 class="text-base font-semibold text-slate-900">
+            <h3 class="text-lg font-semibold text-slate-900">
               {program_287g_breakdown_heading({ year: latestYear })}
             </h3>
-            <div class="mt-3 -mx-5 overflow-x-auto px-5 sm:-mx-6 sm:px-6">
-              <table class="min-w-full text-xs sm:text-sm">
+            <div class="mt-4 -mx-4 overflow-x-auto px-4 sm:-mx-8 sm:px-8">
+              <table class="min-w-full text-sm sm:text-base">
                 <thead>
                   <tr class="border-b border-slate-200 text-left text-slate-500">
-                    <th class="py-1.5 pr-3 text-[10px] font-semibold uppercase tracking-wider"></th>
+                    <th class="py-2 pr-3 text-xs font-semibold uppercase tracking-wider"></th>
                     {#each RACE_COLUMNS as col}
-                      <th class="py-1.5 pl-3 text-right text-[10px] font-semibold uppercase tracking-wider">{col}</th>
+                      <th class="py-2 pl-3 text-right text-xs font-semibold uppercase tracking-wider">{col}</th>
                     {/each}
                   </tr>
                 </thead>
                 <tbody>
                   <tr class="border-b border-slate-100 align-top">
-                    <td class="py-2 pr-3 font-medium text-slate-700">{program_287g_breakdown_row_stops()}</td>
+                    <td class="py-2.5 pr-3 font-medium text-slate-700">{program_287g_breakdown_row_stops()}</td>
                     {#each RACE_COLUMNS as col}
-                      <td class="py-2 pl-3 text-right tabular-nums">
+                      <td class="py-2.5 pl-3 text-right tabular-nums">
                         <div class="font-semibold text-slate-900">{formatBreakdownInteger(stopsByRace[col])}</div>
-                        {#if col !== "Total"}
-                          <div class="text-[10px] text-slate-500">{formatBreakdownPercent(raceShareOfTotal(stopsByRace, col))}</div>
-                        {/if}
+                        <div class="text-xs text-slate-500">{formatBreakdownPercent(inRowShare(stopsByRace, col))}</div>
                       </td>
                     {/each}
                   </tr>
                   <tr class="border-b border-slate-100 align-top">
-                    <td class="py-2 pr-3 font-medium text-slate-700">{program_287g_breakdown_row_residency()}</td>
+                    <td class="py-2.5 pr-3 font-medium text-slate-700">{program_287g_breakdown_row_residency()}</td>
                     {#each RACE_COLUMNS as col}
-                      <td class="py-2 pl-3 text-right tabular-nums">
+                      <td class="py-2.5 pl-3 text-right tabular-nums">
                         <div class="text-slate-900">{formatBreakdownInteger(residentByRace[col])}</div>
-                        <div class="text-[10px] text-slate-500">{formatBreakdownPercent(residencyShare(residentByRace, stopsByRace, col))}</div>
+                        <div class="text-xs text-slate-500">{formatBreakdownPercent(inRowShare(residentByRace, col))}</div>
                       </td>
                     {/each}
                   </tr>
                   <tr class="border-b border-slate-100 align-top">
-                    <td class="py-2 pr-3 font-medium text-slate-700">{program_287g_breakdown_row_nonresidency()}</td>
+                    <td class="py-2.5 pr-3 font-medium text-slate-700">{program_287g_breakdown_row_nonresidency()}</td>
                     {#each RACE_COLUMNS as col}
-                      <td class="py-2 pl-3 text-right tabular-nums">
+                      <td class="py-2.5 pl-3 text-right tabular-nums">
                         <div class="text-slate-900">{formatBreakdownInteger(nonResidentByRace[col])}</div>
-                        <div class="text-[10px] text-slate-500">{formatBreakdownPercent(residencyShare(nonResidentByRace, stopsByRace, col))}</div>
+                        <div class="text-xs text-slate-500">{formatBreakdownPercent(inRowShare(nonResidentByRace, col))}</div>
                       </td>
                     {/each}
                   </tr>
                   <tr class="border-b border-slate-100">
-                    <td class="py-2 pr-3 font-medium text-slate-700">{program_287g_breakdown_row_search_rate()}</td>
+                    <td class="py-2.5 pr-3 font-medium text-slate-700">{program_287g_breakdown_row_search_rate()}</td>
                     {#each RACE_COLUMNS as col}
-                      <td class="py-2 pl-3 text-right tabular-nums text-slate-900">
+                      <td class="py-2.5 pl-3 text-right tabular-nums text-slate-900">
                         {formatBreakdownRate(searchByRace[col])}
                       </td>
                     {/each}
                   </tr>
-                  <tr>
-                    <td class="py-2 pr-3 font-medium text-slate-700">{program_287g_breakdown_row_arrest_rate()}</td>
+                  <tr class="border-b border-slate-100">
+                    <td class="py-2.5 pr-3 font-medium text-slate-700">{program_287g_breakdown_row_arrest_rate()}</td>
                     {#each RACE_COLUMNS as col}
-                      <td class="py-2 pl-3 text-right tabular-nums text-slate-900">
+                      <td class="py-2.5 pl-3 text-right tabular-nums text-slate-900">
                         {formatBreakdownRate(arrestByRace[col])}
+                      </td>
+                    {/each}
+                  </tr>
+                  <tr class="border-b border-slate-100">
+                    <td class="py-2.5 pr-3 font-medium text-slate-700">{program_287g_breakdown_row_license_stop_rate()}</td>
+                    {#each RACE_COLUMNS as col}
+                      <td class="py-2.5 pl-3 text-right tabular-nums text-slate-900">
+                        {formatBreakdownRate(licenseStopRateByRace[col])}
+                      </td>
+                    {/each}
+                  </tr>
+                  <tr>
+                    <td class="py-2.5 pr-3 font-medium text-slate-700">{program_287g_breakdown_row_contraband_hit_rate()}</td>
+                    {#each RACE_COLUMNS as col}
+                      <td class="py-2.5 pl-3 text-right tabular-nums text-slate-900">
+                        {formatBreakdownRate(contrabandHitRateByRace[col])}
                       </td>
                     {/each}
                   </tr>
@@ -708,10 +764,10 @@
           </div>
         {/if}
 
-        <div class="mt-6 flex justify-end">
+        <div class="mt-7 flex justify-end">
           <a
             href="#main-content"
-            class="text-xs text-slate-500 underline-offset-2 hover:underline"
+            class="text-sm text-slate-500 underline-offset-2 hover:underline"
           >
             {program_287g_back_to_top()}
           </a>

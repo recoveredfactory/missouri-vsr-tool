@@ -11,15 +11,19 @@
   export let labelsByRace: Record<Race, string> = { White: "Wh.", Black: "Bl.", Hispanic: "Hsp." };
   export let formatValue: (value: number) => string = (v) => String(v);
   export let width = 220;
-  export let height = 165;
-  export let strokeWidth = 2.25;
+  export let height = 220;
+  export let strokeWidth = 2.5;
   /**
    * Y-domain min. Race-rate charts force 0; pass null to derive from data min.
    */
   export let minDomain: number | null = 0;
-  export let yLabelGutter = 56;
-  export let endLabelGutter = 64;
-  export let axisBelow = 16;
+  export let yLabelGutter = 64;
+  export let endLabelGutter = 72;
+  export let axisBelow = 20;
+  /** Optional unit suffix shown after the value in the hover tooltip. */
+  export let unitLabel = "";
+  /** Label for the statewide reference row in the tooltip. */
+  export let referenceLabel = "Statewide";
 
   const RACES: readonly Race[] = ["White", "Black", "Hispanic"] as const;
   const AXIS_COLOR = "#cbd5e1"; // slate-300
@@ -113,7 +117,7 @@
       items.push({ race, year: last.year, value: last.value, y: yScale(last.value) });
     }
     items.sort((a, b) => a.y - b.y);
-    const minSpacing = 16;
+    const minSpacing = 18;
     for (let i = 1; i < items.length; i += 1) {
       if (items[i].y - items[i - 1].y < minSpacing) {
         items[i].y = items[i - 1].y + minSpacing;
@@ -135,7 +139,7 @@
       items.push({ race, year: first.year, value: first.value, y: yScale(first.value) });
     }
     items.sort((a, b) => a.y - b.y);
-    const minSpacing = 16;
+    const minSpacing = 18;
     for (let i = 1; i < items.length; i += 1) {
       if (items[i].y - items[i - 1].y < minSpacing) {
         items[i].y = items[i - 1].y + minSpacing;
@@ -152,6 +156,44 @@
 
   /** Where the x-axis baseline draws — at the actual zero (or domain min) position. */
   $: zeroY = yScale(yDomain.min);
+
+  let hoverYear: number | null = null;
+  let chartContainer: HTMLDivElement | undefined;
+
+  const handleHoverMove = (e: MouseEvent | TouchEvent) => {
+    if (!years.length || !chartContainer) return;
+    const rect = chartContainer.getBoundingClientRect();
+    const clientX =
+      "touches" in e ? e.touches[0]?.clientX : (e as MouseEvent).clientX;
+    if (clientX === undefined) return;
+    const xRatio = (clientX - rect.left) / rect.width;
+    const targetX = xRatio * width;
+    let bestY = years[0];
+    let bestD = Infinity;
+    for (const y of years) {
+      const d = Math.abs(xScale(y) - targetX);
+      if (d < bestD) {
+        bestD = d;
+        bestY = y;
+      }
+    }
+    hoverYear = bestY;
+  };
+  const handleHoverLeave = () => {
+    hoverYear = null;
+  };
+
+  /** Per-race + reference value at the hovered year, for the tooltip. */
+  $: hoverValues = (() => {
+    if (hoverYear === null) return null;
+    const out = {} as Record<Race, number | null> & { ref: number | null };
+    for (const r of RACES) {
+      const p = cleanedByRace[r].find((q) => q.year === hoverYear);
+      out[r] = p ? p.value : null;
+    }
+    out.ref = refCleaned.find((q) => q.year === hoverYear)?.value ?? null;
+    return out;
+  })();
 </script>
 
 <div
@@ -168,7 +210,7 @@
       {@const maxClash = startYs.some((y) => Math.abs(y - maxY) < 12)}
       {#if !maxClash}
         <div
-          class="pointer-events-none absolute right-1.5 text-[10px] tabular-nums leading-none"
+          class="pointer-events-none absolute right-1.5 text-xs tabular-nums leading-none"
           style="top: {(maxY / height) * 100}%; transform: translateY(-50%); color: {AXIS_LABEL_COLOR};"
         >
           {formatValue(yTicks.max)}
@@ -176,7 +218,7 @@
       {/if}
       {#if !minClash}
         <div
-          class="pointer-events-none absolute right-1.5 text-[10px] tabular-nums leading-none"
+          class="pointer-events-none absolute right-1.5 text-xs tabular-nums leading-none"
           style="top: {(minY / height) * 100}%; transform: translateY(-50%); color: {AXIS_LABEL_COLOR};"
         >
           {formatValue(yTicks.min)}
@@ -185,7 +227,7 @@
     {/if}
     {#each startLabels as label}
       <div
-        class="absolute right-1.5 whitespace-nowrap text-right text-[10px] leading-tight tabular-nums"
+        class="absolute right-1.5 whitespace-nowrap text-right text-xs leading-tight tabular-nums"
         style="top: {label.y}px; transform: translateY(-50%); color: {raceColors[label.race]};"
       >
         <span class="font-semibold">{labelsByRace[label.race]}</span>
@@ -261,10 +303,59 @@
         {#each cleanedByRace[race] as p}
           <span
             class="spark287-dot"
+            class:spark287-dot--hover={hoverYear === p.year}
             style="left:{xPct(p.year)}%;top:{yPct(p.value)}%;background:{raceColors[race]}"
           ></span>
         {/each}
       {/each}
+
+      <!-- Hover crosshair -->
+      {#if hoverYear !== null}
+        <div
+          class="pointer-events-none absolute top-0 z-20 w-px bg-slate-400/70"
+          style="left: {xPct(hoverYear)}%; height: 100%;"
+        ></div>
+      {/if}
+
+      <!-- Pointer-capture overlay -->
+      <div
+        bind:this={chartContainer}
+        class="absolute inset-0 z-10"
+        on:mousemove={handleHoverMove}
+        on:mouseleave={handleHoverLeave}
+        on:touchstart|passive={handleHoverMove}
+        on:touchmove|passive={handleHoverMove}
+        on:touchend={handleHoverLeave}
+        role="presentation"
+      ></div>
+
+      <!-- Tooltip -->
+      {#if hoverYear !== null && hoverValues}
+        <div
+          class="pointer-events-none absolute z-30 -translate-x-1/2 whitespace-nowrap rounded-md border border-slate-200 bg-white px-2.5 py-1.5 text-xs leading-tight shadow-md"
+          style="left: clamp(0%, {xPct(hoverYear)}%, 100%); top: 0; transform: translate(-50%, calc(-100% - 6px));"
+        >
+          <div class="mb-1 tabular-nums text-slate-500">{hoverYear}</div>
+          <div class="grid grid-cols-[max-content_max-content] gap-x-3 gap-y-0.5 text-sm tabular-nums">
+            {#each RACES as race}
+              <span class="font-semibold" style="color: {raceColors[race]};"
+                >{labelsByRace[race]}</span
+              >
+              <span class="text-right text-slate-900">
+                {hoverValues[race] !== null
+                  ? `${formatValue(hoverValues[race] as number)}${unitLabel ? ` ${unitLabel}` : ""}`
+                  : "—"}
+              </span>
+            {/each}
+            {#if hoverValues.ref !== null}
+              <span class="text-slate-500">{referenceLabel}</span>
+              <span class="text-right text-slate-900">
+                {formatValue(hoverValues.ref)}{unitLabel ? ` ${unitLabel}` : ""}
+              </span>
+            {/if}
+          </div>
+        </div>
+      {/if}
 
       <!-- x-axis tick marks at endpoints (anchored to the zero baseline) -->
       {#if startYear !== null}
@@ -284,7 +375,7 @@
     <div class="relative" style="height: {axisBelow}px;">
       {#if startYear !== null}
         <span
-          class="absolute text-[9px] tabular-nums leading-none"
+          class="absolute text-[11px] tabular-nums leading-none"
           style="left: 0; top: 4px; transform: translateX(-50%); color: {AXIS_LABEL_COLOR};"
         >
           {startYear}
@@ -292,7 +383,7 @@
       {/if}
       {#if endYear !== null && endYear !== startYear}
         <span
-          class="absolute text-[9px] tabular-nums leading-none"
+          class="absolute text-[11px] tabular-nums leading-none"
           style="right: 0; top: 4px; transform: translateX(50%); color: {AXIS_LABEL_COLOR};"
         >
           {endYear}
@@ -304,7 +395,7 @@
   <div class="relative shrink-0" style="width: var(--end-label-w); height: var(--data-h);">
     {#each endLabels as label}
       <div
-        class="absolute left-1.5 whitespace-nowrap text-left text-[10px] leading-tight tabular-nums"
+        class="absolute left-1.5 whitespace-nowrap text-left text-xs leading-tight tabular-nums"
         style="top: {label.y}px; transform: translateY(-50%); color: {raceColors[label.race]};"
       >
         <span class="font-semibold">{labelsByRace[label.race]}</span>

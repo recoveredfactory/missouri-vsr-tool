@@ -64,6 +64,8 @@ export type Participant = {
   latestStopsByRace: RaceBreakdown;
   latestSearchRateByRace: RaceBreakdown;
   latestArrestRateByRace: RaceBreakdown;
+  latestLicenseStopRateByRace: RaceBreakdown;
+  latestContrabandHitRateByRace: RaceBreakdown;
   latestResidentStopsByRace: RaceBreakdown;
   latestNonResidentStopsByRace: RaceBreakdown;
 };
@@ -144,6 +146,7 @@ export async function load({ fetch }) {
     residentStopsFile,
     nonResidentStopsFile,
     licenseStopRateFile,
+    contrabandHitRateFile,
   ] = await Promise.all([
     fetchJson<Array<Record<string, any>>>(fetch, withDataBase("/data/dist/agency_index.json")),
     fetchJson<SubsetIndex>(fetch, withDataBase("/data/dist/metric_year_subset/_index.json")),
@@ -153,6 +156,7 @@ export async function load({ fetch }) {
     fetchJson<SubsetMetricFile>(fetch, subsetUrl("resident-stops")),
     fetchJson<SubsetMetricFile>(fetch, subsetUrl("non-resident-stops")),
     fetchJson<SubsetMetricFile>(fetch, subsetUrl("license-stop-rate")),
+    fetchJson<SubsetMetricFile>(fetch, subsetUrl("contraband-hit-rate")),
   ]);
 
   const emptyReturn = {
@@ -225,6 +229,7 @@ export async function load({ fetch }) {
   const residentStopsBy = indexMetric(residentStopsFile);
   const nonResidentStopsBy = indexMetric(nonResidentStopsFile);
   const licenseStopRateBy = indexMetric(licenseStopRateFile);
+  const contrabandHitRateBy = indexMetric(contrabandHitRateFile);
 
   // Statewide weighted-by-stops rate series (Total column).
   const statewideRateSeries = (
@@ -344,6 +349,8 @@ export async function load({ fetch }) {
     const nonResidentRows = subsetIdx !== undefined ? nonResidentStopsBy.get(subsetIdx) ?? null : null;
     const licenseStopRateRows =
       subsetIdx !== undefined ? licenseStopRateBy.get(subsetIdx) ?? null : null;
+    const contrabandHitRateRows =
+      subsetIdx !== undefined ? contrabandHitRateBy.get(subsetIdx) ?? null : null;
 
     const totalStopsSeries: SeriesPoint[] = years.map((year, i) => ({
       year,
@@ -409,6 +416,10 @@ export async function load({ fetch }) {
     const stopsBreakdown: RaceBreakdown = (latestIdx >= 0 && stopsRows?.[latestIdx]) || {};
     const searchBreakdown: RaceBreakdown = (latestIdx >= 0 && searchRows?.[latestIdx]) || {};
     const arrestBreakdown: RaceBreakdown = (latestIdx >= 0 && arrestRows?.[latestIdx]) || {};
+    const licenseStopRateBreakdown: RaceBreakdown =
+      (latestIdx >= 0 && licenseStopRateRows?.[latestIdx]) || {};
+    const contrabandHitRateBreakdown: RaceBreakdown =
+      (latestIdx >= 0 && contrabandHitRateRows?.[latestIdx]) || {};
     const residentBreakdown: RaceBreakdown = (latestIdx >= 0 && residentRows?.[latestIdx]) || {};
     const nonResidentBreakdown: RaceBreakdown = (latestIdx >= 0 && nonResidentRows?.[latestIdx]) || {};
 
@@ -436,6 +447,8 @@ export async function load({ fetch }) {
       latestStopsByRace: stopsBreakdown,
       latestSearchRateByRace: searchBreakdown,
       latestArrestRateByRace: arrestBreakdown,
+      latestLicenseStopRateByRace: licenseStopRateBreakdown,
+      latestContrabandHitRateByRace: contrabandHitRateBreakdown,
       latestResidentStopsByRace: residentBreakdown,
       latestNonResidentStopsByRace: nonResidentBreakdown,
     });

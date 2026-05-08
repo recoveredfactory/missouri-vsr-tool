@@ -62,6 +62,12 @@
   width: 6px;
   height: 6px;
 }
+.spark287-dot--hover {
+  width: 10px;
+  height: 10px;
+  box-shadow: 0 0 0 2px white;
+  z-index: 25;
+}
 
 .page-fade {
   opacity: 1;

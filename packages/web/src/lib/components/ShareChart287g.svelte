@@ -13,7 +13,7 @@
   type RaceQuadSeries = Record<Race, Series>;
 
   export let comp: RaceQuadSeries;
-  export let recentSeries: (s: Series) => Series = (s) => s;
+  export let selectedRace: Race = "Hispanic";
 
   const RACE_COLORS: Record<Race, string> = {
     White: "#25784c",
@@ -21,8 +21,6 @@
     Hispanic: "#1c4f74",
     Other: "#94a3b8",
   };
-
-  let selectedRace: Race = "Hispanic";
 
   $: raceFullLabels = {
     White: program_287g_race_full_white(),
@@ -63,19 +61,20 @@
     });
   })();
 
-  $: windowedSeries = recentSeries(shareSeries);
+  // `comp` is already rolling-applied + sliced upstream, so the derived share
+  // series is the windowed series — no extra smoothing.
 </script>
 
 <div class="flex flex-wrap items-baseline gap-x-2 gap-y-1">
-  <h3 class="text-base font-semibold text-slate-900">
+  <h3 class="text-lg font-semibold text-slate-900">
     {program_287g_chart_stops_share_by_race_label()}
   </h3>
   <span class="text-slate-400">·</span>
-  <label class="inline-flex items-center gap-1 text-sm">
+  <label class="inline-flex items-center gap-1 text-base">
     <span class="sr-only">{program_287g_chart_stops_share_by_race_label()}</span>
     <select
       bind:value={selectedRace}
-      class="rounded border border-slate-300 bg-white px-1.5 py-0.5 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-emerald-700"
+      class="rounded border border-slate-300 bg-white px-2 py-0.5 text-base font-medium focus:outline-none focus:ring-2 focus:ring-emerald-700"
       style="color: {RACE_COLORS[selectedRace]};"
     >
       {#each ["White", "Black", "Hispanic", "Other"] as const as r}
@@ -86,9 +85,9 @@
 </div>
 <div class="mt-4">
   <Spark287gTotal
-    series={windowedSeries}
+    series={shareSeries}
     stroke={RACE_COLORS[selectedRace]}
     formatValue={formatPercent}
-    minDomain={0}
+    showZeroBreak={true}
   />
 </div>
