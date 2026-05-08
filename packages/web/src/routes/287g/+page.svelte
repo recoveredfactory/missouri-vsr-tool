@@ -11,6 +11,7 @@
     program_287g_page_heading,
     program_287g_page_summary,
     program_287g_page_clarification,
+    program_287g_page_clarification_charts,
     program_287g_chart_window_label,
     program_287g_chart_statewide_label,
     program_287g_chart_total_stops_label,
@@ -31,6 +32,7 @@
     program_287g_outlier_metric_arrest_rate,
     program_287g_totals_label,
     program_287g_totals_all_stops,
+    program_287g_totals_headline,
     program_287g_totals_white_stops,
     program_287g_totals_black_stops,
     program_287g_totals_hispanic_stops,
@@ -448,15 +450,23 @@
 
 <StickyHeader />
 
-<main id="main-content" class="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6">
-  <h1 class="text-3xl font-bold text-slate-900 sm:text-4xl">
+<main id="main-content" class="mx-auto w-full max-w-6xl px-4 py-12 sm:px-6 sm:py-16">
+  <h1 class="text-4xl font-bold leading-tight text-slate-900 sm:text-5xl">
     {program_287g_page_heading()}
   </h1>
 
-  <div class="mt-5 grid gap-8 lg:grid-cols-[1.618fr_1fr] lg:gap-12">
-    <!-- Left: intro copy -->
-    <div class="space-y-3 text-lg leading-relaxed text-slate-700">
-      <p>
+  <div class="mt-10 grid gap-8 lg:grid-cols-[1.618fr_1fr] lg:gap-12">
+    <!-- Left: intro copy. The description and clarification paragraphs
+         each lead with a serif dropcap; in-between paragraphs (summary)
+         do not. The `.dropcap` selector adds extra top margin so the
+         floated character doesn't crash into the paragraph above it,
+         and extra space below so the followup paragraphs breathe. -->
+    <div
+      class="space-y-4 text-lg leading-relaxed text-slate-700 [&>.dropcap]:mt-8 [&>.dropcap:first-child]:mt-0 [&>.dropcap+p]:mt-6"
+    >
+      <p
+        class="dropcap [&_a]:underline [&_a:hover]:text-slate-900 first-letter:float-left first-letter:mr-2 first-letter:mt-1 first-letter:font-serif first-letter:text-6xl first-letter:font-normal first-letter:leading-[0.85] first-letter:text-slate-800"
+      >
         <a class="underline" href={WIKIPEDIA_287G_URL} target="_blank" rel="noreferrer"
           >{agency_287g_description_link()}</a
         >{agency_287g_description_post()}
@@ -467,18 +477,50 @@
           date: formatLongDate(data.snapshotDate),
         })}
       </p>
-      <!--
-        `program_287g_page_clarification` contains anchor tags, so it's
-        rendered as HTML. Inline `[&_a]:` styles give the embedded links
-        the same look as the explicit `<a class="underline">` above.
-      -->
-      <p class="[&_a]:underline [&_a:hover]:text-slate-900">
+      <!-- Clarification strings render as HTML to preserve their embedded anchors. -->
+      <p
+        class="dropcap [&_a]:underline [&_a:hover]:text-slate-900 first-letter:float-left first-letter:mr-2 first-letter:mt-1 first-letter:font-serif first-letter:text-6xl first-letter:font-normal first-letter:leading-[0.85] first-letter:text-slate-800"
+      >
         {@html program_287g_page_clarification()}
+      </p>
+      <p>
+        {@html program_287g_page_clarification_charts()}
       </p>
     </div>
 
-    <!-- Right: support models stacked over big numbers -->
-    <div class="space-y-8">
+    <!-- Right: big numbers above support models, faint divider between. -->
+    <div class="space-y-10">
+      {#if data.totalStopsLatestSum > 0 && anchorYear !== null}
+        <section>
+          <h2 class="text-2xl font-semibold leading-tight text-slate-900 sm:text-3xl">
+            {program_287g_totals_headline({
+              stops: totalStopsDisplay,
+              year: anchorYear,
+              count: countDisplay,
+            })}
+          </h2>
+          <p class="mt-2 text-sm italic text-slate-500">{program_287g_totals_caveat()}</p>
+          <div class="mt-4 divide-y divide-slate-200 border-t border-slate-200">
+            <p class="py-2.5 text-lg text-slate-700 sm:text-xl">
+              {program_287g_totals_white_stops({ stops: totalWhiteStopsDisplay })}
+            </p>
+            <p class="py-2.5 text-lg text-slate-700 sm:text-xl">
+              {program_287g_totals_black_stops({ stops: totalBlackStopsDisplay })}
+            </p>
+            <p class="py-2.5 text-lg text-slate-700 sm:text-xl">
+              {program_287g_totals_hispanic_stops({ stops: totalHispanicStopsDisplay })}
+            </p>
+            <p class="py-2.5 text-lg text-slate-700 sm:text-xl">
+              {program_287g_totals_other_stops({ stops: totalOtherStopsDisplay })}
+            </p>
+          </div>
+        </section>
+      {/if}
+
+      {#if data.totalStopsLatestSum > 0 && anchorYear !== null && data.supportTypeCounts && data.supportTypeCounts.length}
+        <hr class="border-slate-200" />
+      {/if}
+
       {#if data.supportTypeCounts && data.supportTypeCounts.length}
         {@const totalAgencies = data.participants.length}
         <section>
@@ -502,32 +544,6 @@
               </li>
             {/each}
           </ul>
-        </section>
-      {/if}
-
-      {#if data.totalStopsLatestSum > 0 && anchorYear !== null}
-        <section>
-          <h2 class="text-lg font-semibold text-slate-900">
-            {program_287g_totals_label({ year: anchorYear, count: countDisplay })}
-          </h2>
-          <p class="mt-1 text-sm text-slate-500">{program_287g_totals_caveat()}</p>
-          <p class="mt-3 text-2xl font-semibold text-slate-900 sm:text-3xl">
-            {program_287g_totals_all_stops({ stops: totalStopsDisplay })}
-          </p>
-          <div class="mt-1 divide-y divide-slate-200 border-t border-slate-200">
-            <p class="py-2.5 text-lg text-slate-700 sm:text-xl">
-              {program_287g_totals_white_stops({ stops: totalWhiteStopsDisplay })}
-            </p>
-            <p class="py-2.5 text-lg text-slate-700 sm:text-xl">
-              {program_287g_totals_black_stops({ stops: totalBlackStopsDisplay })}
-            </p>
-            <p class="py-2.5 text-lg text-slate-700 sm:text-xl">
-              {program_287g_totals_hispanic_stops({ stops: totalHispanicStopsDisplay })}
-            </p>
-            <p class="py-2.5 text-lg text-slate-700 sm:text-xl">
-              {program_287g_totals_other_stops({ stops: totalOtherStopsDisplay })}
-            </p>
-          </div>
         </section>
       {/if}
     </div>
@@ -604,7 +620,7 @@
     </span>
   </p>
 
-  <div class="mt-5 space-y-12">
+  <div class="mt-8 space-y-16">
     {#each participantViews as view (view.participant.agency_slug)}
       {@const participant = view.participant}
       {@const latestYear = participant.latestYear}
@@ -622,74 +638,76 @@
 
       <article
         id="agency-{participant.agency_slug}"
-        class="-mx-4 border-y border-slate-200 bg-white p-4 sm:mx-0 sm:rounded-lg sm:border sm:p-8"
+        class="-mx-4 border-y border-slate-200 bg-white p-6 sm:mx-0 sm:rounded-lg sm:border sm:p-10"
         style="scroll-margin-top: {scrollMargin};"
       >
-        <div class="flex flex-row items-stretch gap-3 sm:gap-6">
-          <div class="min-w-0 flex-1 space-y-5">
-            <header>
-              <h2 class="text-2xl font-semibold text-slate-900 sm:text-3xl">
-                <a
-                  class="text-emerald-900 underline-offset-2 hover:underline"
-                  href={`${localeBase}/agency/${participant.agency_slug}`}
+        <header>
+          <h2 class="text-2xl font-semibold text-slate-900 sm:text-3xl">
+            <a
+              class="text-emerald-900 underline-offset-2 hover:underline"
+              href={`${localeBase}/agency/${participant.agency_slug}`}
+            >
+              {participant.canonical_name}
+            </a>
+          </h2>
+          {#if typeof participant.latestTotalStops === "number" && latestYear}
+            <p class="mt-2 text-xl font-semibold tracking-tight text-slate-900 sm:text-2xl">
+              {program_287g_card_total_stops_line({
+                stops: integerFormatter.format(participant.latestTotalStops),
+                year: latestYear,
+              })}
+              {#if typeof participant.population === "number" && participant.population > 0}
+                <span class="font-light text-slate-500"
+                  >· Pop. {formatPopulation(participant.population)}</span
                 >
-                  {participant.canonical_name}
-                </a>
-              </h2>
-              {#if typeof participant.latestTotalStops === "number" && latestYear}
-                <p class="mt-2 text-xl font-semibold tracking-tight text-slate-900 sm:text-2xl">
-                  {program_287g_card_total_stops_line({
-                    stops: integerFormatter.format(participant.latestTotalStops),
-                    year: latestYear,
-                  })}
-                  {#if typeof participant.population === "number" && participant.population > 0}
-                    <span class="font-light text-slate-500"
-                      >· Pop. {formatPopulation(participant.population)}</span
-                    >
-                  {/if}
-                </p>
               {/if}
-              {#if locationParts.length}
-                <p class="mt-1.5 text-base text-slate-500">
-                  {locationParts.join(" · ")}
-                </p>
-              {/if}
-            </header>
+            </p>
+          {/if}
+          {#if locationParts.length}
+            <p class="mt-1.5 text-base text-slate-500">
+              {locationParts.join(" · ")}
+            </p>
+          {/if}
+        </header>
 
-            <ul class="space-y-2.5">
-              {#each participant.agreements as agreement}
-                <li class="rounded-md border border-slate-200 bg-slate-50 px-4 py-3">
-                  <dl class="grid grid-cols-[max-content_1fr] gap-x-4 gap-y-1.5 text-base">
-                    {#if agreement.support_type}
-                      <dt class="text-xs font-semibold uppercase tracking-wider text-slate-500">
-                        {agency_287g_support_type_label()}
-                      </dt>
-                      <dd class="text-slate-900">{agreement.support_type}</dd>
-                    {/if}
-                    {#if agreement.signed_date}
-                      <dt class="text-xs font-semibold uppercase tracking-wider text-slate-500">
-                        {agency_287g_signed_label()}
-                      </dt>
-                      <dd class="text-slate-900">{formatLongDate(agreement.signed_date)}</dd>
-                    {/if}
-                    {#if agreement.moa_url}
-                      <dt class="text-xs font-semibold uppercase tracking-wider text-slate-500">
-                        MOA
-                      </dt>
-                      <dd>
-                        <a
-                          class="text-emerald-900 underline"
-                          href={agreement.moa_url}
-                          target="_blank"
-                          rel="noreferrer">{agency_287g_moa_link()}</a
-                        >
-                      </dd>
-                    {/if}
-                  </dl>
-                </li>
-              {/each}
-            </ul>
-          </div>
+        <div class="mt-6 flex flex-row items-start gap-4 sm:gap-6">
+          <ul
+            class="min-w-0 flex-1 space-y-4 divide-y divide-slate-200 [&>li:not(:first-child)]:pt-4"
+          >
+            {#each participant.agreements as agreement}
+              <li>
+                <dl
+                  class="grid grid-cols-[4rem_1fr] items-baseline gap-x-3 gap-y-1.5 text-base sm:grid-cols-[max-content_1fr] sm:gap-x-4"
+                >
+                  {#if agreement.support_type}
+                    <dt class="text-xs font-semibold uppercase tracking-wider text-slate-500">
+                      {agency_287g_support_type_label()}
+                    </dt>
+                    <dd class="text-slate-900">{agreement.support_type}</dd>
+                  {/if}
+                  {#if agreement.signed_date}
+                    <dt class="text-xs font-semibold uppercase tracking-wider text-slate-500">
+                      {agency_287g_signed_label()}
+                    </dt>
+                    <dd class="text-slate-900">{formatLongDate(agreement.signed_date)}</dd>
+                  {/if}
+                  {#if agreement.moa_url}
+                    <dt class="text-xs font-semibold uppercase tracking-wider text-slate-500">
+                      MOA
+                    </dt>
+                    <dd>
+                      <a
+                        class="text-emerald-900 underline"
+                        href={agreement.moa_url}
+                        target="_blank"
+                        rel="noreferrer">{agency_287g_moa_link()}</a
+                      >
+                    </dd>
+                  {/if}
+                </dl>
+              </li>
+            {/each}
+          </ul>
           <Locator287gMap
             agencySlug={participant.agency_slug}
             {participantSlugs}
@@ -701,7 +719,7 @@
         </div>
 
         <div
-          class="mt-8 grid gap-10 sm:grid-cols-2 [&>:last-child:nth-child(odd)]:sm:col-span-2 [&>:last-child:nth-child(odd)]:sm:mx-auto [&>:last-child:nth-child(odd)]:sm:w-full [&>:last-child:nth-child(odd)]:sm:max-w-[28rem]"
+          class="mt-12 grid gap-x-12 gap-y-14 sm:grid-cols-2 [&>:last-child:nth-child(odd)]:sm:col-span-2 [&>:last-child:nth-child(odd)]:sm:mx-auto [&>:last-child:nth-child(odd)]:sm:w-full [&>:last-child:nth-child(odd)]:sm:max-w-[28rem]"
         >
           <div>
             <h3 class="text-lg font-semibold text-slate-900">
@@ -777,7 +795,7 @@
         {/if}
 
         {#if latestYear}
-          <div class="mt-8 border-t border-slate-200 pt-6">
+          <div class="mt-12 border-t border-slate-200 pt-8">
             <h3 class="text-lg font-semibold text-slate-900">
               {program_287g_breakdown_heading({ year: latestYear })}
             </h3>

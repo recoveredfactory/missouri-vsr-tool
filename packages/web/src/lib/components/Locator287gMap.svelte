@@ -240,7 +240,7 @@
 
 <div
   bind:this={container}
-  class="locator287g-frame relative w-24 shrink-0 sm:w-72 sm:self-stretch"
+  class="locator287g-frame relative w-44 shrink-0 sm:w-72 sm:self-stretch"
 >
   <div
     bind:this={inner}
