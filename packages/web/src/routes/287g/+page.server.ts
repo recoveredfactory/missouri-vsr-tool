@@ -68,6 +68,8 @@ export type Participant = {
   latestContrabandHitRateByRace: RaceBreakdown;
   latestResidentStopsByRace: RaceBreakdown;
   latestNonResidentStopsByRace: RaceBreakdown;
+  /** Total population (rates-population-2023-acs) for this agency. */
+  population: number | null;
 };
 
 /**
@@ -137,6 +139,10 @@ export async function load({ fetch }) {
   const subsetUrl = (key: string) =>
     withDataBase(`/data/dist/metric_year_subset/${key}.json`);
 
+  type PopulationFile = {
+    rows?: Array<{ agency: string; year: number; Total?: number | null }>;
+  };
+
   const [
     agencyEntries,
     subsetIndex,
@@ -147,6 +153,7 @@ export async function load({ fetch }) {
     nonResidentStopsFile,
     licenseStopRateFile,
     contrabandHitRateFile,
+    populationFile,
   ] = await Promise.all([
     fetchJson<Array<Record<string, any>>>(fetch, withDataBase("/data/dist/agency_index.json")),
     fetchJson<SubsetIndex>(fetch, withDataBase("/data/dist/metric_year_subset/_index.json")),
@@ -157,23 +164,49 @@ export async function load({ fetch }) {
     fetchJson<SubsetMetricFile>(fetch, subsetUrl("non-resident-stops")),
     fetchJson<SubsetMetricFile>(fetch, subsetUrl("license-stop-rate")),
     fetchJson<SubsetMetricFile>(fetch, subsetUrl("contraband-hit-rate")),
+    fetchJson<PopulationFile>(
+      fetch,
+      withDataBase("/data/dist/metric_year/rates-population-2023-acs.json"),
+    ),
   ]);
+
+  // Per-agency population (latest row per agency, keyed by canonical name).
+  const populationByName = new Map<string, number>();
+  if (populationFile?.rows) {
+    for (const row of populationFile.rows) {
+      const total = numberOrNull(row?.Total);
+      if (total !== null && row.agency) {
+        populationByName.set(normalizeName(String(row.agency)), total);
+      }
+    }
+  }
 
   const emptyReturn = {
     participants: [] as Participant[],
     snapshotDate: "",
     years: [] as number[],
     totalStopsLatestSum: 0,
+    totalWhiteStopsLatestSum: 0,
+    totalBlackStopsLatestSum: 0,
     totalHispanicStopsLatestSum: 0,
+    totalOtherStopsLatestSum: 0,
     statewideTotalStopsLatest: 0,
     latestYearAnchor: null as number | null,
     supportTypeCounts: [] as Array<{ type: string; count: number }>,
     statewideSearchRateSeries: [] as SeriesPoint[],
     statewideArrestRateSeries: [] as SeriesPoint[],
     statewideLicenseStopRateSeries: [] as SeriesPoint[],
+    allCountySlugs: [] as string[],
+    totalParticipantPopulation: 0,
   };
 
   if (!agencyEntries) return emptyReturn;
+
+  // All county slugs (participating or not) — used by the locator map to
+  // give a faint outline to non-participating counties on the basemap.
+  const allCountySlugs: string[] = agencyEntries
+    .filter((e) => e?.agency_type === "County" && typeof e?.agency_slug === "string")
+    .map((e) => String(e.agency_slug));
 
   const years: number[] = Array.isArray(subsetIndex?.years)
     ? subsetIndex!.years.map((y) => Number(y)).filter((y) => Number.isFinite(y))
@@ -427,6 +460,17 @@ export async function load({ fetch }) {
       typeof stopsBreakdown.Total === "number" ? stopsBreakdown.Total : null;
     const latestHispanicStops =
       typeof stopsBreakdown.Hispanic === "number" ? stopsBreakdown.Hispanic : null;
+    /**
+     * State agencies (e.g. MSHP) cover the whole state, so use the MO 2024
+     * population estimate (~6.245M, US Census Bureau). Hardcoded for now;
+     * future pipeline work will emit it as `rates-population-2023-acs`
+     * for the state-agency rows so we can drop this fallback.
+     */
+    const MO_STATE_POPULATION_2024 = 6_245_466;
+    const population =
+      entry?.agency_type === "State Agency"
+        ? MO_STATE_POPULATION_2024
+        : populationByName.get(normalizeName(canonicalName)) ?? null;
 
     participants.push({
       agency_slug: String(entry.agency_slug ?? ""),
@@ -451,14 +495,16 @@ export async function load({ fetch }) {
       latestContrabandHitRateByRace: contrabandHitRateBreakdown,
       latestResidentStopsByRace: residentBreakdown,
       latestNonResidentStopsByRace: nonResidentBreakdown,
+      population,
     });
   }
 
+  // Sort by absolute total stops (latest year), descending.
   participants.sort((a, b) => {
-    const aHas = typeof a.latestHispanicStops === "number" && Number.isFinite(a.latestHispanicStops);
-    const bHas = typeof b.latestHispanicStops === "number" && Number.isFinite(b.latestHispanicStops);
-    if (aHas && bHas && a.latestHispanicStops !== b.latestHispanicStops) {
-      return (b.latestHispanicStops as number) - (a.latestHispanicStops as number);
+    const aHas = typeof a.latestTotalStops === "number" && Number.isFinite(a.latestTotalStops);
+    const bHas = typeof b.latestTotalStops === "number" && Number.isFinite(b.latestTotalStops);
+    if (aHas && bHas && a.latestTotalStops !== b.latestTotalStops) {
+      return (b.latestTotalStops as number) - (a.latestTotalStops as number);
     }
     if (aHas && !bHas) return -1;
     if (!aHas && bHas) return 1;
@@ -466,12 +512,26 @@ export async function load({ fetch }) {
   });
 
   let totalStopsLatestSum = 0;
+  let totalWhiteStopsLatestSum = 0;
+  let totalBlackStopsLatestSum = 0;
   let totalHispanicStopsLatestSum = 0;
+  let totalParticipantPopulation = 0;
   for (const p of participants) {
     if (typeof p.latestTotalStops === "number") totalStopsLatestSum += p.latestTotalStops;
+    const b = p.latestStopsByRace;
+    if (typeof b.White === "number") totalWhiteStopsLatestSum += b.White;
+    if (typeof b.Black === "number") totalBlackStopsLatestSum += b.Black;
     if (typeof p.latestHispanicStops === "number")
       totalHispanicStopsLatestSum += p.latestHispanicStops;
+    if (typeof p.population === "number") totalParticipantPopulation += p.population;
   }
+  const totalOtherStopsLatestSum = Math.max(
+    0,
+    totalStopsLatestSum -
+      totalWhiteStopsLatestSum -
+      totalBlackStopsLatestSum -
+      totalHispanicStopsLatestSum,
+  );
 
   const supportTypeCountMap = new Map<string, number>();
   for (const p of participants) {
@@ -490,12 +550,17 @@ export async function load({ fetch }) {
     snapshotDate,
     years,
     totalStopsLatestSum,
+    totalWhiteStopsLatestSum,
+    totalBlackStopsLatestSum,
     totalHispanicStopsLatestSum,
+    totalOtherStopsLatestSum,
     statewideTotalStopsLatest,
     latestYearAnchor,
     supportTypeCounts,
     statewideSearchRateSeries,
     statewideArrestRateSeries,
     statewideLicenseStopRateSeries,
+    allCountySlugs,
+    totalParticipantPopulation,
   };
 }

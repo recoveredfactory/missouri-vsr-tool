@@ -14,9 +14,13 @@
   export let height = 220;
   export let strokeWidth = 2.5;
   /**
-   * Y-domain min. Race-rate charts force 0; pass null to derive from data min.
+   * Y-domain min when `showZeroBreak` is false. Set to null to derive from
+   * the data. With `showZeroBreak` on, this is ignored — the axis crops to
+   * the data range and the break is drawn at the bottom.
    */
   export let minDomain: number | null = 0;
+  /** Crop axis to data range and signal it with a break at the bottom. */
+  export let showZeroBreak = false;
   export let yLabelGutter = 64;
   export let endLabelGutter = 72;
   export let axisBelow = 20;
@@ -29,6 +33,7 @@
   const AXIS_COLOR = "#cbd5e1"; // slate-300
   const AXIS_LABEL_COLOR = "#64748b"; // slate-500
   const PAD_Y = 10;
+  const BREAK_BAND = 22;
 
   $: cleanedByRace = (() => {
     const out = {} as Record<Race, Array<{ year: number; value: number }>>;
@@ -52,29 +57,48 @@
     return Array.from(set).sort((a, b) => a - b);
   })();
 
-  $: yDomain = (() => {
+  $: dataValues = (() => {
     const all: number[] = [];
     for (const race of RACES) for (const p of cleanedByRace[race]) all.push(p.value);
     for (const p of refCleaned) all.push(p.value);
-    if (!all.length) return { min: 0, max: 1 };
-    let min = Math.min(...all);
-    let max = Math.max(...all);
-    if (minDomain !== null) min = Math.min(min, minDomain);
+    return all;
+  })();
+  $: dataMin = dataValues.length ? Math.min(...dataValues) : 0;
+  $: dataMax = dataValues.length ? Math.max(...dataValues) : 0;
+  /**
+   * Crop & break only when the floor is meaningfully above zero (>= 5 in
+   * data units). Matches Spark287gTotal's convention so every chart on the
+   * page treats the y-axis the same way.
+   */
+  const ZERO_BREAK_FLOOR = 5;
+  $: doBreak =
+    showZeroBreak && dataValues.length > 0 && dataMin >= ZERO_BREAK_FLOOR;
+
+  $: yDomain = (() => {
+    if (!dataValues.length) return { min: 0, max: 1 };
+    let min = dataMin;
+    let max = dataMax;
+    // Anchor at minDomain (e.g. 0) only when we're NOT cropping to data.
+    if (!doBreak && minDomain !== null) min = Math.min(min, minDomain);
     if (min === max) return { min: min - 0.5, max: max + 0.5 };
     const span = max - min;
     return { min, max: max + span * 0.1 };
   })();
 
+  /** Vertical span available to plot data — full height minus break band when active. */
+  $: plotH = doBreak ? height - BREAK_BAND : height;
+
   /**
-   * Y-tick labels: anchor at 0 (or domain min) and the data max.
-   * Race-start labels handle the rest of the y-axis context.
+   * Y-tick labels: bottom = data min when broken, otherwise minDomain (or
+   * data min). Top = data max.
    */
   $: yTicks = (() => {
-    const all: number[] = [];
-    for (const race of RACES) for (const p of cleanedByRace[race]) all.push(p.value);
-    if (!all.length) return null;
-    const dataMax = Math.max(...all);
-    const tickMin = minDomain !== null ? minDomain : Math.min(...all);
+    if (!dataValues.length) return null;
+    const tickMin = doBreak
+      ? dataMin
+      : minDomain !== null
+        ? minDomain
+        : dataMin;
     if (tickMin === dataMax) return null;
     return { min: tickMin, max: dataMax };
   })();
@@ -91,7 +115,7 @@
   $: yScale = (value: number) => {
     const { min, max } = yDomain;
     const t = (value - min) / (max - min);
-    return PAD_Y + (1 - t) * (height - PAD_Y * 2);
+    return PAD_Y + (1 - t) * (plotH - PAD_Y * 2);
   };
 
   $: xPct = (year: number) => +((xScale(year) / width) * 100).toFixed(1);
@@ -154,8 +178,12 @@
   $: startYear = years[0] ?? null;
   $: endYear = years[years.length - 1] ?? null;
 
-  /** Where the x-axis baseline draws — at the actual zero (or domain min) position. */
-  $: zeroY = yScale(yDomain.min);
+  /**
+   * Where the x-axis baseline draws — at the actual zero reference. When the
+   * axis is broken, the baseline sits inside the break band at the bottom
+   * (matching Spark287gTotal's `height - 4` placement).
+   */
+  $: zeroY = doBreak ? height - 4 : yScale(yDomain.min);
 
   let hoverYear: number | null = null;
   let chartContainer: HTMLDivElement | undefined;
@@ -225,6 +253,14 @@
         </div>
       {/if}
     {/if}
+    {#if doBreak}
+      <div
+        class="pointer-events-none absolute right-1.5 text-xs tabular-nums leading-none"
+        style="top: {zeroY}px; transform: translateY(-50%); color: {AXIS_LABEL_COLOR};"
+      >
+        0
+      </div>
+    {/if}
     {#each startLabels as label}
       <div
         class="absolute right-1.5 whitespace-nowrap text-right text-xs leading-tight tabular-nums"
@@ -253,6 +289,42 @@
         <div
           class="pointer-events-none absolute h-px"
           style="left: 0; width: 4px; top: {(yScale(yTicks.min) / height) * 100}%; transform: translateY(-50%); background: {AXIS_COLOR};"
+        ></div>
+      {/if}
+
+      <!-- Axis-break indicator + 0 tick (mirrors Spark287gTotal). -->
+      {#if doBreak}
+        <div
+          class="pointer-events-none absolute"
+          style="left: -1px; top: {plotH + 1}px; width: 3px; height: {height - plotH - 6}px; background: white;"
+        ></div>
+        <svg
+          class="pointer-events-none absolute"
+          style="left: -6px; top: {plotH + 1}px; width: 14px; height: {height - plotH - 6}px;"
+          aria-hidden="true"
+        >
+          <line
+            x1="0"
+            y1={height - plotH - 12}
+            x2="14"
+            y2={2}
+            stroke={AXIS_COLOR}
+            stroke-width="1.25"
+            vector-effect="non-scaling-stroke"
+          />
+          <line
+            x1="0"
+            y1={height - plotH - 6}
+            x2="14"
+            y2={8}
+            stroke={AXIS_COLOR}
+            stroke-width="1.25"
+            vector-effect="non-scaling-stroke"
+          />
+        </svg>
+        <div
+          class="pointer-events-none absolute h-px"
+          style="left: 0; width: 4px; top: {zeroY}px; transform: translateY(-50%); background: {AXIS_COLOR};"
         ></div>
       {/if}
 

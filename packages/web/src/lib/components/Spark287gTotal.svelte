@@ -30,16 +30,18 @@
   $: dataMin = cleaned.length ? Math.min(...cleaned.map((p) => p.value)) : 0;
   $: dataMax = cleaned.length ? Math.max(...cleaned.map((p) => p.value)) : 0;
   /**
-   * Break the axis only when zooming actually buys something — i.e. when 0 sits
-   * far below the data range. Rule: `dataMin > (dataMax - dataMin)`. So
-   * 60..90 (zero is 2× the span away) breaks; 5..15 (zero is 0.5× span away)
-   * stays anchored at 0 and skips the break.
+   * Break whenever cropping actually buys something — i.e. when the data
+   * floor is far enough above zero that a zero-anchored axis would waste
+   * half the chart. When the floor is already close to zero, the break
+   * looks fussy, so anchor at zero in that case.
+   *
+   * 5 is in chart-data units (per-100 rates, raw stop counts, etc.). For
+   * stops, dataMin is virtually always >5; for race rates, dataMin must
+   * exceed 5% before we crop.
    */
+  const ZERO_BREAK_FLOOR = 5;
   $: doBreak =
-    showZeroBreak &&
-    cleaned.length > 0 &&
-    dataMin > 0 &&
-    dataMin > dataMax - dataMin;
+    showZeroBreak && cleaned.length > 0 && dataMin >= ZERO_BREAK_FLOOR;
 
   $: yDomain = (() => {
     if (!cleaned.length) return { min: 0, max: 1 };

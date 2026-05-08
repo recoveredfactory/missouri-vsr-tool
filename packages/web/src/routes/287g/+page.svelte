@@ -31,7 +31,10 @@
     program_287g_outlier_metric_arrest_rate,
     program_287g_totals_label,
     program_287g_totals_all_stops,
+    program_287g_totals_white_stops,
+    program_287g_totals_black_stops,
     program_287g_totals_hispanic_stops,
+    program_287g_totals_other_stops,
     program_287g_totals_share_of_state,
     program_287g_totals_caveat,
     program_287g_models_heading,
@@ -71,6 +74,21 @@
     "https://en.wikipedia.org/wiki/Immigration_and_Nationality_Act_Section_287(g)";
 
   const SPARKLINE_YEAR_WINDOW = 10;
+
+  /**
+   * Format a population count for the locator/totals labels:
+   *   ≥1,000,000 → "X.Y million"
+   *   ≥10,000    → "12,300" (no rounding tail)
+   *   else       → "1,234"
+   */
+  const formatPopulation = (n: number): string => {
+    if (!Number.isFinite(n) || n <= 0) return "—";
+    if (n >= 1_000_000) {
+      const m = n / 1_000_000;
+      return `${m.toFixed(m >= 10 ? 0 : 1)} million`;
+    }
+    return integerFormatter.format(Math.round(n));
+  };
 
   $: locale = getLocale() || "en";
   $: localeBase = `/${locale}`;
@@ -182,8 +200,58 @@
   $: countDisplay = integerFormatter.format(data.participants.length);
   $: anchorYear = data.latestYearAnchor;
   $: participantSlugs = data.participants.map((p) => p.agency_slug);
+  $: dotSlugs = data.participants
+    .filter((p) => p.agency_type !== "County")
+    .map((p) => p.agency_slug);
+  $: countySlugs = data.participants
+    .filter((p) => p.agency_type === "County")
+    .map((p) => p.agency_slug);
+  $: locatorTooltips = (() => {
+    const out: Record<
+      string,
+      { name: string; subtitle?: string; stops?: string; agreement?: string }
+    > = {};
+    for (const p of data.participants) {
+      const subtitleParts: string[] = [];
+      if (p.agency_type) subtitleParts.push(p.agency_type);
+      if (p.agency_type !== "State Agency") {
+        const place = [p.city, p.county].filter(Boolean).join(", ");
+        if (place) subtitleParts.push(place);
+      }
+      const stops =
+        typeof p.latestTotalStops === "number" && p.latestYear
+          ? `${integerFormatter.format(p.latestTotalStops)} stops in ${p.latestYear}`
+          : undefined;
+      let agreement: string | undefined;
+      if (p.agreements?.length) {
+        const types = Array.from(
+          new Set(
+            p.agreements
+              .map((a) => a.support_type)
+              .filter((t): t is string => Boolean(t)),
+          ),
+        );
+        if (types.length) {
+          agreement =
+            p.agreements.length > 1
+              ? `${p.agreements.length} agreements: ${types.join(", ")}`
+              : types[0];
+        }
+      }
+      out[p.agency_slug] = {
+        name: p.canonical_name,
+        subtitle: subtitleParts.join(" · ") || undefined,
+        stops,
+        agreement,
+      };
+    }
+    return out;
+  })();
   $: totalStopsDisplay = formatInteger(data.totalStopsLatestSum) ?? "—";
+  $: totalWhiteStopsDisplay = formatInteger(data.totalWhiteStopsLatestSum) ?? "—";
+  $: totalBlackStopsDisplay = formatInteger(data.totalBlackStopsLatestSum) ?? "—";
   $: totalHispanicStopsDisplay = formatInteger(data.totalHispanicStopsLatestSum) ?? "—";
+  $: totalOtherStopsDisplay = formatInteger(data.totalOtherStopsLatestSum) ?? "—";
   $: statewideShare =
     data.statewideTotalStopsLatest > 0
       ? (data.totalStopsLatestSum / data.statewideTotalStopsLatest) * 100
@@ -385,75 +453,85 @@
     {program_287g_page_heading()}
   </h1>
 
-  <p class="mt-5 text-lg leading-relaxed text-slate-700">
-    <a class="underline" href={WIKIPEDIA_287G_URL} target="_blank" rel="noreferrer"
-      >{agency_287g_description_link()}</a
-    >{agency_287g_description_post()}
-  </p>
-
-  <p class="mt-3 text-lg text-slate-700">
-    {program_287g_page_summary({
-      count: countDisplay,
-      date: formatLongDate(data.snapshotDate),
-    })}
-  </p>
-
-  <!--
-    `program_287g_page_clarification` contains anchor tags, so it's rendered
-    as HTML. Inline `[&_a]:` styles give the embedded links the same look as
-    the explicit `<a class="underline">` above.
-  -->
-  <p class="mt-3 text-lg leading-relaxed text-slate-700 [&_a]:underline [&_a:hover]:text-slate-900">
-    {@html program_287g_page_clarification()}
-  </p>
-
-  {#if data.supportTypeCounts && data.supportTypeCounts.length}
-    {@const totalAgencies = data.participants.length}
-    <section class="mt-8">
-      <h2 class="text-lg font-semibold text-slate-900">{program_287g_models_heading()}</h2>
-      <p class="mt-1 text-sm text-slate-500">{program_287g_models_subhead()}</p>
-      <ul class="mt-3 space-y-2.5">
-        {#each data.supportTypeCounts as model}
-          <li>
-            <div class="flex items-baseline justify-between gap-3 text-base">
-              <span class="font-medium text-slate-800">{model.type}</span>
-              <span class="tabular-nums text-slate-600">
-                {integerFormatter.format(model.count)}/{integerFormatter.format(totalAgencies)}
-              </span>
-            </div>
-            <div class="mt-1 h-2.5 w-full overflow-hidden rounded-sm bg-slate-100">
-              <div
-                class="h-full bg-emerald-800"
-                style="width: {totalAgencies > 0 ? (model.count / totalAgencies) * 100 : 0}%"
-              ></div>
-            </div>
-          </li>
-        {/each}
-      </ul>
-    </section>
-  {/if}
-
-  {#if data.totalStopsLatestSum > 0 && anchorYear !== null}
-    <div class="mt-8 rounded-md border border-slate-200 bg-slate-50 p-5 sm:p-6">
-      <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
-        {program_287g_totals_label({ year: anchorYear, count: countDisplay })}
+  <div class="mt-5 grid gap-8 lg:grid-cols-[1.618fr_1fr] lg:gap-12">
+    <!-- Left: intro copy -->
+    <div class="space-y-3 text-lg leading-relaxed text-slate-700">
+      <p>
+        <a class="underline" href={WIKIPEDIA_287G_URL} target="_blank" rel="noreferrer"
+          >{agency_287g_description_link()}</a
+        >{agency_287g_description_post()}
       </p>
-      <p class="mt-1.5 text-lg text-slate-900">
-        {program_287g_totals_all_stops({ stops: totalStopsDisplay })}
-        <span class="text-slate-400">·</span>
-        {program_287g_totals_hispanic_stops({ stops: totalHispanicStopsDisplay })}
+      <p>
+        {program_287g_page_summary({
+          count: countDisplay,
+          date: formatLongDate(data.snapshotDate),
+        })}
       </p>
-      {#if statewideShareDisplay}
-        <p class="mt-1 text-base text-slate-600">
-          {program_287g_totals_share_of_state({
-            pct: statewideShareDisplay,
-            year: anchorYear,
-          })}
-        </p>
-      {/if}
-      <p class="mt-2.5 text-sm italic text-slate-500">{program_287g_totals_caveat()}</p>
+      <!--
+        `program_287g_page_clarification` contains anchor tags, so it's
+        rendered as HTML. Inline `[&_a]:` styles give the embedded links
+        the same look as the explicit `<a class="underline">` above.
+      -->
+      <p class="[&_a]:underline [&_a:hover]:text-slate-900">
+        {@html program_287g_page_clarification()}
+      </p>
     </div>
-  {/if}
+
+    <!-- Right: support models stacked over big numbers -->
+    <div class="space-y-8">
+      {#if data.supportTypeCounts && data.supportTypeCounts.length}
+        {@const totalAgencies = data.participants.length}
+        <section>
+          <h2 class="text-lg font-semibold text-slate-900">{program_287g_models_heading()}</h2>
+          <p class="mt-1 text-sm text-slate-500">{program_287g_models_subhead()}</p>
+          <ul class="mt-3 space-y-2.5">
+            {#each data.supportTypeCounts as model}
+              <li>
+                <div class="flex items-baseline justify-between gap-3 text-base">
+                  <span class="font-medium text-slate-800">{model.type}</span>
+                  <span class="tabular-nums text-slate-600">
+                    {integerFormatter.format(model.count)}/{integerFormatter.format(totalAgencies)}
+                  </span>
+                </div>
+                <div class="mt-1 h-2.5 w-full overflow-hidden rounded-sm bg-slate-100">
+                  <div
+                    class="h-full bg-emerald-800"
+                    style="width: {totalAgencies > 0 ? (model.count / totalAgencies) * 100 : 0}%"
+                  ></div>
+                </div>
+              </li>
+            {/each}
+          </ul>
+        </section>
+      {/if}
+
+      {#if data.totalStopsLatestSum > 0 && anchorYear !== null}
+        <section>
+          <h2 class="text-lg font-semibold text-slate-900">
+            {program_287g_totals_label({ year: anchorYear, count: countDisplay })}
+          </h2>
+          <p class="mt-1 text-sm text-slate-500">{program_287g_totals_caveat()}</p>
+          <p class="mt-3 text-2xl font-semibold text-slate-900 sm:text-3xl">
+            {program_287g_totals_all_stops({ stops: totalStopsDisplay })}
+          </p>
+          <div class="mt-1 divide-y divide-slate-200 border-t border-slate-200">
+            <p class="py-2.5 text-lg text-slate-700 sm:text-xl">
+              {program_287g_totals_white_stops({ stops: totalWhiteStopsDisplay })}
+            </p>
+            <p class="py-2.5 text-lg text-slate-700 sm:text-xl">
+              {program_287g_totals_black_stops({ stops: totalBlackStopsDisplay })}
+            </p>
+            <p class="py-2.5 text-lg text-slate-700 sm:text-xl">
+              {program_287g_totals_hispanic_stops({ stops: totalHispanicStopsDisplay })}
+            </p>
+            <p class="py-2.5 text-lg text-slate-700 sm:text-xl">
+              {program_287g_totals_other_stops({ stops: totalOtherStopsDisplay })}
+            </p>
+          </div>
+        </section>
+      {/if}
+    </div>
+  </div>
 
   {#if agencyJumpList.length}
     <div bind:this={stickySentinel} class="mt-6 h-px"></div>
@@ -564,6 +642,11 @@
                     stops: integerFormatter.format(participant.latestTotalStops),
                     year: latestYear,
                   })}
+                  {#if typeof participant.population === "number" && participant.population > 0}
+                    <span class="font-light text-slate-500"
+                      >· Pop. {formatPopulation(participant.population)}</span
+                    >
+                  {/if}
                 </p>
               {/if}
               {#if locationParts.length}
@@ -610,10 +693,16 @@
           <Locator287gMap
             agencySlug={participant.agency_slug}
             {participantSlugs}
+            {dotSlugs}
+            {countySlugs}
+            allCountySlugs={data.allCountySlugs}
+            tooltips={locatorTooltips}
           />
         </div>
 
-        <div class="mt-8 grid gap-10 sm:grid-cols-2">
+        <div
+          class="mt-8 grid gap-10 sm:grid-cols-2 [&>:last-child:nth-child(odd)]:sm:col-span-2 [&>:last-child:nth-child(odd)]:sm:mx-auto [&>:last-child:nth-child(odd)]:sm:w-full [&>:last-child:nth-child(odd)]:sm:max-w-[28rem]"
+        >
           <div>
             <h3 class="text-lg font-semibold text-slate-900">
               {program_287g_chart_total_stops_label()}
@@ -644,7 +733,7 @@
                 referenceSeries={statewideSearchRateWindow}
                 labelsByRace={raceShortLabels}
                 formatValue={formatRateLabel}
-                minDomain={0}
+                showZeroBreak={true}
                 unitLabel="per 100"
               />
             </div>
@@ -659,7 +748,7 @@
                 referenceSeries={statewideArrestRateWindow}
                 labelsByRace={raceShortLabels}
                 formatValue={formatRateLabel}
-                minDomain={0}
+                showZeroBreak={true}
                 unitLabel="per 100"
               />
             </div>
@@ -674,7 +763,7 @@
                 referenceSeries={statewideLicenseStopRateWindow}
                 labelsByRace={raceShortLabels}
                 formatValue={formatRateLabel}
-                minDomain={0}
+                showZeroBreak={true}
                 unitLabel="per 100"
               />
             </div>
