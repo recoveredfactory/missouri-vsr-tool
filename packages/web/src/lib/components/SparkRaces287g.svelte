@@ -1,8 +1,5 @@
 <script lang="ts">
   import { raceColors } from "$lib/colors.js";
-  import { tweened } from "svelte/motion";
-  import { cubicInOut } from "svelte/easing";
-  import { onMount } from "svelte";
 
   type Race = "White" | "Black" | "Hispanic";
   type Series = Array<{ year: number; value: number | null }>;
@@ -45,88 +42,21 @@
   /** Fixed visual height of the diagonal break indicator regardless of band size. */
   const BREAK_INDICATOR_H = 16;
 
-  // === Tween infrastructure ===
-  // Same approach as Spark287gTotal: tween only the y-values per race, with
-  // NaN as the "no data" sentinel so missing-data points snap rather than
-  // poisoning the array interpolator. Year axis stays fixed.
-  let mounted = false;
-  /**
-   * Charts off-screen snap to their target instead of animating. With ~12
-   * agencies × multiple charts each, rolling-avg toggles otherwise kick off
-   * 40+ simultaneous tweens, most invisible.
-   */
-  let inView = false;
-  const whiteTween = tweened<number[]>([], { duration: 500, easing: cubicInOut });
-  const blackTween = tweened<number[]>([], { duration: 500, easing: cubicInOut });
-  const hispanicTween = tweened<number[]>([], { duration: 500, easing: cubicInOut });
-  const refValuesTween = tweened<number[]>([], {
-    duration: 500,
-    easing: cubicInOut,
-  });
-  $: tweenOpts = inView ? undefined : { duration: 0 };
-
-  const valuesOf = (s: Series): number[] =>
-    s.map((p) =>
-      typeof p.value === "number" && Number.isFinite(p.value as number)
-        ? (p.value as number)
-        : NaN,
-    );
-  $: targetByRace = {
-    White: valuesOf(seriesByRace.White ?? []),
-    Black: valuesOf(seriesByRace.Black ?? []),
-    Hispanic: valuesOf(seriesByRace.Hispanic ?? []),
-  };
-  $: targetRefValues = valuesOf(referenceSeries ?? []);
-  onMount(() => {
-    // Seed each tween with the current target at duration 0 so subsequent
-    // animated sets interpolate same-length arrays. svelte/motion's array
-    // interpolator throws "Cannot interpolate values of different type" when
-    // a[i] is undefined for any element of b, which is what happens going
-    // from the initial [] to a populated target.
-    whiteTween.set(targetByRace.White, { duration: 0 });
-    blackTween.set(targetByRace.Black, { duration: 0 });
-    hispanicTween.set(targetByRace.Hispanic, { duration: 0 });
-    refValuesTween.set(targetRefValues, { duration: 0 });
-    mounted = true;
-
-    if (typeof IntersectionObserver === "undefined" || !chartContainer) {
-      inView = true;
-      return;
-    }
-    const io = new IntersectionObserver(
-      ([entry]) => {
-        inView = entry.isIntersecting;
-      },
-      { rootMargin: "200px 0px" },
-    );
-    io.observe(chartContainer);
-    return () => io.disconnect();
-  });
-  $: if (mounted) whiteTween.set(targetByRace.White, tweenOpts);
-  $: if (mounted) blackTween.set(targetByRace.Black, tweenOpts);
-  $: if (mounted) hispanicTween.set(targetByRace.Hispanic, tweenOpts);
-  $: if (mounted) refValuesTween.set(targetRefValues, tweenOpts);
-  $: liveByRace = mounted
-    ? { White: $whiteTween, Black: $blackTween, Hispanic: $hispanicTween }
-    : targetByRace;
-  $: liveRefValues = mounted ? $refValuesTween : targetRefValues;
-
+  // Render the supplied series directly — no tween. The rolling-avg toggle
+  // updates a lot of charts at once and animating them all was janky on
+  // phones. The race-selector animation in ShareChart287g is the only place
+  // we tween charts on this page.
   $: cleanedByRace = (() => {
     const out = {} as Record<Race, Array<{ year: number; value: number }>>;
     for (const race of RACES) {
-      const src = seriesByRace[race] ?? [];
-      const live = liveByRace[race];
-      out[race] = src
-        .map((p, i) => ({ year: p.year, value: live[i] }))
-        .filter(
-          (p) => typeof p.value === "number" && Number.isFinite(p.value),
-        ) as Array<{ year: number; value: number }>;
+      out[race] = (seriesByRace[race] ?? []).filter(
+        (p) => typeof p.value === "number" && Number.isFinite(p.value as number),
+      ) as Array<{ year: number; value: number }>;
     }
     return out;
   })();
 
   $: refCleaned = (referenceSeries ?? [])
-    .map((p, i) => ({ year: p.year, value: liveRefValues[i] }))
     .filter(
       (p) => typeof p.value === "number" && Number.isFinite(p.value),
     ) as Array<{ year: number; value: number }>;
@@ -269,13 +199,10 @@
   let hoverYear: number | null = null;
   let chartContainer: HTMLDivElement | undefined;
 
-  const handleHoverMove = (e: MouseEvent | TouchEvent) => {
+  const handleHoverMove = (e: MouseEvent) => {
     if (!years.length || !chartContainer) return;
     const rect = chartContainer.getBoundingClientRect();
-    const clientX =
-      "touches" in e ? e.touches[0]?.clientX : (e as MouseEvent).clientX;
-    if (clientX === undefined) return;
-    const xRatio = (clientX - rect.left) / rect.width;
+    const xRatio = (e.clientX - rect.left) / rect.width;
     const targetX = xRatio * width;
     let bestY = years[0];
     let bestD = Infinity;
@@ -477,9 +404,6 @@
         class="absolute inset-0 z-10"
         on:mousemove={handleHoverMove}
         on:mouseleave={handleHoverLeave}
-        on:touchstart|passive={handleHoverMove}
-        on:touchmove|passive={handleHoverMove}
-        on:touchend={handleHoverLeave}
         role="presentation"
       ></div>
 

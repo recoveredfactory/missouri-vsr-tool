@@ -1,8 +1,4 @@
 <script lang="ts">
-  import { tweened } from "svelte/motion";
-  import { cubicInOut } from "svelte/easing";
-  import { onMount } from "svelte";
-
   type Series = Array<{ year: number; value: number | null }>;
 
   export let series: Series = [];
@@ -39,74 +35,17 @@
   const BREAK_INDICATOR_H = 16;
   const PAD_Y = 10;
 
-  // === Tween infrastructure ===
-  // Tween only the y-values; years stay fixed. NaN marks "no data" — the
-  // default array interpolator snaps NaN ↔ number transitions instantly,
-  // so missing-data points don't propagate NaN through the animation.
-  let mounted = false;
-  /**
-   * Charts off-screen snap to their target instead of animating. With ~12
-   * agencies × multiple charts each, rolling-avg toggles otherwise kick off
-   * dozens of simultaneous tweens, most invisible.
-   */
-  let inView = false;
-  const seriesValuesTween = tweened<number[]>([], {
-    duration: 500,
-    easing: cubicInOut,
-  });
-  const refValuesTween = tweened<number[]>([], {
-    duration: 500,
-    easing: cubicInOut,
-  });
-  $: tweenOpts = inView ? undefined : { duration: 0 };
-  $: targetSeriesValues = series.map((p) =>
-    typeof p.value === "number" && Number.isFinite(p.value as number)
-      ? (p.value as number)
-      : NaN,
-  );
-  $: targetRefValues = (referenceSeries ?? []).map((p) =>
-    typeof p.value === "number" && Number.isFinite(p.value as number)
-      ? (p.value as number)
-      : NaN,
-  );
-  onMount(() => {
-    // Seed tweens at duration 0 so the first animated set has a same-length
-    // starting array — otherwise svelte/motion throws "Cannot interpolate
-    // values of different type" when interpolating from [] to a populated
-    // target (a[i] is undefined, b[i] is a number).
-    seriesValuesTween.set(targetSeriesValues, { duration: 0 });
-    refValuesTween.set(targetRefValues, { duration: 0 });
-    mounted = true;
+  // Render the supplied series directly — no tween. The rolling-avg toggle
+  // updates a lot of charts at once and animating them all was janky on
+  // phones. The race-selector animation in ShareChart287g is the only place
+  // we tween charts on this page.
+  $: cleaned = series.filter(
+    (p) => typeof p.value === "number" && Number.isFinite(p.value as number),
+  ) as Array<{ year: number; value: number }>;
 
-    if (typeof IntersectionObserver === "undefined" || !chartContainer) {
-      inView = true;
-      return;
-    }
-    const io = new IntersectionObserver(
-      ([entry]) => {
-        inView = entry.isIntersecting;
-      },
-      { rootMargin: "200px 0px" },
-    );
-    io.observe(chartContainer);
-    return () => io.disconnect();
-  });
-  $: if (mounted) seriesValuesTween.set(targetSeriesValues, tweenOpts);
-  $: if (mounted) refValuesTween.set(targetRefValues, tweenOpts);
-  $: liveSeriesValues = mounted ? $seriesValuesTween : targetSeriesValues;
-  $: liveRefValues = mounted ? $refValuesTween : targetRefValues;
-
-  $: cleaned = series
-    .map((p, i) => ({ year: p.year, value: liveSeriesValues[i] }))
-    .filter(
-      (p) => typeof p.value === "number" && Number.isFinite(p.value),
-    ) as Array<{ year: number; value: number }>;
-
-  $: refCleaned = (referenceSeries ?? [])
-    .map((p, i) => ({ year: p.year, value: liveRefValues[i] }))
-    .filter(
-      (p) => typeof p.value === "number" && Number.isFinite(p.value),
-    ) as Array<{ year: number; value: number }>;
+  $: refCleaned = (referenceSeries ?? []).filter(
+    (p) => typeof p.value === "number" && Number.isFinite(p.value as number),
+  ) as Array<{ year: number; value: number }>;
 
   /** Union of years across the main series and reference, sorted. */
   $: years = (() => {
@@ -206,13 +145,10 @@
   let hoverIdx: number | null = null;
   let chartContainer: HTMLDivElement | undefined;
 
-  const handleHoverMove = (e: MouseEvent | TouchEvent) => {
+  const handleHoverMove = (e: MouseEvent) => {
     if (!cleaned.length || !chartContainer) return;
     const rect = chartContainer.getBoundingClientRect();
-    const clientX =
-      "touches" in e ? e.touches[0]?.clientX : (e as MouseEvent).clientX;
-    if (clientX === undefined) return;
-    const xRatio = (clientX - rect.left) / rect.width;
+    const xRatio = (e.clientX - rect.left) / rect.width;
     const targetX = xRatio * width;
     let bestI = 0;
     let bestD = Infinity;
@@ -410,9 +346,6 @@
         class="absolute inset-0 z-10"
         on:mousemove={handleHoverMove}
         on:mouseleave={handleHoverLeave}
-        on:touchstart|passive={handleHoverMove}
-        on:touchmove|passive={handleHoverMove}
-        on:touchend={handleHoverLeave}
         role="presentation"
       ></div>
 
