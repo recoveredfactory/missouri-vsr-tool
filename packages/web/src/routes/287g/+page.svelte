@@ -392,16 +392,8 @@
     }));
 
   import { onMount } from "svelte";
-  import { afterNavigate, disableScrollHandling, replaceState } from "$app/navigation";
+  import { replaceState } from "$app/navigation";
   import { page } from "$app/stores";
-
-  // Disable SvelteKit's built-in scroll handling for this page. The agency
-  // picker manages scroll itself (manual offset math + history.replaceState
-  // for the URL). SvelteKit's scroll-on-navigation behavior was occasionally
-  // overriding our scrollTo and snapping back near the top.
-  afterNavigate(() => {
-    disableScrollHandling();
-  });
 
   /**
    * Agency picker uses anchor links (`<a href="#agency-X">`) wrapped in
