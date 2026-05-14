@@ -12,12 +12,12 @@
     program_287g_page_summary,
     program_287g_page_clarification,
     program_287g_page_clarification_charts,
+    program_287g_page_clarification_race,
     program_287g_chart_window_label,
     program_287g_chart_statewide_label,
     program_287g_chart_total_stops_label,
     program_287g_chart_search_rate_by_race_label,
     program_287g_chart_arrest_rate_by_race_label,
-    program_287g_chart_license_stop_rate_by_race_label,
     program_287g_race_short_white,
     program_287g_race_short_black,
     program_287g_race_short_hispanic,
@@ -46,7 +46,6 @@
     program_287g_breakdown_row_stops,
     program_287g_breakdown_row_search_rate,
     program_287g_breakdown_row_arrest_rate,
-    program_287g_breakdown_row_license_stop_rate,
     program_287g_breakdown_row_contraband_hit_rate,
     program_287g_breakdown_row_residency,
     program_287g_breakdown_row_nonresidency,
@@ -145,6 +144,32 @@
     typeof value === "number" && Number.isFinite(value)
       ? percentFormatter.format(value)
       : "—";
+
+  /**
+   * Below this magnitude (in per-100 units) we treat the delta vs the
+   * statewide aggregate as noise — borrowing the same threshold convention
+   * we use in the agency-contact project so readers don't anchor on
+   * sub-percentage-point differences.
+   */
+  const RATE_DELTA_FLOOR = 0.5;
+
+  const formatRateDelta = (
+    agencyVal: number | null | undefined,
+    stateVal: number | null | undefined,
+  ): { value: string; cls: string } | null => {
+    if (typeof agencyVal !== "number" || !Number.isFinite(agencyVal)) return null;
+    if (typeof stateVal !== "number" || !Number.isFinite(stateVal)) return null;
+    const diff = agencyVal - stateVal;
+    if (Math.abs(diff) < RATE_DELTA_FLOOR) {
+      return { value: "~0", cls: "text-slate-400" };
+    }
+    const sign = diff > 0 ? "+" : "−";
+    const mag = percentFormatter.format(Math.abs(diff));
+    return {
+      value: `${sign}${mag}`,
+      cls: diff > 0 ? "text-amber-700" : "text-sky-700",
+    };
+  };
 
   type SeriesPoint = { year: number; value: number | null };
 
@@ -254,6 +279,35 @@
   $: totalBlackStopsDisplay = formatInteger(data.totalBlackStopsLatestSum) ?? "—";
   $: totalHispanicStopsDisplay = formatInteger(data.totalHispanicStopsLatestSum) ?? "—";
   $: totalOtherStopsDisplay = formatInteger(data.totalOtherStopsLatestSum) ?? "—";
+  /**
+   * Per-race share = participants' stops / all-Missouri stops for the same
+   * race in the anchor year. Falls back to "—" when the statewide denominator
+   * isn't available (e.g. no rows for that race at the anchor year).
+   */
+  const raceShareDisplay = (
+    participantSum: number,
+    statewideSum: number | undefined,
+  ): string => {
+    if (typeof statewideSum !== "number" || statewideSum <= 0) return "—";
+    const pct = (participantSum / statewideSum) * 100;
+    return integerPercentFormatter.format(Math.max(0, pct));
+  };
+  $: whiteShareDisplay = raceShareDisplay(
+    data.totalWhiteStopsLatestSum,
+    data.statewideWhiteStopsLatest,
+  );
+  $: blackShareDisplay = raceShareDisplay(
+    data.totalBlackStopsLatestSum,
+    data.statewideBlackStopsLatest,
+  );
+  $: hispanicShareDisplay = raceShareDisplay(
+    data.totalHispanicStopsLatestSum,
+    data.statewideHispanicStopsLatest,
+  );
+  $: otherShareDisplay = raceShareDisplay(
+    data.totalOtherStopsLatestSum,
+    data.statewideOtherStopsLatest,
+  );
   $: statewideShare =
     data.statewideTotalStopsLatest > 0
       ? (data.totalStopsLatestSum / data.statewideTotalStopsLatest) * 100
@@ -284,7 +338,6 @@
     stopsComp: RaceQuadSeries;
     searchRace: RaceSeries;
     arrestRace: RaceSeries;
-    licenseRace: RaceSeries;
   };
   $: participantViews = data.participants.map(
     (p: (typeof data.participants)[number]): ParticipantView => ({
@@ -293,7 +346,6 @@
       stopsComp: applyRollingRaceQuad(p.stopsCompositionSeries as RaceQuadSeries, rollingAvg),
       searchRace: applyRollingRace(p.searchRateByRaceSeries as RaceSeries, rollingAvg),
       arrestRace: applyRollingRace(p.arrestRateByRaceSeries as RaceSeries, rollingAvg),
-      licenseRace: applyRollingRace(p.licenseStopRateByRaceSeries as RaceSeries, rollingAvg),
     }),
   );
 
@@ -428,7 +480,15 @@
 
   $: statewideSearchRateWindow = applyRolling(data.statewideSearchRateSeries ?? [], rollingAvg);
   $: statewideArrestRateWindow = applyRolling(data.statewideArrestRateSeries ?? [], rollingAvg);
-  $: statewideLicenseStopRateWindow = applyRolling(data.statewideLicenseStopRateSeries ?? [], rollingAvg);
+  $: statewideStopsCompositionWindow = applyRollingRaceQuad(
+    (data.statewideStopsCompositionSeries ?? {
+      White: [],
+      Black: [],
+      Hispanic: [],
+      Other: [],
+    }) as RaceQuadSeries,
+    rollingAvg,
+  );
 
   type SuppressionNote = { metric: "search-rate" | "arrest-rate"; year: number };
   const formatSuppressionNote = (notes: SuppressionNote[]): string => {
@@ -486,6 +546,9 @@
       <p>
         {@html program_287g_page_clarification_charts()}
       </p>
+      <p class="text-slate-600">
+        {@html program_287g_page_clarification_race()}
+      </p>
     </div>
 
     <!-- Right: big numbers above support models, faint divider between. -->
@@ -502,16 +565,16 @@
           <p class="mt-2 text-sm italic text-slate-500">{program_287g_totals_caveat()}</p>
           <div class="mt-4 divide-y divide-slate-200 border-t border-slate-200">
             <p class="py-2.5 text-lg text-slate-700 sm:text-xl">
-              {program_287g_totals_white_stops({ stops: totalWhiteStopsDisplay })}
+              {program_287g_totals_white_stops({ stops: totalWhiteStopsDisplay, share: whiteShareDisplay })}
             </p>
             <p class="py-2.5 text-lg text-slate-700 sm:text-xl">
-              {program_287g_totals_black_stops({ stops: totalBlackStopsDisplay })}
+              {program_287g_totals_black_stops({ stops: totalBlackStopsDisplay, share: blackShareDisplay })}
             </p>
             <p class="py-2.5 text-lg text-slate-700 sm:text-xl">
-              {program_287g_totals_hispanic_stops({ stops: totalHispanicStopsDisplay })}
+              {program_287g_totals_hispanic_stops({ stops: totalHispanicStopsDisplay, share: hispanicShareDisplay })}
             </p>
             <p class="py-2.5 text-lg text-slate-700 sm:text-xl">
-              {program_287g_totals_other_stops({ stops: totalOtherStopsDisplay })}
+              {program_287g_totals_other_stops({ stops: totalOtherStopsDisplay, share: otherShareDisplay })}
             </p>
           </div>
         </section>
@@ -558,17 +621,15 @@
       style="top: {stickyTopPx}; width: 100vw; margin-inline: calc(50% - 50vw);"
     >
       <div class="mx-auto flex max-w-6xl flex-wrap items-center gap-x-5 gap-y-1.5 px-4 py-2.5 text-base sm:px-6">
-        <div class="flex min-w-0 flex-1 items-center gap-x-2 gap-y-1 sm:flex-none">
-          <label for="agency-jump" class="font-medium text-slate-700">
-            {program_287g_jump_to_label()}:
-          </label>
+        <div class="flex min-w-0 flex-1 items-center sm:flex-none">
+          <label for="agency-jump" class="sr-only">{program_287g_jump_to_label()}</label>
           <select
             id="agency-jump"
             class="min-w-0 max-w-full flex-1 rounded border border-slate-300 bg-white px-2.5 py-1.5 text-base focus:outline-none focus:ring-2 focus:ring-emerald-700 sm:flex-none"
             bind:value={jumpSelected}
             on:change={handleJump}
           >
-            <option value="">—</option>
+            <option value="">{program_287g_jump_to_label()}</option>
             {#each agencyJumpList as a (a.slug)}
               <option value={a.slug}>{a.label}</option>
             {/each}
@@ -627,7 +688,6 @@
       {@const stopsByRace = participant.latestStopsByRace as RaceBreakdown}
       {@const searchByRace = participant.latestSearchRateByRace as RaceBreakdown}
       {@const arrestByRace = participant.latestArrestRateByRace as RaceBreakdown}
-      {@const licenseStopRateByRace = participant.latestLicenseStopRateByRace as RaceBreakdown}
       {@const contrabandHitRateByRace = participant.latestContrabandHitRateByRace as RaceBreakdown}
       {@const residentByRace = participant.latestResidentStopsByRace as RaceBreakdown}
       {@const nonResidentByRace = participant.latestNonResidentStopsByRace as RaceBreakdown}
@@ -641,8 +701,16 @@
         class="-mx-4 border-y border-slate-200 bg-white p-6 sm:mx-0 sm:rounded-lg sm:border sm:p-10"
         style="scroll-margin-top: {scrollMargin};"
       >
-        <header>
-          <h2 class="text-2xl font-semibold text-slate-900 sm:text-3xl">
+        <header
+          class="mx-auto grid w-full max-w-3xl gap-x-4 gap-y-4 sm:gap-x-6 lg:gap-x-8
+                 [grid-template-columns:minmax(0,1fr)_11rem]
+                 [grid-template-areas:'name_name''info_map']
+                 sm:[grid-template-columns:18rem_minmax(0,1fr)]
+                 sm:[grid-template-areas:'map_name''map_info']"
+        >
+          <h2
+            class="text-2xl font-semibold text-slate-900 sm:text-3xl [grid-area:name]"
+          >
             <a
               class="text-emerald-900 underline-offset-2 hover:underline"
               href={`${localeBase}/agency/${participant.agency_slug}`}
@@ -650,64 +718,7 @@
               {participant.canonical_name}
             </a>
           </h2>
-          {#if typeof participant.latestTotalStops === "number" && latestYear}
-            <p class="mt-2 text-xl font-semibold tracking-tight text-slate-900 sm:text-2xl">
-              {program_287g_card_total_stops_line({
-                stops: integerFormatter.format(participant.latestTotalStops),
-                year: latestYear,
-              })}
-              {#if typeof participant.population === "number" && participant.population > 0}
-                <span class="font-light text-slate-500"
-                  >· Pop. {formatPopulation(participant.population)}</span
-                >
-              {/if}
-            </p>
-          {/if}
-          {#if locationParts.length}
-            <p class="mt-1.5 text-base text-slate-500">
-              {locationParts.join(" · ")}
-            </p>
-          {/if}
-        </header>
 
-        <div class="mt-6 flex flex-row items-start gap-4 sm:gap-6">
-          <ul
-            class="min-w-0 flex-1 space-y-4 divide-y divide-slate-200 [&>li:not(:first-child)]:pt-4"
-          >
-            {#each participant.agreements as agreement}
-              <li>
-                <dl
-                  class="grid grid-cols-[4rem_1fr] items-baseline gap-x-3 gap-y-1.5 text-base sm:grid-cols-[max-content_1fr] sm:gap-x-4"
-                >
-                  {#if agreement.support_type}
-                    <dt class="text-xs font-semibold uppercase tracking-wider text-slate-500">
-                      {agency_287g_support_type_label()}
-                    </dt>
-                    <dd class="text-slate-900">{agreement.support_type}</dd>
-                  {/if}
-                  {#if agreement.signed_date}
-                    <dt class="text-xs font-semibold uppercase tracking-wider text-slate-500">
-                      {agency_287g_signed_label()}
-                    </dt>
-                    <dd class="text-slate-900">{formatLongDate(agreement.signed_date)}</dd>
-                  {/if}
-                  {#if agreement.moa_url}
-                    <dt class="text-xs font-semibold uppercase tracking-wider text-slate-500">
-                      MOA
-                    </dt>
-                    <dd>
-                      <a
-                        class="text-emerald-900 underline"
-                        href={agreement.moa_url}
-                        target="_blank"
-                        rel="noreferrer">{agency_287g_moa_link()}</a
-                      >
-                    </dd>
-                  {/if}
-                </dl>
-              </li>
-            {/each}
-          </ul>
           <Locator287gMap
             agencySlug={participant.agency_slug}
             {participantSlugs}
@@ -715,8 +726,68 @@
             {countySlugs}
             allCountySlugs={data.allCountySlugs}
             tooltips={locatorTooltips}
+            frameClass="w-full self-start [grid-area:map]"
           />
-        </div>
+
+          <div class="min-w-0 [grid-area:info]">
+            {#if typeof participant.latestTotalStops === "number" && latestYear}
+              <p class="text-xl font-semibold tracking-tight text-slate-900 sm:text-2xl">
+                {program_287g_card_total_stops_line({
+                  stops: integerFormatter.format(participant.latestTotalStops),
+                  year: latestYear,
+                })}
+                {#if typeof participant.population === "number" && participant.population > 0}
+                  <span class="font-light text-slate-500"
+                    >· Pop. {formatPopulation(participant.population)}</span
+                  >
+                {/if}
+              </p>
+            {/if}
+            {#if locationParts.length}
+              <p class="mt-1.5 text-base text-slate-500">
+                {locationParts.join(" · ")}
+              </p>
+            {/if}
+
+            <ul
+              class="mt-6 divide-y divide-slate-200 [&>li]:py-4 [&>li:first-child]:pt-0 [&>li:last-child]:pb-0"
+            >
+              {#each participant.agreements as agreement}
+                <li>
+                  <dl
+                    class="grid grid-cols-[4rem_1fr] items-baseline gap-x-3 gap-y-1.5 text-base sm:grid-cols-[max-content_1fr] sm:gap-x-4"
+                  >
+                    {#if agreement.support_type}
+                      <dt class="text-xs font-semibold uppercase tracking-wider text-slate-500">
+                        {agency_287g_support_type_label()}
+                      </dt>
+                      <dd class="text-slate-900">{agreement.support_type}</dd>
+                    {/if}
+                    {#if agreement.signed_date}
+                      <dt class="text-xs font-semibold uppercase tracking-wider text-slate-500">
+                        {agency_287g_signed_label()}
+                      </dt>
+                      <dd class="text-slate-900">{formatLongDate(agreement.signed_date)}</dd>
+                    {/if}
+                    {#if agreement.moa_url}
+                      <dt class="text-xs font-semibold uppercase tracking-wider text-slate-500">
+                        MOA
+                      </dt>
+                      <dd>
+                        <a
+                          class="text-emerald-900 underline"
+                          href={agreement.moa_url}
+                          target="_blank"
+                          rel="noreferrer">{agency_287g_moa_link()}</a
+                        >
+                      </dd>
+                    {/if}
+                  </dl>
+                </li>
+              {/each}
+            </ul>
+          </div>
+        </header>
 
         <div
           class="mt-12 grid gap-x-12 gap-y-14 sm:grid-cols-2 [&>:last-child:nth-child(odd)]:sm:col-span-2 [&>:last-child:nth-child(odd)]:sm:mx-auto [&>:last-child:nth-child(odd)]:sm:w-full [&>:last-child:nth-child(odd)]:sm:max-w-[28rem]"
@@ -738,6 +809,7 @@
           <div>
             <ShareChart287g
               comp={view.stopsComp}
+              referenceComp={statewideStopsCompositionWindow}
               bind:selectedRace={selectedShareRace}
             />
           </div>
@@ -771,21 +843,6 @@
               />
             </div>
           </div>
-          <div>
-            <h3 class="text-lg font-semibold text-slate-900">
-              {program_287g_chart_license_stop_rate_by_race_label()}
-            </h3>
-            <div class="mt-4">
-              <SparkRaces287g
-                seriesByRace={view.licenseRace}
-                referenceSeries={statewideLicenseStopRateWindow}
-                labelsByRace={raceShortLabels}
-                formatValue={formatRateLabel}
-                showZeroBreak={true}
-                unitLabel="per 100"
-              />
-            </div>
-          </div>
         </div>
 
         {#if participant.suppressedOutliers && participant.suppressedOutliers.length}
@@ -795,9 +852,13 @@
         {/if}
 
         {#if latestYear}
+          {@const showDeltas = latestYear === data.latestYearAnchor}
+          {@const stateSearch = data.statewideRatesLatest?.searchRate ?? {}}
+          {@const stateArrest = data.statewideRatesLatest?.arrestRate ?? {}}
+          {@const stateContraband = data.statewideRatesLatest?.contrabandHitRate ?? {}}
           <div class="mt-12 border-t border-slate-200 pt-8">
             <h3 class="text-lg font-semibold text-slate-900">
-              {program_287g_breakdown_heading({ year: latestYear })}
+              {program_287g_breakdown_heading({ agency: participant.canonical_name, year: latestYear })}
             </h3>
             <div class="mt-4 -mx-4 overflow-x-auto px-4 sm:-mx-8 sm:px-8">
               <table class="min-w-full text-sm sm:text-base">
@@ -837,35 +898,45 @@
                       </td>
                     {/each}
                   </tr>
-                  <tr class="border-b border-slate-100">
+                  <tr class="border-b border-slate-100 align-top">
                     <td class="py-2.5 pr-3 font-medium text-slate-700">{program_287g_breakdown_row_search_rate()}</td>
                     {#each RACE_COLUMNS as col}
-                      <td class="py-2.5 pl-3 text-right tabular-nums text-slate-900">
-                        {formatBreakdownRate(searchByRace[col])}
+                      {@const delta = showDeltas ? formatRateDelta(searchByRace[col], stateSearch[col]) : null}
+                      <td class="py-2.5 pl-3 text-right tabular-nums">
+                        <div class="text-slate-900">{formatBreakdownRate(searchByRace[col])}</div>
+                        {#if delta}
+                          <div class="text-xs tabular-nums">
+                            {#if col === "Total"}<span class="text-slate-400">vs MO: </span>{/if}<span class={delta.cls}>{delta.value}</span>
+                          </div>
+                        {/if}
                       </td>
                     {/each}
                   </tr>
-                  <tr class="border-b border-slate-100">
+                  <tr class="border-b border-slate-100 align-top">
                     <td class="py-2.5 pr-3 font-medium text-slate-700">{program_287g_breakdown_row_arrest_rate()}</td>
                     {#each RACE_COLUMNS as col}
-                      <td class="py-2.5 pl-3 text-right tabular-nums text-slate-900">
-                        {formatBreakdownRate(arrestByRace[col])}
+                      {@const delta = showDeltas ? formatRateDelta(arrestByRace[col], stateArrest[col]) : null}
+                      <td class="py-2.5 pl-3 text-right tabular-nums">
+                        <div class="text-slate-900">{formatBreakdownRate(arrestByRace[col])}</div>
+                        {#if delta}
+                          <div class="text-xs tabular-nums">
+                            {#if col === "Total"}<span class="text-slate-400">vs MO: </span>{/if}<span class={delta.cls}>{delta.value}</span>
+                          </div>
+                        {/if}
                       </td>
                     {/each}
                   </tr>
-                  <tr class="border-b border-slate-100">
-                    <td class="py-2.5 pr-3 font-medium text-slate-700">{program_287g_breakdown_row_license_stop_rate()}</td>
-                    {#each RACE_COLUMNS as col}
-                      <td class="py-2.5 pl-3 text-right tabular-nums text-slate-900">
-                        {formatBreakdownRate(licenseStopRateByRace[col])}
-                      </td>
-                    {/each}
-                  </tr>
-                  <tr>
+                  <tr class="align-top">
                     <td class="py-2.5 pr-3 font-medium text-slate-700">{program_287g_breakdown_row_contraband_hit_rate()}</td>
                     {#each RACE_COLUMNS as col}
-                      <td class="py-2.5 pl-3 text-right tabular-nums text-slate-900">
-                        {formatBreakdownRate(contrabandHitRateByRace[col])}
+                      {@const delta = showDeltas ? formatRateDelta(contrabandHitRateByRace[col], stateContraband[col]) : null}
+                      <td class="py-2.5 pl-3 text-right tabular-nums">
+                        <div class="text-slate-900">{formatBreakdownRate(contrabandHitRateByRace[col])}</div>
+                        {#if delta}
+                          <div class="text-xs tabular-nums">
+                            {#if col === "Total"}<span class="text-slate-400">vs MO: </span>{/if}<span class={delta.cls}>{delta.value}</span>
+                          </div>
+                        {/if}
                       </td>
                     {/each}
                   </tr>

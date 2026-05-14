@@ -1,4 +1,8 @@
 <script lang="ts">
+  import { tweened } from "svelte/motion";
+  import { cubicInOut } from "svelte/easing";
+  import { onMount } from "svelte";
+
   type Series = Array<{ year: number; value: number | null }>;
 
   export let series: Series = [];
@@ -15,20 +19,112 @@
   export let axisBelow = 20;
   /** Optional unit suffix shown after the value in the hover tooltip (e.g. "stops"). */
   export let unitLabel = "";
+  /** Optional statewide reference rendered as a dashed grey line. */
+  export let referenceSeries: Series | null = null;
+  export let referenceStroke = "#94a3b8";
+  export let referenceLabel = "Statewide";
+  /** Inline tag rendered next to the reference line's start point (e.g. "MO").
+   *  When set, the reference line also gets numeric labels at both endpoints. */
+  export let referenceTag = "";
 
   const AXIS_COLOR = "#cbd5e1"; // slate-300
   const AXIS_LABEL_COLOR = "#64748b"; // slate-500
-  const BREAK_BAND = 22;
+  /**
+   * When the axis is broken, the band below the data takes ~1/3 of the chart
+   * height. This signals "we're far from zero" without exaggerating the data
+   * range — the data line keeps about 2/3 of the vertical real estate.
+   */
+  $: BREAK_BAND = Math.round(height / 3);
+  /** Fixed visual height of the diagonal break indicator regardless of band size. */
+  const BREAK_INDICATOR_H = 16;
   const PAD_Y = 10;
 
-  $: cleaned = series.filter(
-    (p) => typeof p.value === "number" && Number.isFinite(p.value as number),
-  ) as Array<{ year: number; value: number }>;
+  // === Tween infrastructure ===
+  // Tween only the y-values; years stay fixed. NaN marks "no data" — the
+  // default array interpolator snaps NaN ↔ number transitions instantly,
+  // so missing-data points don't propagate NaN through the animation.
+  let mounted = false;
+  /**
+   * Charts off-screen snap to their target instead of animating. With ~12
+   * agencies × multiple charts each, rolling-avg toggles otherwise kick off
+   * dozens of simultaneous tweens, most invisible.
+   */
+  let inView = false;
+  const seriesValuesTween = tweened<number[]>([], {
+    duration: 500,
+    easing: cubicInOut,
+  });
+  const refValuesTween = tweened<number[]>([], {
+    duration: 500,
+    easing: cubicInOut,
+  });
+  $: tweenOpts = inView ? undefined : { duration: 0 };
+  $: targetSeriesValues = series.map((p) =>
+    typeof p.value === "number" && Number.isFinite(p.value as number)
+      ? (p.value as number)
+      : NaN,
+  );
+  $: targetRefValues = (referenceSeries ?? []).map((p) =>
+    typeof p.value === "number" && Number.isFinite(p.value as number)
+      ? (p.value as number)
+      : NaN,
+  );
+  onMount(() => {
+    // Seed tweens at duration 0 so the first animated set has a same-length
+    // starting array — otherwise svelte/motion throws "Cannot interpolate
+    // values of different type" when interpolating from [] to a populated
+    // target (a[i] is undefined, b[i] is a number).
+    seriesValuesTween.set(targetSeriesValues, { duration: 0 });
+    refValuesTween.set(targetRefValues, { duration: 0 });
+    mounted = true;
 
-  $: years = cleaned.map((p) => p.year);
+    if (typeof IntersectionObserver === "undefined" || !chartContainer) {
+      inView = true;
+      return;
+    }
+    const io = new IntersectionObserver(
+      ([entry]) => {
+        inView = entry.isIntersecting;
+      },
+      { rootMargin: "200px 0px" },
+    );
+    io.observe(chartContainer);
+    return () => io.disconnect();
+  });
+  $: if (mounted) seriesValuesTween.set(targetSeriesValues, tweenOpts);
+  $: if (mounted) refValuesTween.set(targetRefValues, tweenOpts);
+  $: liveSeriesValues = mounted ? $seriesValuesTween : targetSeriesValues;
+  $: liveRefValues = mounted ? $refValuesTween : targetRefValues;
 
-  $: dataMin = cleaned.length ? Math.min(...cleaned.map((p) => p.value)) : 0;
-  $: dataMax = cleaned.length ? Math.max(...cleaned.map((p) => p.value)) : 0;
+  $: cleaned = series
+    .map((p, i) => ({ year: p.year, value: liveSeriesValues[i] }))
+    .filter(
+      (p) => typeof p.value === "number" && Number.isFinite(p.value),
+    ) as Array<{ year: number; value: number }>;
+
+  $: refCleaned = (referenceSeries ?? [])
+    .map((p, i) => ({ year: p.year, value: liveRefValues[i] }))
+    .filter(
+      (p) => typeof p.value === "number" && Number.isFinite(p.value),
+    ) as Array<{ year: number; value: number }>;
+
+  /** Union of years across the main series and reference, sorted. */
+  $: years = (() => {
+    const set = new Set<number>();
+    for (const p of cleaned) set.add(p.year);
+    for (const p of refCleaned) set.add(p.year);
+    return Array.from(set).sort((a, b) => a - b);
+  })();
+
+  /** Values across both series — drives y-domain so reference stays in view. */
+  $: allValues = (() => {
+    const arr: number[] = [];
+    for (const p of cleaned) arr.push(p.value);
+    for (const p of refCleaned) arr.push(p.value);
+    return arr;
+  })();
+  $: dataMin = allValues.length ? Math.min(...allValues) : 0;
+  $: dataMax = allValues.length ? Math.max(...allValues) : 0;
   /**
    * Break whenever cropping actually buys something — i.e. when the data
    * floor is far enough above zero that a zero-anchored axis would waste
@@ -76,20 +172,26 @@
   $: xPct = (year: number) => +((xScale(year) / width) * 100).toFixed(1);
   $: yPct = (value: number) => +((yScale(value) / height) * 100).toFixed(1);
 
-  $: path = cleaned.length
-    ? "M" +
-      cleaned
-        .map((p) => `${xScale(p.year).toFixed(1)},${yScale(p.value).toFixed(1)}`)
-        .join(" L")
-    : "";
+  $: pathFor = (points: Array<{ year: number; value: number }>) =>
+    points.length
+      ? "M" +
+        points
+          .map((p) => `${xScale(p.year).toFixed(1)},${yScale(p.value).toFixed(1)}`)
+          .join(" L")
+      : "";
+  $: path = pathFor(cleaned);
+  $: referencePath = pathFor(refCleaned);
 
   $: lastPoint = cleaned[cleaned.length - 1] ?? null;
+  $: refStartPoint = refCleaned[0] ?? null;
+  $: refEndPoint = refCleaned[refCleaned.length - 1] ?? null;
 
   $: yTicks = (() => {
-    if (!cleaned.length) return null;
-    const values = cleaned.map((p) => p.value);
-    const min = Math.min(...values);
-    const max = Math.max(...values);
+    // Tick labels reflect the displayed extent — agency + reference combined —
+    // so a reference line that stretches the y-domain still gets honest ticks.
+    if (!allValues.length) return null;
+    const min = Math.min(...allValues);
+    const max = Math.max(...allValues);
     if (min === max) return null;
     return { min, max };
   })();
@@ -129,6 +231,10 @@
 
   $: hoverPoint =
     hoverIdx !== null && hoverIdx < cleaned.length ? cleaned[hoverIdx] : null;
+  $: hoverRefValue =
+    hoverPoint !== null
+      ? refCleaned.find((q) => q.year === hoverPoint.year)?.value ?? null
+      : null;
 </script>
 
 <div
@@ -183,30 +289,33 @@
 
       <!-- axis-break indicator + 0 tick -->
       {#if doBreak}
-        <!-- white-out a slice of the spine to make the break visually obvious -->
+        <!-- Centered vertically within the break band so the gap reads as
+             empty compressed space on either side of the slash. -->
+        {@const breakTop = plotH + Math.round((BREAK_BAND - BREAK_INDICATOR_H) / 2)}
+        <!-- white-out a slice of the spine just where the indicator sits -->
         <div
           class="pointer-events-none absolute"
-          style="left: -1px; top: {plotH + 1}px; width: 3px; height: {height - plotH - 6}px; background: white;"
+          style="left: -1px; top: {breakTop}px; width: 3px; height: {BREAK_INDICATOR_H}px; background: white;"
         ></div>
         <svg
           class="pointer-events-none absolute"
-          style="left: -6px; top: {plotH + 1}px; width: 14px; height: {height - plotH - 6}px;"
+          style="left: -6px; top: {breakTop}px; width: 14px; height: {BREAK_INDICATOR_H}px;"
           aria-hidden="true"
         >
           <line
             x1="0"
-            y1={height - plotH - 12}
+            y1="10"
             x2="14"
-            y2={2}
+            y2="2"
             stroke={AXIS_COLOR}
             stroke-width="1.25"
             vector-effect="non-scaling-stroke"
           />
           <line
             x1="0"
-            y1={height - plotH - 6}
+            y1="16"
             x2="14"
-            y2={8}
+            y2="8"
             stroke={AXIS_COLOR}
             stroke-width="1.25"
             vector-effect="non-scaling-stroke"
@@ -238,6 +347,16 @@
           stroke-width="1"
           vector-effect="non-scaling-stroke"
         />
+        {#if referencePath}
+          <path
+            d={referencePath}
+            fill="none"
+            stroke={referenceStroke}
+            stroke-width="1.25"
+            stroke-dasharray="3 3"
+            vector-effect="non-scaling-stroke"
+          />
+        {/if}
         {#if path}
           <path
             d={path}
@@ -257,6 +376,25 @@
           style="left:{xPct(p.year)}%;top:{yPct(p.value)}%;background:{stroke}"
         ></span>
       {/each}
+
+      <!-- Reference-line endpoint annotations (e.g. "MO 12.3%" at the start
+           and "11.7%" at the end). Only rendered when a referenceTag is set. -->
+      {#if referenceTag && refStartPoint}
+        <span
+          class="pointer-events-none absolute z-10 whitespace-nowrap text-[11px] font-medium leading-none"
+          style="left: {xPct(refStartPoint.year)}%; top: {yPct(refStartPoint.value)}%; transform: translate(2px, calc(-100% - 4px)); color: {referenceStroke};"
+        >
+          {referenceTag} {formatValue(refStartPoint.value)}
+        </span>
+      {/if}
+      {#if referenceTag && refEndPoint && refEndPoint !== refStartPoint}
+        <span
+          class="pointer-events-none absolute z-10 whitespace-nowrap text-[11px] leading-none"
+          style="left: {xPct(refEndPoint.year)}%; top: {yPct(refEndPoint.value)}%; transform: translate(calc(-100% - 2px), calc(-100% - 4px)); color: {referenceStroke};"
+        >
+          {formatValue(refEndPoint.value)}
+        </span>
+      {/if}
 
       <!-- Hover crosshair -->
       {#if hoverPoint}
@@ -288,6 +426,13 @@
           <div class="text-sm font-semibold tabular-nums" style="color: {stroke};">
             {formatValue(hoverPoint.value)}{unitLabel ? ` ${unitLabel}` : ""}
           </div>
+          {#if hoverRefValue !== null}
+            <div class="mt-0.5 text-xs tabular-nums text-slate-500">
+              {referenceLabel}: <span class="text-slate-700"
+                >{formatValue(hoverRefValue)}{unitLabel ? ` ${unitLabel}` : ""}</span
+              >
+            </div>
+          {/if}
         </div>
       {/if}
 

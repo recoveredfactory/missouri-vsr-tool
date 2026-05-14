@@ -14,6 +14,10 @@
 
   export let comp: RaceQuadSeries;
   export let selectedRace: Race = "Hispanic";
+  /** Statewide stops composition (raw counts per race per year). When set,
+   *  the chart derives a per-year statewide share for the selected race
+   *  and renders it as a dashed reference line. */
+  export let referenceComp: RaceQuadSeries | null = null;
 
   const RACE_COLORS: Record<Race, string> = {
     White: "#25784c",
@@ -35,12 +39,13 @@
   });
   const formatPercent = (v: number) => `${percentFormatter.format(v)}%`;
 
-  $: shareSeries = (() => {
-    const w = comp.White;
-    const b = comp.Black;
-    const hsp = comp.Hispanic;
-    const oth = comp.Other;
-    const sel = comp[selectedRace];
+  /** Derive a per-year share series for `selectedRace` from a quad of raw counts. */
+  const deriveShare = (q: RaceQuadSeries, race: Race) => {
+    const w = q.White;
+    const b = q.Black;
+    const hsp = q.Hispanic;
+    const oth = q.Other;
+    const sel = q[race];
     return sel.map((p, i) => {
       const wv = w[i]?.value ?? null;
       const bv = b[i]?.value ?? null;
@@ -59,7 +64,12 @@
       const total = wv + bv + hv + ov;
       return { year: p.year, value: total > 0 ? (v / total) * 100 : null };
     });
-  })();
+  };
+
+  $: shareSeries = deriveShare(comp, selectedRace);
+  $: referenceShareSeries = referenceComp
+    ? deriveShare(referenceComp, selectedRace)
+    : null;
 
   // `comp` is already rolling-applied + sliced upstream, so the derived share
   // series is the windowed series — no extra smoothing.
@@ -86,6 +96,8 @@
 <div class="mt-4">
   <Spark287gTotal
     series={shareSeries}
+    referenceSeries={referenceShareSeries}
+    referenceTag="MO"
     stroke={RACE_COLORS[selectedRace]}
     formatValue={formatPercent}
     showZeroBreak={true}

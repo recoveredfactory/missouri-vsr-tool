@@ -50,6 +50,8 @@
   export let countySlugs: string[] = [];
   export let allCountySlugs: string[] = [];
   export let tooltips: Record<string, LocatorTooltipInfo> = {};
+  /** Override the outer frame's classes (sizing, grid placement, etc.). */
+  export let frameClass: string = "w-44 shrink-0 sm:w-72 sm:self-stretch";
 
   let container: HTMLDivElement | undefined;
   let inner: HTMLDivElement | undefined;
@@ -144,7 +146,7 @@
       //   3. <g class="roads">             roads above fills, below dots
       //   4. <g class="centroids">         only muni-participant dots visible
       //   5. <path class="state">          state border on top of fills
-      //   6. current-agency element        orange highlight, above everything
+      //   6. current-agency element        olive highlight, above everything
       const agenciesGroup = svg.querySelector("g.agencies");
       const centroidsGroup = svg.querySelector("g.centroids");
       const roadsGroup =
@@ -240,15 +242,15 @@
 
 <div
   bind:this={container}
-  class="locator287g-frame relative w-44 shrink-0 sm:w-72 sm:self-stretch"
+  class="locator287g-frame relative {frameClass}"
 >
   <div
     bind:this={inner}
-    class="aspect-square h-full w-full overflow-hidden sm:aspect-auto"
+    class="aspect-square w-full overflow-hidden"
   ></div>
   {#if tooltipInfo}
     <div
-      class="locator287g-tooltip pointer-events-none absolute z-10 max-w-[16rem] rounded-md border border-slate-200 bg-white px-3 py-2 text-xs leading-tight shadow-lg"
+      class="locator287g-tooltip pointer-events-none absolute z-10 w-max max-w-[16rem] rounded-md border border-slate-200 bg-white px-3 py-2 text-xs leading-tight shadow-lg"
       style="left:{tooltipX + 12}px; top:{tooltipY + 12}px;"
     >
       <div class="font-semibold text-slate-900">{tooltipInfo.name}</div>
@@ -283,9 +285,9 @@
     stroke-linejoin: round;
   }
   /* When the current card is a state agency (no polygon / no centroid in
-   * the SVG), light up the state border itself in orange. */
+   * the SVG), light up the state border itself in olive. */
   .locator287g-frame :global(.state.locator-current) {
-    stroke: #f97316;
+    stroke: #729839;
     stroke-width: 2;
   }
   /* Non-participant agencies: undifferentiated light-gray basemap, no stroke. */
@@ -326,9 +328,9 @@
     stroke-width: 0.35;
     stroke-opacity: 0.5;
   }
-  /* Current agency on this card: hot orange fill, no rim. */
+  /* Current agency on this card: olive fill, no rim. */
   .locator287g-frame :global(.agency.locator-current) {
-    fill: #f97316;
+    fill: #729839;
     stroke: none;
   }
   /* Centroids: hidden by default; opt-in via .dot-visible. */
@@ -341,7 +343,7 @@
     r: 0.05;
   }
   .locator287g-frame :global(circle.centroid.dot-visible.locator-current) {
-    fill: #f97316;
+    fill: #729839;
     stroke: none;
     r: 0.11;
   }

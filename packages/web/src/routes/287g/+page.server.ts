@@ -56,7 +56,6 @@ export type Participant = {
   stopsCompositionSeries: RaceQuadSeries;
   searchRateByRaceSeries: RaceSeries;
   arrestRateByRaceSeries: RaceSeries;
-  licenseStopRateByRaceSeries: RaceSeries;
   suppressedOutliers: SuppressionNote[];
   latestYear: number | null;
   latestTotalStops: number | null;
@@ -64,7 +63,6 @@ export type Participant = {
   latestStopsByRace: RaceBreakdown;
   latestSearchRateByRace: RaceBreakdown;
   latestArrestRateByRace: RaceBreakdown;
-  latestLicenseStopRateByRace: RaceBreakdown;
   latestContrabandHitRateByRace: RaceBreakdown;
   latestResidentStopsByRace: RaceBreakdown;
   latestNonResidentStopsByRace: RaceBreakdown;
@@ -75,8 +73,7 @@ export type Participant = {
 /**
  * Per-race rates above this many per 100 stops are treated as data-entry
  * outliers (e.g. St. Charles arrest rate ~95 in one year for a single race).
- * Applied to arrest-rate and search-rate; license-stop-rate can legitimately
- * be high so it is not capped.
+ * Applied to arrest-rate and search-rate.
  */
 const RACE_RATE_OUTLIER_THRESHOLD = 50;
 
@@ -151,7 +148,6 @@ export async function load({ fetch }) {
     searchRateFile,
     residentStopsFile,
     nonResidentStopsFile,
-    licenseStopRateFile,
     contrabandHitRateFile,
     populationFile,
   ] = await Promise.all([
@@ -162,7 +158,6 @@ export async function load({ fetch }) {
     fetchJson<SubsetMetricFile>(fetch, subsetUrl("search-rate")),
     fetchJson<SubsetMetricFile>(fetch, subsetUrl("resident-stops")),
     fetchJson<SubsetMetricFile>(fetch, subsetUrl("non-resident-stops")),
-    fetchJson<SubsetMetricFile>(fetch, subsetUrl("license-stop-rate")),
     fetchJson<SubsetMetricFile>(fetch, subsetUrl("contraband-hit-rate")),
     fetchJson<PopulationFile>(
       fetch,
@@ -191,11 +186,25 @@ export async function load({ fetch }) {
     totalHispanicStopsLatestSum: 0,
     totalOtherStopsLatestSum: 0,
     statewideTotalStopsLatest: 0,
+    statewideWhiteStopsLatest: 0,
+    statewideBlackStopsLatest: 0,
+    statewideHispanicStopsLatest: 0,
+    statewideOtherStopsLatest: 0,
     latestYearAnchor: null as number | null,
     supportTypeCounts: [] as Array<{ type: string; count: number }>,
     statewideSearchRateSeries: [] as SeriesPoint[],
     statewideArrestRateSeries: [] as SeriesPoint[],
-    statewideLicenseStopRateSeries: [] as SeriesPoint[],
+    statewideRatesLatest: {
+      searchRate: {} as RaceBreakdown,
+      arrestRate: {} as RaceBreakdown,
+      contrabandHitRate: {} as RaceBreakdown,
+    },
+    statewideStopsCompositionSeries: {
+      White: [],
+      Black: [],
+      Hispanic: [],
+      Other: [],
+    } as RaceQuadSeries,
     allCountySlugs: [] as string[],
     totalParticipantPopulation: 0,
   };
@@ -261,7 +270,6 @@ export async function load({ fetch }) {
   const searchRateBy = indexMetric(searchRateFile);
   const residentStopsBy = indexMetric(residentStopsFile);
   const nonResidentStopsBy = indexMetric(nonResidentStopsFile);
-  const licenseStopRateBy = indexMetric(licenseStopRateFile);
   const contrabandHitRateBy = indexMetric(contrabandHitRateFile);
 
   // Statewide weighted-by-stops rate series (Total column).
@@ -286,6 +294,35 @@ export async function load({ fetch }) {
     });
 
   /**
+   * Statewide rate-by-race at a given year index — stops-weighted across all
+   * Missouri agencies, computed per race column. Drives the "vs MO" delta
+   * under each rate cell in the per-agency breakdown table.
+   */
+  const statewideRateByRaceAtYear = (
+    rateBy: Map<number, Array<RaceBreakdown | null>>,
+    yIdx: number,
+  ): RaceBreakdown => {
+    const out: RaceBreakdown = {};
+    for (const col of RACE_COLUMNS) {
+      let weightSum = 0;
+      let weighted = 0;
+      for (const [aIdx, stopsRows] of stopsBy.entries()) {
+        const stopSlot = stopsRows[yIdx];
+        const rateSlot = rateBy.get(aIdx)?.[yIdx];
+        if (!stopSlot || !rateSlot) continue;
+        const stops = stopSlot[col];
+        const rate = rateSlot[col];
+        if (typeof stops === "number" && stops > 0 && typeof rate === "number") {
+          weightSum += stops;
+          weighted += stops * rate;
+        }
+      }
+      out[col] = weightSum > 0 ? weighted / weightSum : null;
+    }
+    return out;
+  };
+
+  /**
    * SSR HTML payload trimming: the page only ever renders a 10-year window
    * (`SPARKLINE_YEAR_WINDOW`). Slicing to the last 12 years before returning
    * keeps the response payload below Lambda's 6 MB cap.
@@ -307,7 +344,60 @@ export async function load({ fetch }) {
 
   const statewideSearchRateSeries = tailWindow(statewideRateSeries(searchRateBy));
   const statewideArrestRateSeries = tailWindow(statewideRateSeries(arrestRateBy));
-  const statewideLicenseStopRateSeries = tailWindow(statewideRateSeries(licenseStopRateBy));
+
+  // Statewide stops composition: sum of W/B/H/Other stops across ALL MO
+  // agencies, year by year. Emitted as raw counts so the consumer can
+  // compute the share for whichever race is selected (mirroring how the
+  // per-participant `stopsCompositionSeries` is structured).
+  const statewideStopsCompositionFull: RaceQuadSeries = {
+    White: [],
+    Black: [],
+    Hispanic: [],
+    Other: [],
+  };
+  for (let yIdx = 0; yIdx < years.length; yIdx += 1) {
+    let total = 0;
+    let w = 0;
+    let b = 0;
+    let h = 0;
+    let anyValid = false;
+    for (const stopsRows of stopsBy.values()) {
+      const slot = stopsRows[yIdx];
+      if (!slot) continue;
+      const t = slot.Total;
+      const wv = slot.White;
+      const bv = slot.Black;
+      const hv = slot.Hispanic;
+      if (
+        typeof t !== "number" ||
+        t <= 0 ||
+        typeof wv !== "number" ||
+        typeof bv !== "number" ||
+        typeof hv !== "number"
+      ) {
+        continue;
+      }
+      total += t;
+      w += wv;
+      b += bv;
+      h += hv;
+      anyValid = true;
+    }
+    const yr = years[yIdx];
+    if (anyValid && total > 0) {
+      const other = Math.max(0, total - w - b - h);
+      statewideStopsCompositionFull.White.push({ year: yr, value: w });
+      statewideStopsCompositionFull.Black.push({ year: yr, value: b });
+      statewideStopsCompositionFull.Hispanic.push({ year: yr, value: h });
+      statewideStopsCompositionFull.Other.push({ year: yr, value: other });
+    } else {
+      statewideStopsCompositionFull.White.push({ year: yr, value: null });
+      statewideStopsCompositionFull.Black.push({ year: yr, value: null });
+      statewideStopsCompositionFull.Hispanic.push({ year: yr, value: null });
+      statewideStopsCompositionFull.Other.push({ year: yr, value: null });
+    }
+  }
+  const statewideStopsCompositionSeries = tailQuadSeries(statewideStopsCompositionFull);
 
   const buildRaceSeries = (
     rows: Array<RaceBreakdown | null> | null,
@@ -350,15 +440,48 @@ export async function load({ fetch }) {
   }
   const latestYearAnchor = anchorYearIdx >= 0 ? years[anchorYearIdx] : null;
 
+  const statewideRatesLatest =
+    anchorYearIdx >= 0
+      ? {
+          searchRate: statewideRateByRaceAtYear(searchRateBy, anchorYearIdx),
+          arrestRate: statewideRateByRaceAtYear(arrestRateBy, anchorYearIdx),
+          contrabandHitRate: statewideRateByRaceAtYear(contrabandHitRateBy, anchorYearIdx),
+        }
+      : {
+          searchRate: {} as RaceBreakdown,
+          arrestRate: {} as RaceBreakdown,
+          contrabandHitRate: {} as RaceBreakdown,
+        };
+
   let statewideTotalStopsLatest = 0;
+  let statewideWhiteStopsLatest = 0;
+  let statewideBlackStopsLatest = 0;
+  let statewideHispanicStopsLatest = 0;
   if (anchorYearIdx >= 0 && stopsFile?.rows) {
+    const whiteIdx = raceColIdx.White;
+    const blackIdx = raceColIdx.Black;
+    const hispanicIdx = raceColIdx.Hispanic;
     for (const row of stopsFile.rows) {
       if (!Array.isArray(row)) continue;
       if (Number(row[1]) !== anchorYearIdx) continue;
-      const v = totalIdx >= 0 ? row[totalIdx] : null;
-      if (typeof v === "number" && Number.isFinite(v)) statewideTotalStopsLatest += v;
+      const t = totalIdx >= 0 ? row[totalIdx] : null;
+      if (typeof t === "number" && Number.isFinite(t)) statewideTotalStopsLatest += t;
+      const w = whiteIdx >= 0 ? row[whiteIdx] : null;
+      if (typeof w === "number" && Number.isFinite(w)) statewideWhiteStopsLatest += w;
+      const b = blackIdx >= 0 ? row[blackIdx] : null;
+      if (typeof b === "number" && Number.isFinite(b)) statewideBlackStopsLatest += b;
+      const h = hispanicIdx >= 0 ? row[hispanicIdx] : null;
+      if (typeof h === "number" && Number.isFinite(h)) statewideHispanicStopsLatest += h;
     }
   }
+  // Match the per-participant convention: Other = Total − W − B − H.
+  const statewideOtherStopsLatest = Math.max(
+    0,
+    statewideTotalStopsLatest -
+      statewideWhiteStopsLatest -
+      statewideBlackStopsLatest -
+      statewideHispanicStopsLatest,
+  );
 
   const participants: Participant[] = [];
   let snapshotDate = "";
@@ -380,8 +503,6 @@ export async function load({ fetch }) {
     const searchRows = subsetIdx !== undefined ? searchRateBy.get(subsetIdx) ?? null : null;
     const residentRows = subsetIdx !== undefined ? residentStopsBy.get(subsetIdx) ?? null : null;
     const nonResidentRows = subsetIdx !== undefined ? nonResidentStopsBy.get(subsetIdx) ?? null : null;
-    const licenseStopRateRows =
-      subsetIdx !== undefined ? licenseStopRateBy.get(subsetIdx) ?? null : null;
     const contrabandHitRateRows =
       subsetIdx !== undefined ? contrabandHitRateBy.get(subsetIdx) ?? null : null;
 
@@ -425,7 +546,6 @@ export async function load({ fetch }) {
 
     const rawSearchRate = buildRaceSeries(searchRows);
     const rawArrestRate = buildRaceSeries(arrestRows);
-    const licenseStopRateByRaceSeries = buildRaceSeries(licenseStopRateRows);
 
     const searchSan = sanitizeRateSeries(rawSearchRate, "search-rate");
     const arrestSan = sanitizeRateSeries(rawArrestRate, "arrest-rate");
@@ -449,8 +569,6 @@ export async function load({ fetch }) {
     const stopsBreakdown: RaceBreakdown = (latestIdx >= 0 && stopsRows?.[latestIdx]) || {};
     const searchBreakdown: RaceBreakdown = (latestIdx >= 0 && searchRows?.[latestIdx]) || {};
     const arrestBreakdown: RaceBreakdown = (latestIdx >= 0 && arrestRows?.[latestIdx]) || {};
-    const licenseStopRateBreakdown: RaceBreakdown =
-      (latestIdx >= 0 && licenseStopRateRows?.[latestIdx]) || {};
     const contrabandHitRateBreakdown: RaceBreakdown =
       (latestIdx >= 0 && contrabandHitRateRows?.[latestIdx]) || {};
     const residentBreakdown: RaceBreakdown = (latestIdx >= 0 && residentRows?.[latestIdx]) || {};
@@ -483,7 +601,6 @@ export async function load({ fetch }) {
       stopsCompositionSeries: tailQuadSeries(stopsCompositionSeries),
       searchRateByRaceSeries: tailRaceSeries(searchRateByRaceSeries),
       arrestRateByRaceSeries: tailRaceSeries(arrestRateByRaceSeries),
-      licenseStopRateByRaceSeries: tailRaceSeries(licenseStopRateByRaceSeries),
       suppressedOutliers,
       latestYear,
       latestTotalStops,
@@ -491,7 +608,6 @@ export async function load({ fetch }) {
       latestStopsByRace: stopsBreakdown,
       latestSearchRateByRace: searchBreakdown,
       latestArrestRateByRace: arrestBreakdown,
-      latestLicenseStopRateByRace: licenseStopRateBreakdown,
       latestContrabandHitRateByRace: contrabandHitRateBreakdown,
       latestResidentStopsByRace: residentBreakdown,
       latestNonResidentStopsByRace: nonResidentBreakdown,
@@ -555,11 +671,16 @@ export async function load({ fetch }) {
     totalHispanicStopsLatestSum,
     totalOtherStopsLatestSum,
     statewideTotalStopsLatest,
+    statewideWhiteStopsLatest,
+    statewideBlackStopsLatest,
+    statewideHispanicStopsLatest,
+    statewideOtherStopsLatest,
     latestYearAnchor,
     supportTypeCounts,
     statewideSearchRateSeries,
     statewideArrestRateSeries,
-    statewideLicenseStopRateSeries,
+    statewideRatesLatest,
+    statewideStopsCompositionSeries,
     allCountySlugs,
     totalParticipantPopulation,
   };

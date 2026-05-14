@@ -1,5 +1,8 @@
 <script lang="ts">
   import { raceColors } from "$lib/colors.js";
+  import { tweened } from "svelte/motion";
+  import { cubicInOut } from "svelte/easing";
+  import { onMount } from "svelte";
 
   type Race = "White" | "Black" | "Hispanic";
   type Series = Array<{ year: number; value: number | null }>;
@@ -33,22 +36,100 @@
   const AXIS_COLOR = "#cbd5e1"; // slate-300
   const AXIS_LABEL_COLOR = "#64748b"; // slate-500
   const PAD_Y = 10;
-  const BREAK_BAND = 22;
+  /**
+   * When the axis is broken, the band below the data takes ~1/3 of the chart
+   * height. This signals "we're far from zero" without exaggerating the data
+   * range — the data line keeps about 2/3 of the vertical real estate.
+   */
+  $: BREAK_BAND = Math.round(height / 3);
+  /** Fixed visual height of the diagonal break indicator regardless of band size. */
+  const BREAK_INDICATOR_H = 16;
+
+  // === Tween infrastructure ===
+  // Same approach as Spark287gTotal: tween only the y-values per race, with
+  // NaN as the "no data" sentinel so missing-data points snap rather than
+  // poisoning the array interpolator. Year axis stays fixed.
+  let mounted = false;
+  /**
+   * Charts off-screen snap to their target instead of animating. With ~12
+   * agencies × multiple charts each, rolling-avg toggles otherwise kick off
+   * 40+ simultaneous tweens, most invisible.
+   */
+  let inView = false;
+  const whiteTween = tweened<number[]>([], { duration: 500, easing: cubicInOut });
+  const blackTween = tweened<number[]>([], { duration: 500, easing: cubicInOut });
+  const hispanicTween = tweened<number[]>([], { duration: 500, easing: cubicInOut });
+  const refValuesTween = tweened<number[]>([], {
+    duration: 500,
+    easing: cubicInOut,
+  });
+  $: tweenOpts = inView ? undefined : { duration: 0 };
+
+  const valuesOf = (s: Series): number[] =>
+    s.map((p) =>
+      typeof p.value === "number" && Number.isFinite(p.value as number)
+        ? (p.value as number)
+        : NaN,
+    );
+  $: targetByRace = {
+    White: valuesOf(seriesByRace.White ?? []),
+    Black: valuesOf(seriesByRace.Black ?? []),
+    Hispanic: valuesOf(seriesByRace.Hispanic ?? []),
+  };
+  $: targetRefValues = valuesOf(referenceSeries ?? []);
+  onMount(() => {
+    // Seed each tween with the current target at duration 0 so subsequent
+    // animated sets interpolate same-length arrays. svelte/motion's array
+    // interpolator throws "Cannot interpolate values of different type" when
+    // a[i] is undefined for any element of b, which is what happens going
+    // from the initial [] to a populated target.
+    whiteTween.set(targetByRace.White, { duration: 0 });
+    blackTween.set(targetByRace.Black, { duration: 0 });
+    hispanicTween.set(targetByRace.Hispanic, { duration: 0 });
+    refValuesTween.set(targetRefValues, { duration: 0 });
+    mounted = true;
+
+    if (typeof IntersectionObserver === "undefined" || !chartContainer) {
+      inView = true;
+      return;
+    }
+    const io = new IntersectionObserver(
+      ([entry]) => {
+        inView = entry.isIntersecting;
+      },
+      { rootMargin: "200px 0px" },
+    );
+    io.observe(chartContainer);
+    return () => io.disconnect();
+  });
+  $: if (mounted) whiteTween.set(targetByRace.White, tweenOpts);
+  $: if (mounted) blackTween.set(targetByRace.Black, tweenOpts);
+  $: if (mounted) hispanicTween.set(targetByRace.Hispanic, tweenOpts);
+  $: if (mounted) refValuesTween.set(targetRefValues, tweenOpts);
+  $: liveByRace = mounted
+    ? { White: $whiteTween, Black: $blackTween, Hispanic: $hispanicTween }
+    : targetByRace;
+  $: liveRefValues = mounted ? $refValuesTween : targetRefValues;
 
   $: cleanedByRace = (() => {
     const out = {} as Record<Race, Array<{ year: number; value: number }>>;
     for (const race of RACES) {
-      const arr = seriesByRace[race] ?? [];
-      out[race] = arr.filter(
-        (p) => typeof p.value === "number" && Number.isFinite(p.value as number),
-      ) as Array<{ year: number; value: number }>;
+      const src = seriesByRace[race] ?? [];
+      const live = liveByRace[race];
+      out[race] = src
+        .map((p, i) => ({ year: p.year, value: live[i] }))
+        .filter(
+          (p) => typeof p.value === "number" && Number.isFinite(p.value),
+        ) as Array<{ year: number; value: number }>;
     }
     return out;
   })();
 
-  $: refCleaned = (referenceSeries ?? []).filter(
-    (p) => typeof p.value === "number" && Number.isFinite(p.value as number),
-  ) as Array<{ year: number; value: number }>;
+  $: refCleaned = (referenceSeries ?? [])
+    .map((p, i) => ({ year: p.year, value: liveRefValues[i] }))
+    .filter(
+      (p) => typeof p.value === "number" && Number.isFinite(p.value),
+    ) as Array<{ year: number; value: number }>;
 
   $: years = (() => {
     const set = new Set<number>();
@@ -294,29 +375,30 @@
 
       <!-- Axis-break indicator + 0 tick (mirrors Spark287gTotal). -->
       {#if doBreak}
+        {@const breakTop = plotH + Math.round((BREAK_BAND - BREAK_INDICATOR_H) / 2)}
         <div
           class="pointer-events-none absolute"
-          style="left: -1px; top: {plotH + 1}px; width: 3px; height: {height - plotH - 6}px; background: white;"
+          style="left: -1px; top: {breakTop}px; width: 3px; height: {BREAK_INDICATOR_H}px; background: white;"
         ></div>
         <svg
           class="pointer-events-none absolute"
-          style="left: -6px; top: {plotH + 1}px; width: 14px; height: {height - plotH - 6}px;"
+          style="left: -6px; top: {breakTop}px; width: 14px; height: {BREAK_INDICATOR_H}px;"
           aria-hidden="true"
         >
           <line
             x1="0"
-            y1={height - plotH - 12}
+            y1="10"
             x2="14"
-            y2={2}
+            y2="2"
             stroke={AXIS_COLOR}
             stroke-width="1.25"
             vector-effect="non-scaling-stroke"
           />
           <line
             x1="0"
-            y1={height - plotH - 6}
+            y1="16"
             x2="14"
-            y2={8}
+            y2="8"
             stroke={AXIS_COLOR}
             stroke-width="1.25"
             vector-effect="non-scaling-stroke"
