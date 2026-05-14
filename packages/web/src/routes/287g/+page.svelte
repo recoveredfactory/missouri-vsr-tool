@@ -393,34 +393,46 @@
 
   import { onMount } from "svelte";
 
-  let jumpSelected = "";
+  /**
+   * Agency picker. Many earlier attempts went sideways because the page
+   * combines several scroll-affecting things — global `scroll-behavior:
+   * smooth`, `scroll-padding-top`, per-article `scroll-margin-top`, focus
+   * auto-scroll, mobile picker dismissal — and each browser blends them
+   * differently. So this handler sidesteps all of them: compute the target
+   * scrollY ourselves and call `window.scrollTo` with an explicit instant
+   * behavior. Blur the select to drop focus-restore behavior. No reliance
+   * on scrollIntoView's snapport math.
+   */
   const handleJump = (e: Event) => {
     const target = e.target as HTMLSelectElement;
     const slug = target.value;
-    if (!slug || slug === currentSlug) return;
-    if (typeof window !== "undefined") {
-      window.location.hash = `agency-${slug}`;
-    }
+    target.blur();
+    if (!slug || typeof window === "undefined") return;
+    const el = document.getElementById(`agency-${slug}`);
+    if (!el) return;
+    const offset = headerHeight + jumpBarHeight + 12;
+    const top = el.getBoundingClientRect().top + window.scrollY - offset;
+    window.scrollTo({ top: Math.max(0, top), behavior: "instant" });
   };
 
-  /** Slug of the agency whose card the viewport is currently anchored on. */
+  /** Slug of the agency the viewport is currently centered on; drives the
+   *  picker so it reflects what the user is looking at. */
   let currentSlug = "";
-
+  /** Bound select value. Set by the picker change event AND by currentSlug. */
+  let jumpSelected = "";
   $: jumpSelected = currentSlug;
 
-  /** Height of the sticky site header — drives the agency-jump bar's `top:`. */
+  /** Site-header height drives the sticky agency-jump bar's `top:` offset. */
   let headerHeight = 64;
+  let jumpBarHeight = 0;
+  let jumpBar: HTMLElement | undefined;
   $: stickyTopPx = `${headerHeight}px`;
-  $: scrollMargin = `${headerHeight + 16}px`;
-
-  /** True once the agency bar has actually stuck to its sticky position. */
-  let stickyStuck = false;
-  let stickySentinel: HTMLElement | undefined;
+  /** Clear both stickies plus a small breathing gap on anchor / picker jumps. */
+  $: scrollMargin = `${headerHeight + jumpBarHeight + 12}px`;
 
   onMount(() => {
     if (typeof window === "undefined") return;
 
-    // Track the site header's height so the sticky agency bar sits flush below it.
     const header = document.querySelector<HTMLElement>("header.sticky");
     let headerObserver: ResizeObserver | null = null;
     if (header) {
@@ -432,65 +444,58 @@
       headerObserver.observe(header);
     }
 
-    if (typeof IntersectionObserver === "undefined") {
-      return () => {
-        if (headerObserver) headerObserver.disconnect();
+    let jumpBarObserver: ResizeObserver | null = null;
+    if (jumpBar) {
+      const updateJumpBar = () => {
+        jumpBarHeight = jumpBar!.offsetHeight;
       };
+      updateJumpBar();
+      jumpBarObserver = new ResizeObserver(updateJumpBar);
+      jumpBarObserver.observe(jumpBar);
     }
 
-    // Sentinel above the sticky bar: once it scrolls out of view, the bar is stuck.
-    let stickyObserver: IntersectionObserver | null = null;
-    if (stickySentinel) {
-      stickyObserver = new IntersectionObserver(
-        ([entry]) => {
-          stickyStuck = !entry.isIntersecting && entry.boundingClientRect.top < 0;
-        },
-        { threshold: [0, 1] },
+    // Track which agency is currently most prominent in the viewport so the
+    // picker reflects what the reader is looking at. Light threshold list +
+    // top-anchored rootMargin so it only fires when an article is actually
+    // anchored under the sticky bar, not just brushing the viewport edge.
+    let articleObserver: IntersectionObserver | null = null;
+    if (typeof IntersectionObserver !== "undefined") {
+      const articles = Array.from(
+        document.querySelectorAll<HTMLElement>("article[id^='agency-']"),
       );
-      stickyObserver.observe(stickySentinel);
+      if (articles.length) {
+        const visibility = new Map<string, number>();
+        articleObserver = new IntersectionObserver(
+          (entries) => {
+            for (const entry of entries) {
+              const slug = (entry.target as HTMLElement).id.replace(/^agency-/, "");
+              visibility.set(slug, entry.intersectionRatio);
+            }
+            let bestSlug = currentSlug;
+            let bestRatio = -1;
+            for (const [slug, ratio] of visibility.entries()) {
+              if (ratio > bestRatio) {
+                bestSlug = slug;
+                bestRatio = ratio;
+              }
+            }
+            if (bestRatio > 0 && bestSlug !== currentSlug) {
+              currentSlug = bestSlug;
+            }
+          },
+          {
+            rootMargin: `-${headerHeight + jumpBarHeight + 8}px 0px -40% 0px`,
+            threshold: [0, 0.25, 0.5, 0.75, 1],
+          },
+        );
+        for (const a of articles) articleObserver.observe(a);
+      }
     }
-
-    const articles = Array.from(
-      document.querySelectorAll<HTMLElement>("article[id^='agency-']"),
-    );
-    if (!articles.length) {
-      return () => {
-        if (headerObserver) headerObserver.disconnect();
-        if (stickyObserver) stickyObserver.disconnect();
-      };
-    }
-    const visibility = new Map<string, number>();
-    const observer = new IntersectionObserver(
-      (entries) => {
-        for (const e of entries) {
-          const slug = (e.target as HTMLElement).id.replace(/^agency-/, "");
-          visibility.set(slug, e.intersectionRatio);
-        }
-        // Pick the article that is most prominent within the trigger zone.
-        let bestSlug = currentSlug;
-        let bestRatio = -1;
-        for (const [slug, ratio] of visibility.entries()) {
-          if (ratio > bestRatio) {
-            bestSlug = slug;
-            bestRatio = ratio;
-          }
-        }
-        if (bestRatio > 0 && bestSlug !== currentSlug) {
-          currentSlug = bestSlug;
-        }
-      },
-      // Trigger zone: just below the sticky header, down to 60% of the viewport.
-      {
-        rootMargin: `-${headerHeight + 8}px 0px -40% 0px`,
-        threshold: [0, 0.25, 0.5, 0.75, 1],
-      },
-    );
-    for (const a of articles) observer.observe(a);
 
     return () => {
-      observer.disconnect();
       if (headerObserver) headerObserver.disconnect();
-      if (stickyObserver) stickyObserver.disconnect();
+      if (jumpBarObserver) jumpBarObserver.disconnect();
+      if (articleObserver) articleObserver.disconnect();
     };
   });
 
@@ -662,11 +667,9 @@
   </div>
 
   {#if agencyJumpList.length}
-    <div bind:this={stickySentinel} class="mt-6 h-px"></div>
     <div
-      class="sticky z-30 border-y backdrop-blur transition-colors duration-150 {stickyStuck
-        ? 'border-slate-300 bg-slate-100/95 shadow-md'
-        : 'border-slate-200 bg-white/95'}"
+      bind:this={jumpBar}
+      class="sticky z-30 mt-6 border-y border-slate-200 bg-white"
       style="top: {stickyTopPx}; width: 100vw; margin-inline: calc(50% - 50vw);"
     >
       <div class="mx-auto flex max-w-6xl flex-wrap items-center gap-x-5 gap-y-1.5 px-4 py-2.5 text-base sm:px-6">

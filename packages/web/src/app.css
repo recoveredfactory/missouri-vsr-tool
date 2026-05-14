@@ -29,7 +29,11 @@
   }
 
   html {
-    scroll-behavior: smooth;
+    /**
+     * Smooth-scroll dropped: it interacted badly with sticky bars, mobile
+     * picker dismissal, scroll-restoration, and focus auto-scroll. Cumulative
+     * bugs across browsers outweighed the minor polish.
+     */
     scroll-padding-top: var(--site-header-anchor-offset, 7rem);
     scrollbar-gutter: stable;
   }
@@ -104,11 +108,6 @@
   }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  html {
-    scroll-behavior: auto;
-  }
-}
 
 /*
  * General-purpose prose/content styles.
