@@ -146,7 +146,7 @@
       //   3. <g class="roads">             roads above fills, below dots
       //   4. <g class="centroids">         only muni-participant dots visible
       //   5. <path class="state">          state border on top of fills
-      //   6. current-agency element        olive highlight, above everything
+      //   6. current-agency element        lime highlight, above everything
       const agenciesGroup = svg.querySelector("g.agencies");
       const centroidsGroup = svg.querySelector("g.centroids");
       const roadsGroup =
@@ -285,9 +285,9 @@
     stroke-linejoin: round;
   }
   /* When the current card is a state agency (no polygon / no centroid in
-   * the SVG), light up the state border itself in olive. */
+   * the SVG), light up the state border itself in lime. */
   .locator287g-frame :global(.state.locator-current) {
-    stroke: #729839;
+    stroke: #84cc16;
     stroke-width: 2;
   }
   /* Non-participant agencies: undifferentiated light-gray basemap, no stroke. */
@@ -328,9 +328,9 @@
     stroke-width: 0.35;
     stroke-opacity: 0.5;
   }
-  /* Current agency on this card: olive fill, no rim. */
+  /* Current agency on this card: lime fill, no rim. */
   .locator287g-frame :global(.agency.locator-current) {
-    fill: #729839;
+    fill: #84cc16;
     stroke: none;
   }
   /* Centroids: hidden by default; opt-in via .dot-visible. */
@@ -343,7 +343,7 @@
     r: 0.05;
   }
   .locator287g-frame :global(circle.centroid.dot-visible.locator-current) {
-    fill: #729839;
+    fill: #84cc16;
     stroke: none;
     r: 0.11;
   }

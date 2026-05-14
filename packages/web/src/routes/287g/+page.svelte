@@ -37,6 +37,10 @@
     program_287g_totals_black_stops,
     program_287g_totals_hispanic_stops,
     program_287g_totals_other_stops,
+    program_287g_totals_white_share,
+    program_287g_totals_black_share,
+    program_287g_totals_hispanic_share,
+    program_287g_totals_other_share,
     program_287g_totals_share_of_state,
     program_287g_totals_caveat,
     program_287g_models_heading,
@@ -67,6 +71,16 @@
     "Asian",
     "Other",
   ] as const;
+  /** Compact header labels — "Native American" doesn't fit in equal-width columns. */
+  const RACE_COL_LABELS: Record<RaceColumn, string> = {
+    Total: "Total",
+    White: "White",
+    Black: "Black",
+    Hispanic: "Hispanic",
+    "Native American": "Nat. Am.",
+    Asian: "Asian",
+    Other: "Other",
+  };
 
   /** @type {import('./$types').PageData} */
   export let data;
@@ -546,7 +560,7 @@
       <p>
         {@html program_287g_page_clarification_charts()}
       </p>
-      <p class="text-slate-600">
+      <p>
         {@html program_287g_page_clarification_race()}
       </p>
     </div>
@@ -562,20 +576,53 @@
               count: countDisplay,
             })}
           </h2>
+          {#if statewideShareDisplay}
+            <p class="mt-1 text-base text-slate-500">
+              {program_287g_totals_share_of_state({ pct: statewideShareDisplay, year: anchorYear })}
+            </p>
+          {/if}
           <p class="mt-2 text-sm italic text-slate-500">{program_287g_totals_caveat()}</p>
           <div class="mt-4 divide-y divide-slate-200 border-t border-slate-200">
-            <p class="py-2.5 text-lg text-slate-700 sm:text-xl">
-              {program_287g_totals_white_stops({ stops: totalWhiteStopsDisplay, share: whiteShareDisplay })}
-            </p>
-            <p class="py-2.5 text-lg text-slate-700 sm:text-xl">
-              {program_287g_totals_black_stops({ stops: totalBlackStopsDisplay, share: blackShareDisplay })}
-            </p>
-            <p class="py-2.5 text-lg text-slate-700 sm:text-xl">
-              {program_287g_totals_hispanic_stops({ stops: totalHispanicStopsDisplay, share: hispanicShareDisplay })}
-            </p>
-            <p class="py-2.5 text-lg text-slate-700 sm:text-xl">
-              {program_287g_totals_other_stops({ stops: totalOtherStopsDisplay, share: otherShareDisplay })}
-            </p>
+            <div class="py-3">
+              <p class="text-lg font-semibold text-slate-900 sm:text-xl">
+                {program_287g_totals_white_stops({ stops: totalWhiteStopsDisplay })}
+              </p>
+              {#if whiteShareDisplay !== "—"}
+                <p class="mt-0.5 text-sm text-slate-500">
+                  {program_287g_totals_white_share({ share: whiteShareDisplay })}
+                </p>
+              {/if}
+            </div>
+            <div class="py-3">
+              <p class="text-lg font-semibold text-slate-900 sm:text-xl">
+                {program_287g_totals_black_stops({ stops: totalBlackStopsDisplay })}
+              </p>
+              {#if blackShareDisplay !== "—"}
+                <p class="mt-0.5 text-sm text-slate-500">
+                  {program_287g_totals_black_share({ share: blackShareDisplay })}
+                </p>
+              {/if}
+            </div>
+            <div class="py-3">
+              <p class="text-lg font-semibold text-slate-900 sm:text-xl">
+                {program_287g_totals_hispanic_stops({ stops: totalHispanicStopsDisplay })}
+              </p>
+              {#if hispanicShareDisplay !== "—"}
+                <p class="mt-0.5 text-sm text-slate-500">
+                  {program_287g_totals_hispanic_share({ share: hispanicShareDisplay })}
+                </p>
+              {/if}
+            </div>
+            <div class="py-3">
+              <p class="text-lg font-semibold text-slate-900 sm:text-xl">
+                {program_287g_totals_other_stops({ stops: totalOtherStopsDisplay })}
+              </p>
+              {#if otherShareDisplay !== "—"}
+                <p class="mt-0.5 text-sm text-slate-500">
+                  {program_287g_totals_other_share({ share: otherShareDisplay })}
+                </p>
+              {/if}
+            </div>
           </div>
         </section>
       {/if}
@@ -598,7 +645,7 @@
                     {integerFormatter.format(model.count)}/{integerFormatter.format(totalAgencies)}
                   </span>
                 </div>
-                <div class="mt-1 h-2.5 w-full overflow-hidden rounded-sm bg-slate-100">
+                <div class="mt-1 h-2.5 w-full overflow-hidden rounded-sm bg-slate-200">
                   <div
                     class="h-full bg-emerald-800"
                     style="width: {totalAgencies > 0 ? (model.count / totalAgencies) * 100 : 0}%"
@@ -730,64 +777,66 @@
           />
 
           <div class="min-w-0 [grid-area:info]">
+            {#if locationParts.length}
+              <p class="text-base text-slate-500">
+                {locationParts.join(" · ")}
+              </p>
+            {/if}
             {#if typeof participant.latestTotalStops === "number" && latestYear}
-              <p class="text-xl font-semibold tracking-tight text-slate-900 sm:text-2xl">
+              <p class="mt-1 text-xl font-semibold tracking-tight text-slate-900 sm:text-2xl">
                 {program_287g_card_total_stops_line({
                   stops: integerFormatter.format(participant.latestTotalStops),
                   year: latestYear,
                 })}
                 {#if typeof participant.population === "number" && participant.population > 0}
-                  <span class="font-light text-slate-500"
-                    >· Pop. {formatPopulation(participant.population)}</span
-                  >
+                  <br class="sm:hidden" />
+                  <span class="font-light text-slate-500">
+                    <span class="hidden sm:inline">· </span>Pop.
+                    {formatPopulation(participant.population)}
+                  </span>
                 {/if}
               </p>
             {/if}
-            {#if locationParts.length}
-              <p class="mt-1.5 text-base text-slate-500">
-                {locationParts.join(" · ")}
-              </p>
-            {/if}
-
-            <ul
-              class="mt-6 divide-y divide-slate-200 [&>li]:py-4 [&>li:first-child]:pt-0 [&>li:last-child]:pb-0"
-            >
-              {#each participant.agreements as agreement}
-                <li>
-                  <dl
-                    class="grid grid-cols-[4rem_1fr] items-baseline gap-x-3 gap-y-1.5 text-base sm:grid-cols-[max-content_1fr] sm:gap-x-4"
-                  >
-                    {#if agreement.support_type}
-                      <dt class="text-xs font-semibold uppercase tracking-wider text-slate-500">
-                        {agency_287g_support_type_label()}
-                      </dt>
-                      <dd class="text-slate-900">{agreement.support_type}</dd>
-                    {/if}
-                    {#if agreement.signed_date}
-                      <dt class="text-xs font-semibold uppercase tracking-wider text-slate-500">
-                        {agency_287g_signed_label()}
-                      </dt>
-                      <dd class="text-slate-900">{formatLongDate(agreement.signed_date)}</dd>
-                    {/if}
-                    {#if agreement.moa_url}
-                      <dt class="text-xs font-semibold uppercase tracking-wider text-slate-500">
-                        MOA
-                      </dt>
-                      <dd>
-                        <a
-                          class="text-emerald-900 underline"
-                          href={agreement.moa_url}
-                          target="_blank"
-                          rel="noreferrer">{agency_287g_moa_link()}</a
-                        >
-                      </dd>
-                    {/if}
-                  </dl>
-                </li>
-              {/each}
-            </ul>
           </div>
         </header>
+
+        <ul
+          class="mt-6 grid gap-x-8 gap-y-3 border-t border-slate-200 pt-5 sm:grid-cols-2"
+        >
+          {#each participant.agreements as agreement}
+            <li>
+              <dl
+                class="grid grid-cols-[4rem_1fr] items-baseline gap-x-3 gap-y-1.5 text-base sm:grid-cols-[max-content_1fr] sm:gap-x-4"
+              >
+                {#if agreement.support_type}
+                  <dt class="text-xs font-semibold uppercase tracking-wider text-slate-500">
+                    {agency_287g_support_type_label()}
+                  </dt>
+                  <dd class="text-slate-900">{agreement.support_type}</dd>
+                {/if}
+                {#if agreement.signed_date}
+                  <dt class="text-xs font-semibold uppercase tracking-wider text-slate-500">
+                    {agency_287g_signed_label()}
+                  </dt>
+                  <dd class="text-slate-900">{formatLongDate(agreement.signed_date)}</dd>
+                {/if}
+                {#if agreement.moa_url}
+                  <dt class="text-xs font-semibold uppercase tracking-wider text-slate-500">
+                    MOA
+                  </dt>
+                  <dd>
+                    <a
+                      class="text-emerald-900 underline"
+                      href={agreement.moa_url}
+                      target="_blank"
+                      rel="noreferrer">{agency_287g_moa_link()}</a
+                    >
+                  </dd>
+                {/if}
+              </dl>
+            </li>
+          {/each}
+        </ul>
 
         <div
           class="mt-12 grid gap-x-12 gap-y-14 sm:grid-cols-2 [&>:last-child:nth-child(odd)]:sm:col-span-2 [&>:last-child:nth-child(odd)]:sm:mx-auto [&>:last-child:nth-child(odd)]:sm:w-full [&>:last-child:nth-child(odd)]:sm:max-w-[28rem]"
@@ -862,11 +911,21 @@
             </h3>
             <div class="mt-4 -mx-4 overflow-x-auto px-4 sm:-mx-8 sm:px-8">
               <table class="min-w-full text-sm sm:text-base">
+                <!-- Column widths: label is fixed, Total gets a slightly larger share
+                     because the "vs MO" delta prefix can't wrap; the six race columns
+                     split the remainder equally. -->
+                <colgroup>
+                  <col class="w-32 sm:w-44" />
+                  <col class="w-[16%]" />
+                  {#each RACE_COLUMNS.slice(1) as _col}
+                    <col class="w-[14%]" />
+                  {/each}
+                </colgroup>
                 <thead>
                   <tr class="border-b border-slate-200 text-left text-slate-500">
                     <th class="py-2 pr-3 text-xs font-semibold uppercase tracking-wider"></th>
                     {#each RACE_COLUMNS as col}
-                      <th class="py-2 pl-3 text-right text-xs font-semibold uppercase tracking-wider">{col}</th>
+                      <th class="py-2 pl-3 text-right text-xs font-semibold uppercase tracking-wider">{RACE_COL_LABELS[col]}</th>
                     {/each}
                   </tr>
                 </thead>
@@ -905,7 +964,7 @@
                       <td class="py-2.5 pl-3 text-right tabular-nums">
                         <div class="text-slate-900">{formatBreakdownRate(searchByRace[col])}</div>
                         {#if delta}
-                          <div class="text-xs tabular-nums">
+                          <div class="whitespace-nowrap text-xs tabular-nums">
                             {#if col === "Total"}<span class="text-slate-400">vs MO: </span>{/if}<span class={delta.cls}>{delta.value}</span>
                           </div>
                         {/if}
@@ -919,7 +978,7 @@
                       <td class="py-2.5 pl-3 text-right tabular-nums">
                         <div class="text-slate-900">{formatBreakdownRate(arrestByRace[col])}</div>
                         {#if delta}
-                          <div class="text-xs tabular-nums">
+                          <div class="whitespace-nowrap text-xs tabular-nums">
                             {#if col === "Total"}<span class="text-slate-400">vs MO: </span>{/if}<span class={delta.cls}>{delta.value}</span>
                           </div>
                         {/if}
@@ -933,7 +992,7 @@
                       <td class="py-2.5 pl-3 text-right tabular-nums">
                         <div class="text-slate-900">{formatBreakdownRate(contrabandHitRateByRace[col])}</div>
                         {#if delta}
-                          <div class="text-xs tabular-nums">
+                          <div class="whitespace-nowrap text-xs tabular-nums">
                             {#if col === "Total"}<span class="text-slate-400">vs MO: </span>{/if}<span class={delta.cls}>{delta.value}</span>
                           </div>
                         {/if}
