@@ -188,13 +188,15 @@
   type SeriesPoint = { year: number; value: number | null };
 
   /**
-   * 3-year rolling average. For each year, averages itself with up to two prior
-   * years (whatever is available); requires at least 2 of the 3 to be valid so
-   * we don't render a "rolling average" of a single point.
+   * 2-year rolling average. For each year, averages itself with the prior
+   * year when both are present; pandemic years aren't really signal, and a
+   * 3-year window kept the 2024 reading anchored to the funkiest stretch
+   * (2022–2024). Requires both years to be valid so we don't degrade to a
+   * single-point "average".
    */
   const rollingAverage = (series: SeriesPoint[]): SeriesPoint[] => {
     return series.map((p, i) => {
-      const window = series.slice(Math.max(0, i - 2), i + 1);
+      const window = series.slice(Math.max(0, i - 1), i + 1);
       const valid = window.filter(
         (s) => typeof s.value === "number" && Number.isFinite(s.value),
       ) as Array<{ year: number; value: number }>;
