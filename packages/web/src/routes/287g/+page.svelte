@@ -392,43 +392,66 @@
     }));
 
   import { onMount } from "svelte";
+  import { afterNavigate, disableScrollHandling, replaceState } from "$app/navigation";
+  import { page } from "$app/stores";
+
+  // Disable SvelteKit's built-in scroll handling for this page. The agency
+  // picker manages scroll itself (manual offset math + history.replaceState
+  // for the URL). SvelteKit's scroll-on-navigation behavior was occasionally
+  // overriding our scrollTo and snapping back near the top.
+  afterNavigate(() => {
+    disableScrollHandling();
+  });
 
   /**
-   * Agency picker. Many earlier attempts went sideways because the page
-   * combines several scroll-affecting things — global `scroll-behavior:
-   * smooth`, `scroll-padding-top`, per-article `scroll-margin-top`, focus
-   * auto-scroll, mobile picker dismissal — and each browser blends them
-   * differently. So this handler sidesteps all of them: compute the target
-   * scrollY ourselves and call `window.scrollTo` with an explicit instant
-   * behavior. Blur the select to drop focus-restore behavior. No reliance
-   * on scrollIntoView's snapport math.
+   * Agency picker uses anchor links (`<a href="#agency-X">`) wrapped in
+   * `<details>`. The browser handles the scroll natively via `scroll-padding-top`
+   * (on html) plus per-article `scroll-margin-top`. Zero JS in the scroll
+   * path — every JS-driven approach we tried fought one or another browser
+   * behavior (focus auto-scroll, smooth-scroll interrupts, picker-dismissal
+   * restore, bind:value flush timing).
+   *
+   * The summary text reflects whatever agency is currently in the viewport
+   * (tracked by an IntersectionObserver set up in onMount). Because the
+   * picker is read-only from the IO's perspective — no bind:value, no
+   * writes back to a select element — there's no cascade for the IO to
+   * fight with.
    */
-  const handleJump = (e: Event) => {
-    const target = e.target as HTMLSelectElement;
-    const slug = target.value;
-    target.blur();
-    if (!slug || typeof window === "undefined") return;
-    const el = document.getElementById(`agency-${slug}`);
+  let currentSlug = "";
+  let jumpDetails: HTMLDetailsElement | undefined;
+  $: selectedAgencyLabel =
+    currentSlug ? agencyJumpList.find((a) => a.slug === currentSlug)?.label ?? null : null;
+
+  const handleAnchorClick = (slug: string) => {
+    if (typeof window === "undefined") return;
+    // Articles are id="participant-${slug}" — the mo_locator SVG uses
+    // `agency-${slug}` for its dots/paths, so getElementById on that
+    // prefix returns a display:none path with rect=(0,0,0,0). Disambiguation
+    // via a different prefix was the root fix for the picker bug.
+    const el = document.getElementById(`participant-${slug}`);
     if (!el) return;
     const offset = headerHeight + jumpBarHeight + 12;
     const top = el.getBoundingClientRect().top + window.scrollY - offset;
-    window.scrollTo({ top: Math.max(0, top), behavior: "instant" });
+    window.scrollTo({ top: Math.max(0, top) });
+    replaceState(`#participant-${slug}`, $page.state);
+    setTimeout(() => {
+      if (jumpDetails) jumpDetails.open = false;
+    }, 0);
   };
-
-  /** Slug of the agency the viewport is currently centered on; drives the
-   *  picker so it reflects what the user is looking at. */
-  let currentSlug = "";
-  /** Bound select value. Set by the picker change event AND by currentSlug. */
-  let jumpSelected = "";
-  $: jumpSelected = currentSlug;
 
   /** Site-header height drives the sticky agency-jump bar's `top:` offset. */
   let headerHeight = 64;
   let jumpBarHeight = 0;
   let jumpBar: HTMLElement | undefined;
   $: stickyTopPx = `${headerHeight}px`;
-  /** Clear both stickies plus a small breathing gap on anchor / picker jumps. */
-  $: scrollMargin = `${headerHeight + jumpBarHeight + 12}px`;
+  /**
+   * Anchor-navigation clearance for the jump bar — the html element already
+   * has `scroll-padding-top: 7rem` (= ~112px) which clears the site header,
+   * so scroll-margin-top only needs to add the jump-bar height + a small
+   * gap. The article lands at (scroll-padding-top + scroll-margin-top) from
+   * the viewport top.
+   */
+  $: scrollMargin = `${jumpBarHeight + 12}px`;
 
   onMount(() => {
     if (typeof window === "undefined") return;
@@ -454,21 +477,28 @@
       jumpBarObserver.observe(jumpBar);
     }
 
-    // Track which agency is currently most prominent in the viewport so the
-    // picker reflects what the reader is looking at. Light threshold list +
-    // top-anchored rootMargin so it only fires when an article is actually
-    // anchored under the sticky bar, not just brushing the viewport edge.
+    // Reflect the agency currently in the viewport's trigger zone back to
+    // the picker summary. Read-only — no writes to a select, no bind:value
+    // cascades. The browser handles scrolling natively via anchor links.
+    //
+    // `rootMargin` is intentionally static (not derived from reactive
+    // headerHeight/jumpBarHeight). The IO captures rootMargin at construction
+    // time; reactive values would be stale once ResizeObservers update those
+    // heights, leading to a trigger zone that doesn't match the real sticky
+    // stack. -140px is roomy enough that small variations in sticky height
+    // don't matter — we're just identifying the most-visible article, not
+    // doing precise math.
     let articleObserver: IntersectionObserver | null = null;
     if (typeof IntersectionObserver !== "undefined") {
       const articles = Array.from(
-        document.querySelectorAll<HTMLElement>("article[id^='agency-']"),
+        document.querySelectorAll<HTMLElement>("article[id^='participant-']"),
       );
       if (articles.length) {
         const visibility = new Map<string, number>();
         articleObserver = new IntersectionObserver(
           (entries) => {
             for (const entry of entries) {
-              const slug = (entry.target as HTMLElement).id.replace(/^agency-/, "");
+              const slug = (entry.target as HTMLElement).id.replace(/^participant-/, "");
               visibility.set(slug, entry.intersectionRatio);
             }
             let bestSlug = currentSlug;
@@ -484,7 +514,7 @@
             }
           },
           {
-            rootMargin: `-${headerHeight + jumpBarHeight + 8}px 0px -40% 0px`,
+            rootMargin: "-140px 0px -40% 0px",
             threshold: [0, 0.25, 0.5, 0.75, 1],
           },
         );
@@ -673,20 +703,50 @@
       style="top: {stickyTopPx}; width: 100vw; margin-inline: calc(50% - 50vw);"
     >
       <div class="mx-auto flex max-w-6xl flex-wrap items-center gap-x-5 gap-y-1.5 px-4 py-2.5 text-base sm:px-6">
-        <div class="flex min-w-0 flex-1 items-center sm:flex-none">
-          <label for="agency-jump" class="sr-only">{program_287g_jump_to_label()}</label>
-          <select
-            id="agency-jump"
-            class="min-w-0 max-w-full flex-1 rounded border border-slate-300 bg-white px-2.5 py-1.5 text-base focus:outline-none focus:ring-2 focus:ring-emerald-700 sm:flex-none"
-            bind:value={jumpSelected}
-            on:change={handleJump}
+        <details
+          bind:this={jumpDetails}
+          class="agency-jump relative min-w-0 flex-1 sm:flex-none sm:min-w-[18rem]"
+        >
+          <summary
+            class="flex cursor-pointer items-center justify-between gap-2 rounded border border-slate-300 bg-white px-2.5 py-1.5 text-base text-slate-800 [&::-webkit-details-marker]:hidden"
           >
-            <option value="">{program_287g_jump_to_label()}</option>
-            {#each agencyJumpList as a (a.slug)}
-              <option value={a.slug}>{a.label}</option>
-            {/each}
-          </select>
-        </div>
+            <span class="truncate">
+              {selectedAgencyLabel ?? program_287g_jump_to_label()}
+            </span>
+            <svg
+              class="h-4 w-4 shrink-0 text-slate-500 transition-transform [details[open]_&]:rotate-180"
+              viewBox="0 0 20 20"
+              fill="currentColor"
+              aria-hidden="true"
+            >
+              <path
+                fill-rule="evenodd"
+                d="M5.23 7.21a.75.75 0 011.06.02L10 11.06l3.71-3.83a.75.75 0 111.08 1.04l-4.25 4.39a.75.75 0 01-1.08 0L5.21 8.27a.75.75 0 01.02-1.06z"
+                clip-rule="evenodd"
+              />
+            </svg>
+          </summary>
+          <div
+            class="absolute left-0 right-0 top-full z-40 mt-1 max-h-[60vh] overflow-y-auto rounded border border-slate-300 bg-white shadow-lg"
+          >
+            <ul class="py-1">
+              {#each agencyJumpList as a (a.slug)}
+                <li>
+                  <button
+                    type="button"
+                    on:click={() => handleAnchorClick(a.slug)}
+                    class="block w-full px-3 py-2 text-left text-base text-slate-800 hover:bg-slate-100 {a.slug ===
+                    currentSlug
+                      ? 'bg-emerald-50 font-semibold text-emerald-900'
+                      : ''}"
+                  >
+                    {a.label}
+                  </button>
+                </li>
+              {/each}
+            </ul>
+          </div>
+        </details>
         <label
           class="inline-flex cursor-pointer items-center gap-1.5 text-sm text-slate-600"
           title={program_287g_rolling_avg_title()}
@@ -749,7 +809,7 @@
         : [participant.agency_type, participant.city, participant.county].filter(Boolean)}
 
       <article
-        id="agency-{participant.agency_slug}"
+        id="participant-{participant.agency_slug}"
         class="-mx-4 border-y border-slate-200 bg-white p-6 sm:mx-0 sm:rounded-lg sm:border sm:p-10"
         style="scroll-margin-top: {scrollMargin};"
       >
@@ -969,9 +1029,10 @@
                       <td class="py-2.5 pl-3 text-right tabular-nums">
                         <div class="text-slate-900">{formatBreakdownRate(searchByRace[col])}</div>
                         {#if delta}
-                          <div class="whitespace-nowrap text-xs tabular-nums">
-                            {#if col === "Total"}<span class="text-slate-400">vs MO: </span>{/if}<span class={delta.cls}>{delta.value}</span>
-                          </div>
+                          <div class="whitespace-nowrap text-xs tabular-nums {delta.cls}">{delta.value}</div>
+                          {#if col === "Total"}
+                            <div class="text-xs text-slate-400">vs MO</div>
+                          {/if}
                         {/if}
                       </td>
                     {/each}
@@ -983,9 +1044,10 @@
                       <td class="py-2.5 pl-3 text-right tabular-nums">
                         <div class="text-slate-900">{formatBreakdownRate(arrestByRace[col])}</div>
                         {#if delta}
-                          <div class="whitespace-nowrap text-xs tabular-nums">
-                            {#if col === "Total"}<span class="text-slate-400">vs MO: </span>{/if}<span class={delta.cls}>{delta.value}</span>
-                          </div>
+                          <div class="whitespace-nowrap text-xs tabular-nums {delta.cls}">{delta.value}</div>
+                          {#if col === "Total"}
+                            <div class="text-xs text-slate-400">vs MO</div>
+                          {/if}
                         {/if}
                       </td>
                     {/each}
@@ -997,9 +1059,10 @@
                       <td class="py-2.5 pl-3 text-right tabular-nums">
                         <div class="text-slate-900">{formatBreakdownRate(contrabandHitRateByRace[col])}</div>
                         {#if delta}
-                          <div class="whitespace-nowrap text-xs tabular-nums">
-                            {#if col === "Total"}<span class="text-slate-400">vs MO: </span>{/if}<span class={delta.cls}>{delta.value}</span>
-                          </div>
+                          <div class="whitespace-nowrap text-xs tabular-nums {delta.cls}">{delta.value}</div>
+                          {#if col === "Total"}
+                            <div class="text-xs text-slate-400">vs MO</div>
+                          {/if}
                         {/if}
                       </td>
                     {/each}

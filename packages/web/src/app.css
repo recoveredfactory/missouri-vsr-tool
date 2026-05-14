@@ -33,7 +33,13 @@
      * Smooth-scroll dropped: it interacted badly with sticky bars, mobile
      * picker dismissal, scroll-restoration, and focus auto-scroll. Cumulative
      * bugs across browsers outweighed the minor polish.
+     *
+     * `overflow-anchor: none` disables browser scroll-anchoring — without it,
+     * the 287(g) page's sticky bar reflowing (e.g. the summary text updating
+     * after a JS scroll) would trigger the browser to "compensate" and snap
+     * scroll back to roughly its previous position, undoing our scrollTo.
      */
+    overflow-anchor: none;
     scroll-padding-top: var(--site-header-anchor-offset, 7rem);
     scrollbar-gutter: stable;
   }
