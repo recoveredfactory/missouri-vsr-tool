@@ -13,7 +13,7 @@ export async function GET({ fetch }) {
   const response = await fetch("/data/dist/agency_index.json");
   const agencies = response.ok ? await response.json() : [];
 
-  const urls = [urlEntry("/")];
+  const urls = [urlEntry("/"), urlEntry("/287g")];
   for (const agency of agencies) {
     if (agency.agency_slug) {
       urls.push(urlEntry(`/agency/${agency.agency_slug}`));

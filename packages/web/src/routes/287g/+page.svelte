@@ -8,6 +8,7 @@
   import { raceColors } from "$lib/colors.js";
   import {
     program_287g_page_title,
+    program_287g_page_share_description,
     program_287g_page_heading,
     program_287g_page_summary,
     program_287g_page_clarification,
@@ -108,6 +109,12 @@
 
   $: locale = getLocale() || "en";
   $: localeBase = `/${locale}`;
+
+  const siteUrl = import.meta.env.PUBLIC_SITE_URL ?? "https://vsr.recoveredfactory.net";
+  const siteName = "Missouri Vehicle Stops";
+  $: canonicalUrl = `${siteUrl}${localeBase}/287g`;
+  $: shareHrefEn = `${siteUrl}/en/287g`;
+  $: shareHrefEs = `${siteUrl}/es/287g`;
 
   const integerFormatter = new Intl.NumberFormat(undefined, { maximumFractionDigits: 0 });
   const compactFormatter = new Intl.NumberFormat(undefined, {
@@ -555,6 +562,26 @@
 
 <svelte:head>
   <title>{program_287g_page_title()}</title>
+  <link rel="canonical" href={canonicalUrl} />
+  <link rel="alternate" hreflang="en" href={shareHrefEn} />
+  <link rel="alternate" hreflang="es" href={shareHrefEs} />
+  <link rel="alternate" hreflang="x-default" href={shareHrefEn} />
+  <meta name="description" content={program_287g_page_share_description()} />
+  <meta property="og:type" content="article" />
+  <meta property="og:url" content={canonicalUrl} />
+  <meta property="og:site_name" content={siteName} />
+  <meta property="og:title" content={program_287g_page_title()} />
+  <meta property="og:description" content={program_287g_page_share_description()} />
+  <meta property="og:image" content="{siteUrl}/social-meta.png" />
+  <meta property="og:image:secure_url" content="{siteUrl}/social-meta.png" />
+  <meta property="og:image:alt" content="Missouri Vehicle Stops — 287(g) program" />
+  <meta property="og:image:type" content="image/png" />
+  <meta property="og:image:width" content="1600" />
+  <meta property="og:image:height" content="838" />
+  <meta property="twitter:card" content="summary_large_image" />
+  <meta property="twitter:image" content="{siteUrl}/social-meta.png" />
+  <meta property="twitter:title" content={program_287g_page_title()} />
+  <meta property="twitter:description" content={program_287g_page_share_description()} />
 </svelte:head>
 
 <StickyHeader />

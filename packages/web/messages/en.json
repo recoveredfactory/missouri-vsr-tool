@@ -418,6 +418,7 @@
   "home_287g_link": "287(g) program participants",
   "home_287g_filter_label": "Show only 287(g) participants",
   "program_287g_page_title": "Traffic Stop Profiles of Missouri Agencies Participating in 287(g)",
+  "program_287g_page_share_description": "Stop data, ICE 287(g) agreement details, and demographic breakdowns for every Missouri law enforcement agency in the program.",
   "program_287g_page_heading": "Traffic Stop Profiles of Missouri Agencies Participating in 287(g)",
   "program_287g_page_summary": "{count} Missouri agencies have signed 287(g) Memoranda of Agreement with ICE as of {date}.",
   "program_287g_page_table_agency": "Agency",

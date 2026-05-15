@@ -423,6 +423,7 @@
   "home_287g_link": "Participantes del programa 287(g)",
   "home_287g_filter_label": "Mostrar solo participantes del 287(g)",
   "program_287g_page_title": "Perfiles de paradas de tráfico de las agencias de Missouri que participan en el 287(g)",
+  "program_287g_page_share_description": "Datos de paradas, detalles del acuerdo 287(g) con ICE y desgloses demográficos de cada agencia policial de Missouri en el programa.",
   "program_287g_page_heading": "Perfiles de paradas de tráfico de las agencias de Missouri que participan en el 287(g)",
   "program_287g_page_summary": "{count} agencias de Missouri han firmado Memorandos de Acuerdo del programa 287(g) con ICE a partir del {date}.",
   "program_287g_page_table_agency": "Agencia",
