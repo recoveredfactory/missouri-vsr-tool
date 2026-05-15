@@ -921,12 +921,12 @@
           </div>
           <div>
             <h3 class="text-lg font-semibold text-slate-900">
-              {program_287g_chart_search_rate_by_race_label()}
+              {program_287g_chart_arrest_rate_by_race_label()}
             </h3>
             <div class="mt-4">
               <SparkRaces287g
-                seriesByRace={view.searchRace}
-                referenceSeries={statewideSearchRateWindow}
+                seriesByRace={view.arrestRace}
+                referenceSeries={statewideArrestRateWindow}
                 labelsByRace={raceShortLabels}
                 formatValue={formatRateLabel}
                 showZeroBreak={true}
@@ -936,12 +936,12 @@
           </div>
           <div>
             <h3 class="text-lg font-semibold text-slate-900">
-              {program_287g_chart_arrest_rate_by_race_label()}
+              {program_287g_chart_search_rate_by_race_label()}
             </h3>
             <div class="mt-4">
               <SparkRaces287g
-                seriesByRace={view.arrestRace}
-                referenceSeries={statewideArrestRateWindow}
+                seriesByRace={view.searchRace}
+                referenceSeries={statewideSearchRateWindow}
                 labelsByRace={raceShortLabels}
                 formatValue={formatRateLabel}
                 showZeroBreak={true}
@@ -1015,11 +1015,11 @@
                     {/each}
                   </tr>
                   <tr class="border-b border-slate-100 align-top">
-                    <td class="py-2.5 pr-3 font-medium text-slate-700">{program_287g_breakdown_row_search_rate()}</td>
+                    <td class="py-2.5 pr-3 font-medium text-slate-700">{program_287g_breakdown_row_arrest_rate()}</td>
                     {#each RACE_COLUMNS as col}
-                      {@const delta = showDeltas ? formatRateDelta(searchByRace[col], stateSearch[col]) : null}
+                      {@const delta = showDeltas ? formatRateDelta(arrestByRace[col], stateArrest[col]) : null}
                       <td class="py-2.5 pl-3 text-right tabular-nums">
-                        <div class="text-slate-900">{formatBreakdownRate(searchByRace[col])}</div>
+                        <div class="text-slate-900">{formatBreakdownRate(arrestByRace[col])}</div>
                         {#if delta}
                           <div class="whitespace-nowrap text-xs tabular-nums {delta.cls}">{delta.value}</div>
                           {#if col === "Total"}
@@ -1030,11 +1030,11 @@
                     {/each}
                   </tr>
                   <tr class="border-b border-slate-100 align-top">
-                    <td class="py-2.5 pr-3 font-medium text-slate-700">{program_287g_breakdown_row_arrest_rate()}</td>
+                    <td class="py-2.5 pr-3 font-medium text-slate-700">{program_287g_breakdown_row_search_rate()}</td>
                     {#each RACE_COLUMNS as col}
-                      {@const delta = showDeltas ? formatRateDelta(arrestByRace[col], stateArrest[col]) : null}
+                      {@const delta = showDeltas ? formatRateDelta(searchByRace[col], stateSearch[col]) : null}
                       <td class="py-2.5 pl-3 text-right tabular-nums">
-                        <div class="text-slate-900">{formatBreakdownRate(arrestByRace[col])}</div>
+                        <div class="text-slate-900">{formatBreakdownRate(searchByRace[col])}</div>
                         {#if delta}
                           <div class="whitespace-nowrap text-xs tabular-nums {delta.cls}">{delta.value}</div>
                           {#if col === "Total"}
