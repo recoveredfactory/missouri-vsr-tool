@@ -450,6 +450,7 @@
   "program_287g_totals_other_share": "{share}% of all such stops statewide",
   "program_287g_totals_share_of_state": "≈ {pct} of all Missouri stops in {year}",
   "program_287g_card_total_stops_line": "{stops} stops in {year}",
+  "program_287g_card_share_of_state": "≈ {pct} of all Missouri stops",
   "program_287g_breakdown_heading": "{agency} {year} selected stats",
   "program_287g_breakdown_row_stops": "Stops",
   "program_287g_breakdown_row_search_rate": "Searches per 100 stops",

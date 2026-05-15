@@ -455,6 +455,7 @@
   "program_287g_totals_other_share": "{share}% de todas esas paradas en el estado",
   "program_287g_totals_share_of_state": "≈ {pct} de todas las paradas de Missouri en {year}",
   "program_287g_card_total_stops_line": "{stops} paradas en {year}",
+  "program_287g_card_share_of_state": "≈ {pct} de todas las paradas de Missouri",
   "program_287g_breakdown_heading": "{agency}: estadísticas seleccionadas de {year}",
   "program_287g_breakdown_row_stops": "Paradas",
   "program_287g_breakdown_row_search_rate": "Registros por 100 paradas",

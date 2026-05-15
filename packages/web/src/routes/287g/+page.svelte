@@ -46,6 +46,7 @@
     program_287g_models_heading,
     program_287g_models_subhead,
     program_287g_card_total_stops_line,
+    program_287g_card_share_of_state,
     program_287g_breakdown_heading,
     program_287g_breakdown_row_stops,
     program_287g_breakdown_row_search_rate,
@@ -840,6 +841,12 @@
               </p>
             {/if}
             {#if typeof participant.latestTotalStops === "number" && latestYear}
+              {@const participantShare =
+                latestYear === anchorYear &&
+                data.statewideTotalStopsLatest > 0 &&
+                participant.latestTotalStops > 0
+                  ? (participant.latestTotalStops / data.statewideTotalStopsLatest) * 100
+                  : null}
               <p class="mt-1 text-xl font-semibold tracking-tight text-slate-900 sm:text-2xl">
                 {program_287g_card_total_stops_line({
                   stops: integerFormatter.format(participant.latestTotalStops),
@@ -853,6 +860,13 @@
                   </span>
                 {/if}
               </p>
+              {#if participantShare !== null}
+                <p class="mt-1 text-sm text-slate-500">
+                  {program_287g_card_share_of_state({
+                    pct: `${percentFormatter.format(Math.max(0, participantShare))}%`,
+                  })}
+                </p>
+              {/if}
             {/if}
           </div>
         </header>
