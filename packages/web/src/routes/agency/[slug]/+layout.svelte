@@ -69,11 +69,15 @@
     if (!value) return "";
     const date = new Date(value);
     if (Number.isNaN(date.getTime())) return String(value);
+    // YYYY-MM-DD strings parse as UTC midnight; pin formatting to UTC so
+    // viewers west of UTC don't see the prior day.
+    const isDateOnly = typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value);
     try {
       return new Intl.DateTimeFormat(getLocale() || undefined, {
         year: "numeric",
         month: "long",
         day: "numeric",
+        ...(isDateOnly ? { timeZone: "UTC" } : {}),
       }).format(date);
     } catch {
       return date.toISOString().slice(0, 10);

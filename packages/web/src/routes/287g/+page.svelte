@@ -126,11 +126,16 @@
     if (!value) return "";
     const date = new Date(value);
     if (Number.isNaN(date.getTime())) return String(value);
+    // Snapshot/signed dates are calendar-date strings (YYYY-MM-DD), parsed as
+    // UTC midnight by `new Date`. Format in UTC so viewers west of UTC don't
+    // see the prior day.
+    const isDateOnly = /^\d{4}-\d{2}-\d{2}$/.test(value);
     try {
       return new Intl.DateTimeFormat(locale, {
         year: "numeric",
         month: "long",
         day: "numeric",
+        ...(isDateOnly ? { timeZone: "UTC" } : {}),
       }).format(date);
     } catch {
       return date.toISOString().slice(0, 10);
