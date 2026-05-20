@@ -1005,6 +1005,56 @@
     }
   }
 
+  // Dataset JSON-LD: each agency page is functionally a public dataset
+  // assembled from the Attorney General's Vehicle Stops Report PDFs.
+  // Google uses this for Dataset Search and rich results.
+  $: datasetCounty =
+    cleanMetadataValue(metadata?.geocode_jurisdiction_county) ||
+    cleanMetadataValue(metadata?.geocode_address_county) ||
+    "";
+  $: datasetPlaceName = datasetCounty
+    ? `${datasetCounty}, Missouri`
+    : "Missouri";
+  $: datasetYears = (Array.isArray(years) ? years : [])
+    .map((y) => Number(y))
+    .filter((y) => Number.isFinite(y));
+  $: datasetTemporal = datasetYears.length
+    ? `${Math.min(...datasetYears)}/${Math.max(...datasetYears)}`
+    : null;
+  $: datasetJsonLd = (() => {
+    const agencyName = agencyData?.agency ?? data.slug;
+    const obj = {
+      "@context": "https://schema.org",
+      "@type": "Dataset",
+      name: `${agencyName} traffic stops`,
+      description: metaDescription,
+      url: canonicalAgencyUrl,
+      sameAs: [agencyHrefEn, agencyHrefEs],
+      isAccessibleForFree: true,
+      inLanguage: ["en", "es"],
+      keywords: [
+        "traffic stops",
+        "police data",
+        "vehicle stops report",
+        "Missouri",
+        agencyName,
+      ],
+      creator: {
+        "@type": "GovernmentOrganization",
+        name: "Missouri Attorney General",
+        url: "https://ago.mo.gov/",
+      },
+      publisher: {
+        "@type": "Organization",
+        name: "Recovered Factory",
+        url: "https://recoveredfactory.net/",
+      },
+      spatialCoverage: { "@type": "Place", name: datasetPlaceName },
+      ...(datasetTemporal ? { temporalCoverage: datasetTemporal } : {}),
+    };
+    return JSON.stringify(obj);
+  })();
+
   const columnKeys = [
     "Total",
     "White",
@@ -1451,6 +1501,7 @@
   <meta property="twitter:image" content="{siteUrl}/social-meta.png" />
   <meta property="twitter:title" content={metaTitle} />
   <meta property="twitter:description" content={metaDescription} />
+  {@html `<script type="application/ld+json">${datasetJsonLd}</script>`}
 </svelte:head>
 
 <StickyHeader

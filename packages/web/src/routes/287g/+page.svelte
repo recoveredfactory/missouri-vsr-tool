@@ -115,6 +115,23 @@
   $: canonicalUrl = `${siteUrl}${localeBase}/287g`;
   $: shareHrefEn = `${siteUrl}/en/287g`;
   $: shareHrefEs = `${siteUrl}/es/287g`;
+  $: articleJsonLd = JSON.stringify({
+    "@context": "https://schema.org",
+    "@type": "Article",
+    headline: program_287g_page_title(),
+    description: program_287g_page_share_description(),
+    url: canonicalUrl,
+    sameAs: [shareHrefEn, shareHrefEs],
+    inLanguage: locale,
+    image: `${siteUrl}/social-meta.png`,
+    isAccessibleForFree: true,
+    publisher: {
+      "@type": "Organization",
+      name: "Recovered Factory",
+      url: "https://recoveredfactory.net/",
+    },
+    ...(data.snapshotDate ? { dateModified: data.snapshotDate } : {}),
+  });
 
   const integerFormatter = new Intl.NumberFormat(undefined, { maximumFractionDigits: 0 });
   const compactFormatter = new Intl.NumberFormat(undefined, {
@@ -582,6 +599,7 @@
   <meta property="twitter:image" content="{siteUrl}/social-meta.png" />
   <meta property="twitter:title" content={program_287g_page_title()} />
   <meta property="twitter:description" content={program_287g_page_share_description()} />
+  {@html `<script type="application/ld+json">${articleJsonLd}</script>`}
 </svelte:head>
 
 <StickyHeader />
