@@ -123,7 +123,7 @@
     url: canonicalUrl,
     sameAs: [shareHrefEn, shareHrefEs],
     inLanguage: locale,
-    image: `${siteUrl}/social-meta.png`,
+    image: `${siteUrl}/og/287g.png`,
     isAccessibleForFree: true,
     publisher: {
       "@type": "Organization",
@@ -589,14 +589,14 @@
   <meta property="og:site_name" content={siteName} />
   <meta property="og:title" content={program_287g_page_title()} />
   <meta property="og:description" content={program_287g_page_share_description()} />
-  <meta property="og:image" content="{siteUrl}/social-meta.png" />
-  <meta property="og:image:secure_url" content="{siteUrl}/social-meta.png" />
+  <meta property="og:image" content="{siteUrl}/og/287g.png" />
+  <meta property="og:image:secure_url" content="{siteUrl}/og/287g.png" />
   <meta property="og:image:alt" content="Missouri Vehicle Stops — 287(g) program" />
   <meta property="og:image:type" content="image/png" />
-  <meta property="og:image:width" content="1600" />
-  <meta property="og:image:height" content="838" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
   <meta property="twitter:card" content="summary_large_image" />
-  <meta property="twitter:image" content="{siteUrl}/social-meta.png" />
+  <meta property="twitter:image" content="{siteUrl}/og/287g.png" />
   <meta property="twitter:title" content={program_287g_page_title()} />
   <meta property="twitter:description" content={program_287g_page_share_description()} />
   {@html `<script type="application/ld+json">${articleJsonLd}</script>`}

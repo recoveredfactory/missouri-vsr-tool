@@ -12,5 +12,9 @@ packages/web/static/data/
 !packages/web/static/data/homepage_2024_stats.json
 !packages/web/static/data/dist/
 packages/web/static/data/dist/metric_year_subset.json
+
+# Baked Open Graph card images (run `pnpm bake:og` to regenerate)
+packages/web/static/og/
+
 .vscode/
 *:Zone.Identifier

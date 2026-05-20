@@ -9,10 +9,13 @@
     "check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
     "dev": "vite dev",
     "generate:map-style": "node scripts/generate-map-style.mjs",
+    "bake:og": "node scripts/bake-og-images.mjs",
     "preview": "vite preview"
   },
   "devDependencies": {
+    "@fontsource/inter": "^5.2.8",
     "@protomaps/basemaps": "^5.7.0",
+    "@resvg/resvg-js": "^2.6.2",
     "@sveltejs/kit": "^2.0.0",
     "@sveltejs/vite-plugin-svelte": "^4.0.0",
     "@tailwindcss/postcss": "^4.1.18",
@@ -21,6 +24,8 @@
     "autoprefixer": "^10.4.23",
     "mdsvex": "^0.12.6",
     "postcss": "^8.5.6",
+    "satori": "^0.26.0",
+    "satori-html": "^0.3.2",
     "svelte": "^5.0.0",
     "svelte-check": "^4.0.0",
     "svelte-kit-sst": "2.43.5",

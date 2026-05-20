@@ -256,14 +256,14 @@
     property="og:description"
     content="Who gets stopped? why? What happens next? This tool reveals how traffic enforcement varies across Missouri's agencies."
   />
-  <meta property="og:image" content="{siteUrl}/social-meta.png" />
-  <meta property="og:image:secure_url" content="{siteUrl}/social-meta.png" />
+  <meta property="og:image" content="{siteUrl}/og/home.png" />
+  <meta property="og:image:secure_url" content="{siteUrl}/og/home.png" />
   <meta property="og:image:alt" content="Missouri Vehicle Stops overview" />
   <meta property="og:image:type" content="image/png" />
-  <meta property="og:image:width" content="1600" />
-  <meta property="og:image:height" content="838" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
   <meta property="twitter:card" content="summary_large_image" />
-  <meta property="twitter:image" content="{siteUrl}/social-meta.png" />
+  <meta property="twitter:image" content="{siteUrl}/og/home.png" />
   <meta property="twitter:title" content={siteName} />
   <meta
     property="twitter:description"
