@@ -73,7 +73,8 @@ const fetchText = async (url) => {
 
 const locatorSvg = await fetchText(`${CDN_BASE}${RELEASE_PATH}/dist/mo_locator.svg`);
 
-// Pull the state outline path and the viewBox from the source SVG.
+// Pull state outline, the roads group, and per-agency jurisdiction
+// paths from the source SVG so we can render any subset we like.
 const viewBoxMatch = locatorSvg.match(/viewBox="([^"]+)"/);
 const statePathMatch = locatorSvg.match(/<path class="state" d="([^"]+)"/);
 if (!viewBoxMatch || !statePathMatch) {
@@ -82,7 +83,44 @@ if (!viewBoxMatch || !statePathMatch) {
 const VIEWBOX = viewBoxMatch[1];
 const STATE_PATH = statePathMatch[1];
 
-// Index centroid circles by slug. The SVG uses `data-slug` to tag them.
+// Interstates + US highways. State routes (420 more) would blanket
+// the map in noise at 220 px wide.
+const extractRoads = (className) => {
+  const re = new RegExp(
+    `<path[^>]*class="road ${className}"[^>]*\\bd="([^"]+)"`,
+    "g",
+  );
+  const out = [];
+  let mm;
+  while ((mm = re.exec(locatorSvg))) out.push(mm[1]);
+  return out;
+};
+const interstatePaths = extractRoads("interstate");
+const usHighwayPaths = extractRoads("us-highway");
+const ROADS_SVG =
+  usHighwayPaths
+    .map(
+      (d) =>
+        `<path d="${d}" fill="none" stroke="#cbd5e1" stroke-width="0.016" stroke-linecap="round" stroke-linejoin="round" opacity="0.7" />`,
+    )
+    .join("") +
+  interstatePaths
+    .map(
+      (d) =>
+        `<path d="${d}" fill="none" stroke="#94a3b8" stroke-width="0.024" stroke-linecap="round" stroke-linejoin="round" opacity="0.75" />`,
+    )
+    .join("");
+
+// Per-agency jurisdiction polygons (county outlines for sheriffs,
+// city outlines for municipal PDs, etc.).
+const jurisdictionPathBySlug = new Map();
+const jurisRe = /<path[^>]*id="agency-([^"]+)"[^>]*\bd="([^"]+)"/g;
+let jm;
+while ((jm = jurisRe.exec(locatorSvg))) {
+  jurisdictionPathBySlug.set(jm[1], jm[2]);
+}
+
+// Centroid points by slug.
 const centroidByslug = new Map();
 const circleRe = /<circle[^>]*data-slug="([^"]+)"[^>]*\bcx="([^"]+)"[^>]*\bcy="([^"]+)"/g;
 let m;
@@ -90,25 +128,31 @@ while ((m = circleRe.exec(locatorSvg))) {
   centroidByslug.set(m[1], { cx: Number(m[2]), cy: Number(m[3]) });
 }
 
-// Build a small SVG showing just the state outline + an optional set of
-// highlighted dots, then resvg-render to PNG and return a data URL.
-const renderMapPng = (highlights = [], pxSize = 320) => {
-  // Shrink dots when there are many so they breathe instead of merging
-  // into a single blob. Single-agency highlight stays prominent.
-  const n = highlights.length;
-  const r = n <= 1 ? 0.18 : n <= 20 ? 0.13 : n <= 80 ? 0.1 : 0.08;
-  const stroke = n <= 1 ? 0.05 : 0.025;
-  const dots = highlights
-    .map(
-      ({ cx, cy }) => `
-        <circle cx="${cx}" cy="${cy}" r="${r}" fill="#047857" stroke="#ffffff" stroke-width="${stroke}" />
-      `,
-    )
-    .join("");
+// Render a mini-map at the given pixel size. `mode`:
+//   "none"        — state outline + roads, no highlight
+//   "dots"        — state + roads + a list of centroid dots
+//   "jurisdiction"— state + roads + one filled polygon
+const renderMapPng = (opts, pxSize = 300) => {
+  const { mode = "none", dots = [], path = null } = opts ?? {};
+  let highlight = "";
+  if (mode === "jurisdiction" && path) {
+    highlight = `<path d="${path}" fill="#047857" stroke="#065f46" stroke-width="0.025" stroke-linejoin="round" opacity="0.9" />`;
+  } else if (mode === "dots" && dots.length) {
+    const n = dots.length;
+    const r = n <= 1 ? 0.18 : n <= 20 ? 0.13 : n <= 80 ? 0.1 : 0.08;
+    const stroke = n <= 1 ? 0.05 : 0.025;
+    highlight = dots
+      .map(
+        ({ cx, cy }) =>
+          `<circle cx="${cx}" cy="${cy}" r="${r}" fill="#047857" stroke="#ffffff" stroke-width="${stroke}" />`,
+      )
+      .join("");
+  }
   const svg = `<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="${VIEWBOX}" preserveAspectRatio="xMidYMid meet">
   <path d="${STATE_PATH}" fill="#f1f5f9" stroke="#0f172a" stroke-width="0.025" stroke-linejoin="round" />
-  ${dots}
+  ${ROADS_SVG}
+  ${highlight}
 </svg>`;
   const png = new Resvg(svg, { fitTo: { mode: "width", value: pxSize } })
     .render()
@@ -117,8 +161,8 @@ const renderMapPng = (highlights = [], pxSize = 320) => {
 };
 
 // Pre-render the no-highlight base map once — used for the home card and
-// as a fallback when an agency isn't in the centroid index.
-const baseMapDataUrl = renderMapPng([], 320);
+// as a fallback when an agency has neither a jurisdiction nor a centroid.
+const baseMapDataUrl = renderMapPng({ mode: "none" });
 
 // ---------- helpers ----------
 
@@ -138,12 +182,12 @@ const escapeHtml = (s) =>
 // to two lines and the stat block always fits below.
 const titleSize = (s) => {
   const n = s.length;
-  if (n <= 16) return 88;
-  if (n <= 22) return 72;
-  if (n <= 30) return 62;
-  if (n <= 40) return 54;
-  if (n <= 50) return 46;
-  return 40;
+  if (n <= 16) return 82;
+  if (n <= 22) return 66;
+  if (n <= 30) return 56;
+  if (n <= 40) return 48;
+  if (n <= 50) return 42;
+  return 36;
 };
 
 // ---------- card template ----------
@@ -160,7 +204,7 @@ const card = ({
   display: flex;
   width: 1200px;
   height: 630px;
-  padding: 50px;
+  padding: 65px 105px;
   background-image: url('${brandDataUrl}');
   background-size: 1200px 630px;
   font-family: 'Inter';
@@ -168,11 +212,11 @@ const card = ({
   <div style="
     display: flex;
     flex-direction: column;
-    width: 1100px;
-    height: 530px;
+    width: 990px;
+    height: 500px;
     background: #ffffff;
     border-radius: 28px;
-    padding: 56px 64px;
+    padding: 52px 56px;
     box-shadow: 0 24px 48px rgba(15, 23, 42, 0.25);
   ">
     <div style="
@@ -246,11 +290,12 @@ const card = ({
         flex-shrink: 0;
         align-items: flex-end;
         justify-content: space-between;
+        padding-top: 4px;
       ">
         ${
           mapDataUrl
-            ? `<img src="${mapDataUrl}" style="width: 280px; height: 280px;" />`
-            : `<div style="display: flex; width: 280px; height: 280px;"></div>`
+            ? `<img src="${mapDataUrl}" style="width: 270px; height: 270px;" />`
+            : `<div style="display: flex; width: 270px; height: 270px;"></div>`
         }
         <div style="display: flex; font-size: 20px; font-weight: 600; color: #94a3b8;">
           vsr.recoveredfactory.net
@@ -294,7 +339,7 @@ const buildHome = async () => {
     // best effort
   }
   const allCentroids = [...centroidByslug.values()];
-  const homeMapDataUrl = renderMapPng(allCentroids, 320);
+  const homeMapDataUrl = renderMapPng({ mode: "dots", dots: allCentroids }, 300);
 
   const png = await renderToPng(
     card({
@@ -331,7 +376,7 @@ const build287g = async () => {
     .filter(Boolean);
 
   const mapDataUrl = highlights.length
-    ? renderMapPng(highlights, 320)
+    ? renderMapPng({ mode: "dots", dots: highlights }, 260)
     : baseMapDataUrl;
 
   const png = await renderToPng(
@@ -350,24 +395,40 @@ const build287g = async () => {
 
 const buildAgency = async (agency) => {
   const name = agency.canonical_name || agency.agency_slug;
-  const locationParts = [agency.city, agency.county].filter(Boolean);
-  const location = locationParts.length ? locationParts.join(" · ") : "Missouri";
+  const isStateAgency = agency.agency_type === "State Agency";
+
+  // Subtitle: county only — town gets dropped per request. Skip
+  // entirely for state agencies (their reach is the whole map).
+  const subtitle = isStateAgency ? null : agency.county || null;
+
   const stops = Number(agency.stops ?? agency.all_stops_total ?? 0);
   const latestYear =
     Array.isArray(agency.years_with_data) && agency.years_with_data.length
       ? Math.max(...agency.years_with_data.map(Number).filter(Number.isFinite))
       : null;
 
-  const centroid = centroidByslug.get(agency.agency_slug);
-  const mapDataUrl = centroid
-    ? renderMapPng([centroid], 320)
-    : baseMapDataUrl;
+  // Map highlight priority: jurisdiction polygon (county/city outline)
+  // → centroid dot → nothing. State agencies always get the bare map.
+  let mapDataUrl;
+  if (isStateAgency) {
+    mapDataUrl = baseMapDataUrl;
+  } else {
+    const jurisdiction = jurisdictionPathBySlug.get(agency.agency_slug);
+    const centroid = centroidByslug.get(agency.agency_slug);
+    if (jurisdiction) {
+      mapDataUrl = renderMapPng({ mode: "jurisdiction", path: jurisdiction }, 300);
+    } else if (centroid) {
+      mapDataUrl = renderMapPng({ mode: "dots", dots: [centroid] }, 300);
+    } else {
+      mapDataUrl = baseMapDataUrl;
+    }
+  }
 
   const png = await renderToPng(
     card({
       eyebrow: "Missouri Vehicle Stops",
       title: name,
-      subtitle: location,
+      subtitle,
       stat: stops > 0 ? formatStops(stops) : null,
       statLabel: stops > 0
         ? `stops${latestYear ? ` in ${latestYear}` : ""}`
