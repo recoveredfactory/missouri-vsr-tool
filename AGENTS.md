@@ -22,7 +22,7 @@
 ## Open Graph card images
 
 - Per-page OG/Twitter cards live in `packages/web/static/og/` and are gitignored.
-- Bake locally with `pnpm --filter @missouri-vsr-tool/web bake:og` (or `pnpm bake:og` from inside `packages/web`). Takes ~30s for all ~770 agency cards + home + 287(g).
+- Bake locally with `pnpm --filter @missouri-vsr-tool/web bake:og` (or `pnpm bake:og` from inside `packages/web`). Takes ~10 minutes for all ~770 agency cards + home + 287(g) — each card composites a Missouri-outline inset with the agency's location dot, so resvg re-renders the state path per card.
 - Re-run when an agency name/stops change meaningfully, or when the template changes — they don't need to update every deploy.
 - Targeted runs: `pnpm bake:og --only home`, `--only 287g`, `--only agencies`, or `--slug missouri-state-highway-patrol`.
 - The directory must exist locally before `sst deploy`, otherwise the SST build will ship without OG images and shares will fall back to the (no longer present) `/social-meta.png`.
