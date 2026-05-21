@@ -357,7 +357,11 @@
           id: `${agencyName}-${year}`,
           agency: {
             value: agencyName,
-            href: buildAgencyHref(locale, agencySlug, metricRowKey),
+            href: buildAgencyHref(
+              locale,
+              agencySlug,
+              metricRowKey === baseTotalStopsRowKey ? "" : metricRowKey,
+            ),
             program287g: program287gSlugs.has(agencySlug),
           },
           total_stops: toDisplayValue(stopsTotal),
