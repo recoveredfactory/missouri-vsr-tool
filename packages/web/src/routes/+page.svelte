@@ -42,6 +42,13 @@
     home_download_label_vsr_statistics,
     home_download_v2_heading,
     home_download_v1_heading,
+    home_download_wide_heading,
+    home_download_wide_description,
+    home_download_wide_all_title,
+    home_download_wide_all_subtitle,
+    home_download_wide_year_title,
+    home_download_wide_year_subtitle,
+    home_download_wide_year_picker_label,
     home_download_about_note,
     home_about_link,
     home_287g_link,
@@ -184,6 +191,24 @@
     files: data.v2DownloadManifest.files?.filter((f) => f.path.startsWith(data.v2DownloadManifest.prefix)),
   });
   $: v1DownloadGroups = buildDownloadGroups(data?.v1DownloadManifest);
+
+  // Wide-format downloads aren't in the manifest yet — the files live
+  // at known paths under /releases/v2.1/downloads/, so we build URLs
+  // directly. Year picker drives per-year links; default to the most
+  // recent year in the data manifest.
+  $: wideYears = (data?.manifest?.years ?? []).slice().sort((a, b) => b - a);
+  let selectedWideYear = null;
+  $: if (selectedWideYear === null && wideYears.length) selectedWideYear = wideYears[0];
+  function wideUrl(year, ext) {
+    const stem = year === "all" ? "missouri_vsr_2000_2024_wide" : `missouri_vsr_${year}_wide`;
+    return withDataBase(`/data/downloads/${stem}.${ext}`);
+  }
+  function handleWideDownload(year, ext) {
+    const path = year === "all"
+      ? `missouri_vsr_2000_2024_wide.${ext}`
+      : `missouri_vsr_${year}_wide.${ext}`;
+    trackEvent("download_click", { file: path, group: ext, href: wideUrl(year, ext) });
+  }
 
   function showTooltip(event, content) {
     const el = event.currentTarget || event.target;
@@ -739,6 +764,86 @@
           <span class="text-sm text-slate-500">{home_download_loading()}</span>
         </div>
       {/if}
+
+      <!-- Wide-format (one row per agency-year) — bespoke section
+           with year picker because the wide files aren't in the
+           manifest yet. -->
+      <div class="mt-10 border-t border-slate-100 pt-8">
+        <p class="mb-2 text-center text-xs font-semibold uppercase tracking-widest text-slate-400">
+          {home_download_wide_heading()}
+        </p>
+        <p class="mx-auto mb-6 max-w-2xl text-center text-sm text-slate-600">
+          {home_download_wide_description()}
+        </p>
+        <div class="grid gap-6 md:grid-cols-2">
+          <div class="flex flex-col rounded-lg border-2 border-slate-200 bg-slate-50 p-6 text-center">
+            <h3 class="mb-1 text-lg font-bold text-slate-900">
+              {home_download_wide_all_title()}
+            </h3>
+            <p class="mb-4 min-h-[40px] text-sm text-slate-600">
+              {home_download_wide_all_subtitle()}
+            </p>
+            <a
+              href={wideUrl("all", "csv")}
+              download
+              on:click={() => handleWideDownload("all", "csv")}
+              class="mb-3 block rounded-lg bg-[#1b613c] px-5 py-2.5 text-sm font-semibold text-white no-underline transition-colors hover:bg-[#105430]"
+            >
+              <span class="block">CSV</span>
+              <span class="mt-1 block text-[11px] font-medium text-white/85">{formatBytes(46883419)}</span>
+            </a>
+            <a
+              href={wideUrl("all", "parquet")}
+              download
+              on:click={() => handleWideDownload("all", "parquet")}
+              class="block rounded-lg border-2 border-[#1b613c] px-5 py-2 text-sm font-semibold text-[#1b613c] no-underline transition-colors hover:bg-[#1b613c] hover:text-white"
+            >
+              <span class="block">Parquet</span>
+              <span class="mt-0.5 block text-[11px] font-medium opacity-80">{formatBytes(10152238)}</span>
+            </a>
+          </div>
+
+          <div class="flex flex-col rounded-lg border-2 border-slate-200 bg-slate-50 p-6 text-center">
+            <h3 class="mb-1 text-lg font-bold text-slate-900">
+              {home_download_wide_year_title()}
+            </h3>
+            <p class="mb-4 min-h-[40px] text-sm text-slate-600">
+              {home_download_wide_year_subtitle()}
+            </p>
+            {#if wideYears.length}
+              <label class="mb-3 flex items-center justify-center gap-2 text-sm text-slate-600">
+                <span>{home_download_wide_year_picker_label()}</span>
+                <select
+                  bind:value={selectedWideYear}
+                  class="rounded-md border border-slate-300 bg-white px-2 py-1 text-sm font-semibold text-slate-900"
+                >
+                  {#each wideYears as y}
+                    <option value={y}>{y}</option>
+                  {/each}
+                </select>
+              </label>
+              <a
+                href={wideUrl(selectedWideYear, "csv")}
+                download
+                on:click={() => handleWideDownload(selectedWideYear, "csv")}
+                class="mb-3 block rounded-lg bg-[#1b613c] px-5 py-2.5 text-sm font-semibold text-white no-underline transition-colors hover:bg-[#105430]"
+              >
+                CSV — {selectedWideYear}
+              </a>
+              <a
+                href={wideUrl(selectedWideYear, "parquet")}
+                download
+                on:click={() => handleWideDownload(selectedWideYear, "parquet")}
+                class="block rounded-lg border-2 border-[#1b613c] px-5 py-2 text-sm font-semibold text-[#1b613c] no-underline transition-colors hover:bg-[#1b613c] hover:text-white"
+              >
+                Parquet — {selectedWideYear}
+              </a>
+            {:else}
+              <span class="text-sm text-slate-500">{home_download_loading()}</span>
+            {/if}
+          </div>
+        </div>
+      </div>
 
       <!-- Previous release (v1, 2020–2024) — simple link list -->
       <div class="mt-10 border-t border-slate-100 pt-6">
