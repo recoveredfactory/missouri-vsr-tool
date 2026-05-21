@@ -113,9 +113,31 @@ export default $config({
       },
     });
 
+    const mcp = new sst.aws.Function("Mcp", {
+      handler: "packages/mcp/src/index.handler",
+      runtime: "nodejs22.x",
+      memory: "1024 MB",
+      timeout: "30 seconds",
+      url: {
+        cors: {
+          allowMethods: ["GET", "POST", "OPTIONS"],
+          allowOrigins: ["*"],
+          allowHeaders: ["content-type", "mcp-session-id", "mcp-protocol-version"],
+        },
+      },
+      environment: {
+        DATA_BASE_URL: dataBaseUrl,
+        DATA_RELEASE_PATH: env.PUBLIC_DATA_RELEASE_PATH ?? "",
+      },
+      nodejs: {
+        install: ["@duckdb/node-api"],
+      },
+    });
+
     return {
       dataCdnDistributionId: dataRouter?.distributionID,
       dataCdnDomain: dataRouter?.url,
+      mcpUrl: mcp.url,
     };
   },
 });
