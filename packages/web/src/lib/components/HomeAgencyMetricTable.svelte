@@ -11,6 +11,7 @@
     home_metric_select_label,
     home_metric_table_showing,
     home_metric_min_stops_label,
+    home_287g_filter_label,
     home_metric_search_placeholder,
     home_metric_search_aria_label,
     home_metric_year_selector_label,
@@ -32,6 +33,7 @@
     name?: string;
     agency?: string;
     names?: string[];
+    program_287g?: { agreements?: unknown[] } | null;
   };
 
   type BaselineEntry = {
@@ -59,6 +61,7 @@
   type AgencyLink = {
     value: string;
     href: string;
+    program287g?: boolean;
   };
 
   type TableRow = {
@@ -66,6 +69,7 @@
     agency: {
       value: string;
       href: string;
+      program287g?: boolean;
     };
     total_stops: string;
     Total: string;
@@ -210,6 +214,19 @@
     return map;
   };
 
+  const buildProgram287gSlugSet = (agencyEntries: AgencyIndexEntry[]) => {
+    const set = new Set<string>();
+    agencyEntries.forEach((entry) => {
+      const slug = entry?.agency_slug || entry?.slug || entry?.id;
+      if (!slug) return;
+      const program = entry?.program_287g;
+      if (program && Array.isArray(program.agreements) && program.agreements.length) {
+        set.add(slug);
+      }
+    });
+    return set;
+  };
+
   const rowKeyOptionsFromBaselines = (baselineEntries: BaselineEntry[]): MetricOptionGroup[] => {
     const keys = Array.from(
       new Set(
@@ -289,6 +306,7 @@
     metricRowKey: string,
     year: string,
     slugMap: Map<string, string>,
+    program287gSlugs: Set<string>,
     locale: string,
     sortColumn: "Total" | "total_stops",
   ): TableRow[] => {
@@ -337,7 +355,11 @@
 
         return {
           id: `${agencyName}-${year}`,
-          agency: { value: agencyName, href: buildAgencyHref(locale, agencySlug, metricRowKey) },
+          agency: {
+            value: agencyName,
+            href: buildAgencyHref(locale, agencySlug, metricRowKey),
+            program287g: program287gSlugs.has(agencySlug),
+          },
           total_stops: toDisplayValue(stopsTotal),
           Total: toDisplayValue(metricVals["Total"]),
           White: toDisplayValue(metricVals["White"]),
@@ -357,6 +379,7 @@
 
   let currentLocale = "en";
   let agencySlugMap = new Map<string, string>();
+  let program287gSlugs = new Set<string>();
 
   let metricOptions: MetricOption[] = [];
   let metricOptionGroups: MetricOptionGroup[] = [];
@@ -421,6 +444,7 @@
   let normalizedMinTotalStops = 100;
   let filteredRows: TableRow[] = [];
   let shouldHideOver100Rates = false;
+  let only287gParticipants = false;
 
   const gridPaging = new PagingData(1, 1000, [1000]);
 
@@ -479,6 +503,7 @@
   }
 
   $: agencySlugMap = buildAgencySlugMap(agencies || []);
+  $: program287gSlugs = buildProgram287gSlugSet(agencies || []);
   $: shouldHideOver100Rates = isRateMetricRowKey(selectedMetric);
   $: {
     const split = splitRowsByRateOverflow(tableRows, shouldHideOver100Rates);
@@ -491,10 +516,21 @@
   $: normalizedMinTotalStops = Number.isFinite(Number(minTotalStops)) ? Math.max(0, Number(minTotalStops)) : 0;
   $: normalizedSearch = normalizeText(agencySearch || "");
   $: filteredRows = rateFilteredRows.filter((row) => {
+    if (only287gParticipants && !row.agency.program287g) return false;
     if (row.raw.total_stops < normalizedMinTotalStops) return false;
     if (!normalizedSearch) return true;
     return normalizeText(row.agency.value).includes(normalizedSearch);
   });
+
+  const toggle287gFilter = (event: Event) => {
+    const target = event.currentTarget as HTMLInputElement;
+    only287gParticipants = target.checked;
+    if (only287gParticipants) {
+      minTotalStops = 0;
+      minTotalStopsInput = "0";
+    }
+    syncStateToUrl();
+  };
 
   const applyMinTotalStopsInput = () => {
     const parsed = Number(minTotalStopsInput);
@@ -537,8 +573,12 @@
       }
 
       const sortColumn = rowKey === baseTotalStopsRowKey ? "total_stops" : "Total";
+      // Build the participant set fresh here so we don't depend on the $: reactive
+      // having flushed between agencies = data and rowsForYear() call.
+      const slugMapNow = buildAgencySlugMap(agencies || []);
+      const program287gSlugsNow = buildProgram287gSlugSet(agencies || []);
       tableRows = selectedYear
-        ? rowsForYear(payload, rowKey, selectedYear, agencySlugMap, currentLocale, sortColumn)
+        ? rowsForYear(payload, rowKey, selectedYear, slugMapNow, program287gSlugsNow, currentLocale, sortColumn)
         : [];
     } catch (error) {
       loadError =
@@ -725,6 +765,18 @@
           {/each}
         </div>
       </div>
+    </div>
+
+    <div class="mb-3">
+      <label class="inline-flex cursor-pointer items-center gap-2 text-sm text-slate-700">
+        <input
+          type="checkbox"
+          class="h-4 w-4 cursor-pointer rounded border-slate-400 text-emerald-700 focus:ring-emerald-600"
+          checked={only287gParticipants}
+          on:change={toggle287gFilter}
+        />
+        {home_287g_filter_label()}
+      </label>
     </div>
 
     <div class="mb-5">

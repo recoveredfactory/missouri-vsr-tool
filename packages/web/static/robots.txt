@@ -1,6 +1,6 @@
 # robots.txt for Missouri Vehicle Stop Report (VSR) Tool
 # https://vsr.recoveredfactory.net
-# Last updated: 2025
+# Last updated: 2026-05
 #
 # This file controls how search engines and other bots crawl this site.
 # For more information: https://developers.google.com/search/docs/crawling-indexing/robots/intro
@@ -13,6 +13,7 @@ User-agent: *
 # Allow indexing of all public pages
 Allow: /
 Allow: /agency/
+Allow: /287g
 
 # Disallow crawling of data files (JSON APIs)
 Disallow: /data/
@@ -20,7 +21,6 @@ Disallow: /*.json$
 Disallow: /*__data.json$
 
 # Disallow crawling of internal/system paths
-Disallow: /_app/
 Disallow: /.svelte-kit/
 Disallow: /.well-known/
 Disallow: /node_modules/
@@ -30,12 +30,11 @@ Disallow: /map/
 Disallow: /*.pmtiles$
 Disallow: /*.pbf$
 
-# Disallow query string variations to prevent duplicate content
-Disallow: /*?*
-Disallow: /*&*
-
-# Disallow hash fragments (shouldn't be crawled anyway)
-Disallow: /*#*
+# Note: we intentionally do NOT disallow query strings (/*?*, /*&*).
+# Inbound links with utm_* / fbclid / gclid params should still be
+# crawled — duplicate content is handled by <link rel="canonical">
+# on every page, and Yandex's Clean-param directive below tells
+# Yandex specifically to ignore tracking params.
 
 # =============================================================================
 # GOOGLEBOT - Main Google crawler
@@ -43,11 +42,10 @@ Disallow: /*#*
 
 User-agent: Googlebot
 Allow: /
-Allow: /about-the-data
 Allow: /agency/
+Allow: /287g
 Disallow: /data/
 Disallow: /*.json$
-Disallow: /_app/
 Disallow: /map/
 
 # =============================================================================
@@ -65,11 +63,10 @@ Disallow: /map/
 
 User-agent: Bingbot
 Allow: /
-Allow: /about-the-data
 Allow: /agency/
+Allow: /287g
 Disallow: /data/
 Disallow: /*.json$
-Disallow: /_app/
 Disallow: /map/
 
 # =============================================================================
@@ -78,11 +75,10 @@ Disallow: /map/
 
 User-agent: DuckDuckBot
 Allow: /
-Allow: /about-the-data
 Allow: /agency/
+Allow: /287g
 Disallow: /data/
 Disallow: /*.json$
-Disallow: /_app/
 Disallow: /map/
 
 # =============================================================================
@@ -91,11 +87,10 @@ Disallow: /map/
 
 User-agent: Yandex
 Allow: /
-Allow: /about-the-data
 Allow: /agency/
+Allow: /287g
 Disallow: /data/
 Disallow: /*.json$
-Disallow: /_app/
 Disallow: /map/
 
 # =============================================================================
@@ -104,11 +99,10 @@ Disallow: /map/
 
 User-agent: Baiduspider
 Allow: /
-Allow: /about-the-data
 Allow: /agency/
+Allow: /287g
 Disallow: /data/
 Disallow: /*.json$
-Disallow: /_app/
 Disallow: /map/
 
 # =============================================================================
@@ -350,9 +344,6 @@ Disallow: /
 User-agent: Wget
 Disallow: /
 
-User-agent: curl
-Disallow: /
-
 # =============================================================================
 # VULNERABILITY SCANNERS - Block entirely
 # =============================================================================
@@ -483,23 +474,26 @@ Clean-param: fbclid&gclid&msclkid&ref&source
 #
 # Site structure:
 # - / (homepage with statewide analysis and about section)
+# - /287g (287(g) participating agency profiles)
 # - /agency/[slug] (individual agency pages with detailed metrics)
+# All routes are served under /en/... and /es/... locale prefixes;
+# unprefixed URLs render too, with <link rel="canonical"> pointing
+# at the prefixed version.
 #
 # Key decisions:
 # - Allow search engines to index public pages for discoverability
-# - Block AI training crawlers to protect original analysis
-# - Block raw data files to encourage use of the interactive tool
-# - Allow social media crawlers for link previews
+# - Allow query-string variants (utm_*, fbclid, etc.) and rely on
+#   canonical tags + Yandex Clean-param for dedup
+# - Allow JS/CSS assets (no /_app/ disallow) so renderers can confirm
+#   rendered content matches SSR HTML
+# - Allow social media and AI/LLM crawlers
 # - Rate limit SEO tools to reduce server load
-# - Block known aggressive/malicious crawlers
-# - Block vulnerability scanners and content scrapers
+# - Block known aggressive/malicious crawlers and vuln scanners
 # - Allow accessibility checkers and uptime monitors
-# - Allow academic research crawlers with rate limiting
 #
 # Data files blocked:
-# - /data/*.json (raw agency data)
+# - /data/*.json (raw agency data — served via CDN, not this origin)
 # - /map/*.pmtiles (map vector tiles)
-# - /_app/* (SvelteKit build assets)
 #
 # For questions: https://github.com/recoveredfactory/missouri-vsr-tool
 #

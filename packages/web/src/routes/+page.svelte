@@ -42,8 +42,16 @@
     home_download_label_vsr_statistics,
     home_download_v2_heading,
     home_download_v1_heading,
+    home_download_wide_heading,
+    home_download_wide_description,
+    home_download_wide_all_title,
+    home_download_wide_all_subtitle,
+    home_download_wide_year_title,
+    home_download_wide_year_subtitle,
+    home_download_wide_year_picker_label,
     home_download_about_note,
     home_about_link,
+    home_287g_link,
   } from "$lib/paraglide/messages";
   import { raceColors, raceTextColors, outcomeColors } from "$lib/colors.js";
   import { withDataBase } from "$lib/dataBase";
@@ -178,11 +186,40 @@
       .map((group) => ({ group, files: groups.get(group) }));
   }
 
-  $: v2DownloadGroups = buildDownloadGroups(data?.v2DownloadManifest && {
-    ...data.v2DownloadManifest,
-    files: data.v2DownloadManifest.files?.filter((f) => f.path.startsWith(data.v2DownloadManifest.prefix)),
-  });
+  // Split the v2 manifest: regular long-format files drive the
+  // CSV/Parquet/JSON cards; wide-format files drive the dedicated
+  // wide section so the per-year slices don't blow up the format
+  // cards into a wall of links.
+  $: v2RegularFiles = (data?.v2DownloadManifest?.files ?? []).filter(
+    (f) =>
+      f.path.startsWith(data?.v2DownloadManifest?.prefix ?? "") && f.format !== "wide",
+  );
+  $: v2DownloadGroups = buildDownloadGroups(
+    data?.v2DownloadManifest && { ...data.v2DownloadManifest, files: v2RegularFiles },
+  );
   $: v1DownloadGroups = buildDownloadGroups(data?.v1DownloadManifest);
+
+  // Wide-format downloads: pulled from the manifest entries tagged
+  // `format: "wide"`. The all-years bundle has no `year` field; the
+  // per-year slices do. Year list comes from the per-year entries
+  // themselves so we only offer years that actually have a file.
+  $: wideFiles = (data?.v2DownloadManifest?.files ?? []).filter((f) => f.format === "wide");
+  $: wideAllYears = {
+    csv: wideFiles.find((f) => f.group === "csv" && f.year === undefined),
+    parquet: wideFiles.find((f) => f.group === "parquet" && f.year === undefined),
+  };
+  $: widePerYear = wideFiles.filter((f) => typeof f.year === "number");
+  $: wideYears = [...new Set(widePerYear.map((f) => f.year))].sort((a, b) => b - a);
+  let selectedWideYear = null;
+  $: if (selectedWideYear === null && wideYears.length) selectedWideYear = wideYears[0];
+  $: wideSelectedFiles = {
+    csv: widePerYear.find((f) => f.group === "csv" && f.year === selectedWideYear),
+    parquet: widePerYear.find((f) => f.group === "parquet" && f.year === selectedWideYear),
+  };
+  $: hasWideDownloads = Boolean(wideAllYears.csv || wideAllYears.parquet || widePerYear.length);
+  function handleWideDownload(file, href) {
+    trackEvent("download_click", { file: file?.path, group: file?.group, href });
+  }
 
   function showTooltip(event, content) {
     const el = event.currentTarget || event.target;
@@ -255,14 +292,14 @@
     property="og:description"
     content="Who gets stopped? why? What happens next? This tool reveals how traffic enforcement varies across Missouri's agencies."
   />
-  <meta property="og:image" content="{siteUrl}/social-meta.png" />
-  <meta property="og:image:secure_url" content="{siteUrl}/social-meta.png" />
+  <meta property="og:image" content="{siteUrl}/og/home.png" />
+  <meta property="og:image:secure_url" content="{siteUrl}/og/home.png" />
   <meta property="og:image:alt" content="Missouri Vehicle Stops overview" />
   <meta property="og:image:type" content="image/png" />
-  <meta property="og:image:width" content="1600" />
-  <meta property="og:image:height" content="838" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
   <meta property="twitter:card" content="summary_large_image" />
-  <meta property="twitter:image" content="{siteUrl}/social-meta.png" />
+  <meta property="twitter:image" content="{siteUrl}/og/home.png" />
   <meta property="twitter:title" content={siteName} />
   <meta
     property="twitter:description"
@@ -689,6 +726,10 @@
 
   <HomeAgencyMetricTable agencies={data.agencies} />
 
+  <div class="mx-auto mt-2 max-w-5xl px-4 pb-8 text-sm text-slate-600 sm:px-6">
+    <a class="underline" href={`/${locale}/287g`}>{home_287g_link()}</a>
+  </div>
+
   <!-- Download Section -->
   <section id="download" class="border-t border-slate-200 bg-white py-12">
     <div class="mx-auto max-w-4xl px-6">
@@ -732,6 +773,108 @@
       {:else}
         <div class="flex h-[180px] items-center justify-center rounded-lg border-2 border-slate-200 bg-slate-50">
           <span class="text-sm text-slate-500">{home_download_loading()}</span>
+        </div>
+      {/if}
+
+      <!-- Wide-format (one row per agency-year) — bespoke section
+           with year picker. Driven by manifest entries tagged
+           format: "wide" so sizes and the year list track the
+           pipeline output. Hidden entirely when no wide files are
+           published. -->
+      {#if hasWideDownloads}
+        <div class="mt-10 border-t border-slate-100 pt-8">
+          <p class="mb-2 text-center text-xs font-semibold uppercase tracking-widest text-slate-400">
+            {home_download_wide_heading()}
+          </p>
+          <p class="mx-auto mb-6 max-w-2xl text-center text-sm text-slate-600">
+            {home_download_wide_description()}
+          </p>
+          <div class="grid gap-6 md:grid-cols-2">
+            <div class="flex flex-col rounded-lg border-2 border-slate-200 bg-slate-50 p-6 text-center">
+              <h3 class="mb-1 text-lg font-bold text-slate-900">
+                {home_download_wide_all_title()}
+              </h3>
+              <p class="mb-4 min-h-[40px] text-sm text-slate-600">
+                {home_download_wide_all_subtitle()}
+              </p>
+              {#if wideAllYears.csv}
+                <a
+                  href={withDataBase(`/data/downloads/${wideAllYears.csv.path}`)}
+                  download
+                  on:click={() => handleWideDownload(wideAllYears.csv, withDataBase(`/data/downloads/${wideAllYears.csv.path}`))}
+                  class="mb-3 block rounded-lg bg-[#1b613c] px-5 py-2.5 text-sm font-semibold text-white no-underline transition-colors hover:bg-[#105430]"
+                >
+                  <span class="block">CSV</span>
+                  {#if wideAllYears.csv.size_bytes}
+                    <span class="mt-1 block text-[11px] font-medium text-white/85">{formatBytes(wideAllYears.csv.size_bytes)}</span>
+                  {/if}
+                </a>
+              {/if}
+              {#if wideAllYears.parquet}
+                <a
+                  href={withDataBase(`/data/downloads/${wideAllYears.parquet.path}`)}
+                  download
+                  on:click={() => handleWideDownload(wideAllYears.parquet, withDataBase(`/data/downloads/${wideAllYears.parquet.path}`))}
+                  class="block rounded-lg border-2 border-[#1b613c] px-5 py-2 text-sm font-semibold text-[#1b613c] no-underline transition-colors hover:bg-[#1b613c] hover:text-white"
+                >
+                  <span class="block">Parquet</span>
+                  {#if wideAllYears.parquet.size_bytes}
+                    <span class="mt-0.5 block text-[11px] font-medium opacity-80">{formatBytes(wideAllYears.parquet.size_bytes)}</span>
+                  {/if}
+                </a>
+              {/if}
+            </div>
+
+            <div class="flex flex-col rounded-lg border-2 border-slate-200 bg-slate-50 p-6 text-center">
+              <h3 class="mb-1 text-lg font-bold text-slate-900">
+                {home_download_wide_year_title()}
+              </h3>
+              <p class="mb-4 min-h-[40px] text-sm text-slate-600">
+                {home_download_wide_year_subtitle()}
+              </p>
+              {#if wideYears.length}
+                <label class="mb-3 flex items-center justify-center gap-2 text-sm text-slate-600">
+                  <span>{home_download_wide_year_picker_label()}</span>
+                  <select
+                    bind:value={selectedWideYear}
+                    class="rounded-md border border-slate-300 bg-white px-2 py-1 text-sm font-semibold text-slate-900"
+                  >
+                    {#each wideYears as y}
+                      <option value={y}>{y}</option>
+                    {/each}
+                  </select>
+                </label>
+                {#if wideSelectedFiles.csv}
+                  <a
+                    href={withDataBase(`/data/downloads/${wideSelectedFiles.csv.path}`)}
+                    download
+                    on:click={() => handleWideDownload(wideSelectedFiles.csv, withDataBase(`/data/downloads/${wideSelectedFiles.csv.path}`))}
+                    class="mb-3 block rounded-lg bg-[#1b613c] px-5 py-2.5 text-sm font-semibold text-white no-underline transition-colors hover:bg-[#105430]"
+                  >
+                    <span class="block">CSV — {selectedWideYear}</span>
+                    {#if wideSelectedFiles.csv.size_bytes}
+                      <span class="mt-1 block text-[11px] font-medium text-white/85">{formatBytes(wideSelectedFiles.csv.size_bytes)}</span>
+                    {/if}
+                  </a>
+                {/if}
+                {#if wideSelectedFiles.parquet}
+                  <a
+                    href={withDataBase(`/data/downloads/${wideSelectedFiles.parquet.path}`)}
+                    download
+                    on:click={() => handleWideDownload(wideSelectedFiles.parquet, withDataBase(`/data/downloads/${wideSelectedFiles.parquet.path}`))}
+                    class="block rounded-lg border-2 border-[#1b613c] px-5 py-2 text-sm font-semibold text-[#1b613c] no-underline transition-colors hover:bg-[#1b613c] hover:text-white"
+                  >
+                    <span class="block">Parquet — {selectedWideYear}</span>
+                    {#if wideSelectedFiles.parquet.size_bytes}
+                      <span class="mt-0.5 block text-[11px] font-medium opacity-80">{formatBytes(wideSelectedFiles.parquet.size_bytes)}</span>
+                    {/if}
+                  </a>
+                {/if}
+              {:else}
+                <span class="text-sm text-slate-500">{home_download_loading()}</span>
+              {/if}
+            </div>
+          </div>
         </div>
       {/if}
 

@@ -53,7 +53,36 @@
     agency_stop_volume_rank_clause_highest,
     agency_stop_volume_rank_clause,
     agency_stop_volume_rank_clause_simple,
+    agency_287g_heading,
+    agency_287g_description_link,
+    agency_287g_description_post,
+    agency_287g_support_type_label,
+    agency_287g_signed_label,
+    agency_287g_moa_link,
+    agency_287g_snapshot_provenance,
   } from "$lib/paraglide/messages";
+
+  const WIKIPEDIA_287G_URL =
+    "https://en.wikipedia.org/wiki/Immigration_and_Nationality_Act_Section_287(g)";
+
+  const formatLongDate = (value) => {
+    if (!value) return "";
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return String(value);
+    // YYYY-MM-DD strings parse as UTC midnight; pin formatting to UTC so
+    // viewers west of UTC don't see the prior day.
+    const isDateOnly = typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value);
+    try {
+      return new Intl.DateTimeFormat(getLocale() || undefined, {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+        ...(isDateOnly ? { timeZone: "UTC" } : {}),
+      }).format(date);
+    } catch {
+      return date.toISOString().slice(0, 10);
+    }
+  };
 
   /** @type {import('./$types').LayoutData} */
   export let data;
@@ -976,6 +1005,56 @@
     }
   }
 
+  // Dataset JSON-LD: each agency page is functionally a public dataset
+  // assembled from the Attorney General's Vehicle Stops Report PDFs.
+  // Google uses this for Dataset Search and rich results.
+  $: datasetCounty =
+    cleanMetadataValue(metadata?.geocode_jurisdiction_county) ||
+    cleanMetadataValue(metadata?.geocode_address_county) ||
+    "";
+  $: datasetPlaceName = datasetCounty
+    ? `${datasetCounty}, Missouri`
+    : "Missouri";
+  $: datasetYears = (Array.isArray(years) ? years : [])
+    .map((y) => Number(y))
+    .filter((y) => Number.isFinite(y));
+  $: datasetTemporal = datasetYears.length
+    ? `${Math.min(...datasetYears)}/${Math.max(...datasetYears)}`
+    : null;
+  $: datasetJsonLd = (() => {
+    const agencyName = agencyData?.agency ?? data.slug;
+    const obj = {
+      "@context": "https://schema.org",
+      "@type": "Dataset",
+      name: `${agencyName} traffic stops`,
+      description: metaDescription,
+      url: canonicalAgencyUrl,
+      sameAs: [agencyHrefEn, agencyHrefEs],
+      isAccessibleForFree: true,
+      inLanguage: ["en", "es"],
+      keywords: [
+        "traffic stops",
+        "police data",
+        "vehicle stops report",
+        "Missouri",
+        agencyName,
+      ],
+      creator: {
+        "@type": "GovernmentOrganization",
+        name: "Missouri Attorney General",
+        url: "https://ago.mo.gov/",
+      },
+      publisher: {
+        "@type": "Organization",
+        name: "Recovered Factory",
+        url: "https://recoveredfactory.net/",
+      },
+      spatialCoverage: { "@type": "Place", name: datasetPlaceName },
+      ...(datasetTemporal ? { temporalCoverage: datasetTemporal } : {}),
+    };
+    return JSON.stringify(obj);
+  })();
+
   const columnKeys = [
     "Total",
     "White",
@@ -1412,16 +1491,17 @@
   <meta property="og:site_name" content="Missouri Vehicle Stops" />
   <meta property="og:title" content={metaTitle} />
   <meta property="og:description" content={metaDescription} />
-  <meta property="og:image" content="{siteUrl}/social-meta.png" />
-  <meta property="og:image:secure_url" content="{siteUrl}/social-meta.png" />
-  <meta property="og:image:alt" content="Missouri Vehicle Stops overview" />
+  <meta property="og:image" content="{siteUrl}/og/agency/{data.slug}.png" />
+  <meta property="og:image:secure_url" content="{siteUrl}/og/agency/{data.slug}.png" />
+  <meta property="og:image:alt" content="{metaTitle}" />
   <meta property="og:image:type" content="image/png" />
-  <meta property="og:image:width" content="1600" />
-  <meta property="og:image:height" content="838" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
   <meta property="twitter:card" content="summary_large_image" />
-  <meta property="twitter:image" content="{siteUrl}/social-meta.png" />
+  <meta property="twitter:image" content="{siteUrl}/og/agency/{data.slug}.png" />
   <meta property="twitter:title" content={metaTitle} />
   <meta property="twitter:description" content={metaDescription} />
+  {@html `<script type="application/ld+json">${datasetJsonLd}</script>`}
 </svelte:head>
 
 <StickyHeader
@@ -1467,6 +1547,48 @@
           {/if}
           .
         </p>
+      {/if}
+      {#if data.program287g && Array.isArray(data.program287g.agreements) && data.program287g.agreements.length}
+        <section class="mb-4 rounded-md border border-slate-200 bg-slate-50 p-3">
+          <h3 class="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">
+            {agency_287g_heading()}
+          </h3>
+          <p class="mt-2 text-sm leading-relaxed text-slate-700">
+            <a
+              class="underline"
+              href={WIKIPEDIA_287G_URL}
+              target="_blank"
+              rel="noreferrer"
+            >{agency_287g_description_link()}</a>{agency_287g_description_post()}
+          </p>
+          <ul class="mt-3 space-y-1">
+            {#each data.program287g.agreements as agreement}
+              <li class="text-sm text-slate-700">
+                {#if agreement.support_type}
+                  <span class="font-medium">{agency_287g_support_type_label()}:</span>
+                  {" "}{agreement.support_type}
+                {/if}
+                {#if agreement.signed_date}
+                  <span class="ml-2 font-medium">{agency_287g_signed_label()}:</span>
+                  {" "}{formatLongDate(agreement.signed_date)}
+                {/if}
+                {#if agreement.moa_url}
+                  <a
+                    class="ml-2 underline"
+                    href={agreement.moa_url}
+                    target="_blank"
+                    rel="noreferrer"
+                  >{agency_287g_moa_link()}</a>
+                {/if}
+              </li>
+            {/each}
+          </ul>
+          {#if data.program287g.snapshot_date}
+            <p class="mt-2 text-xs text-slate-500">
+              {agency_287g_snapshot_provenance({ date: formatLongDate(data.program287g.snapshot_date) })}
+            </p>
+          {/if}
+        </section>
       {/if}
       <dl class="divide-y divide-slate-100">
         {#if showJurisdiction}

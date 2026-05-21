@@ -29,7 +29,17 @@
   }
 
   html {
-    scroll-behavior: smooth;
+    /**
+     * Smooth-scroll dropped: it interacted badly with sticky bars, mobile
+     * picker dismissal, scroll-restoration, and focus auto-scroll. Cumulative
+     * bugs across browsers outweighed the minor polish.
+     *
+     * `overflow-anchor: none` disables browser scroll-anchoring — without it,
+     * the 287(g) page's sticky bar reflowing (e.g. the summary text updating
+     * after a JS scroll) would trigger the browser to "compensate" and snap
+     * scroll back to roughly its previous position, undoing our scrollTo.
+     */
+    overflow-anchor: none;
     scroll-padding-top: var(--site-header-anchor-offset, 7rem);
     scrollbar-gutter: stable;
   }
@@ -45,6 +55,28 @@
   a:focus-visible {
     @apply outline-none ring-2 ring-[#3e9e6c] ring-offset-2 ring-offset-slate-50;
   }
+}
+
+/* 287(g) sparkline dots — class hoists static styles out of inline attrs to keep
+   the SSR HTML payload under Lambda's 6 MB cap. */
+.spark287-dot {
+  position: absolute;
+  pointer-events: none;
+  display: block;
+  border-radius: 9999px;
+  transform: translate(-50%, -50%);
+  width: 5px;
+  height: 5px;
+}
+.spark287-dot--total {
+  width: 6px;
+  height: 6px;
+}
+.spark287-dot--hover {
+  width: 10px;
+  height: 10px;
+  box-shadow: 0 0 0 2px white;
+  z-index: 25;
 }
 
 .page-fade {
@@ -82,11 +114,6 @@
   }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  html {
-    scroll-behavior: auto;
-  }
-}
 
 /*
  * General-purpose prose/content styles.

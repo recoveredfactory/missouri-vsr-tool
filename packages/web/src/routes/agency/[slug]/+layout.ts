@@ -85,6 +85,11 @@ export async function load({ fetch, params }) {
     ? indexYearsWithData.slice().sort((a, b) => a - b).map(String)
     : null;
 
+  const program287g =
+    agencyIndexEntry && typeof agencyIndexEntry === "object"
+      ? (agencyIndexEntry as any).program_287g ?? null
+      : null;
+
   return {
     slug,
     manifest,
@@ -96,6 +101,7 @@ export async function load({ fetch, params }) {
     baselines,
     agencies,
     agencyCount: Array.isArray(agencies) ? agencies.length : 0,
+    program287g,
     boundary: null,
   };
 }
