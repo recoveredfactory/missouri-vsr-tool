@@ -78,6 +78,11 @@ const init = async (): Promise<DuckDBConnection> => {
   // agency_index.json is small (~3.6MB); materialize into a fast in-memory
   // table. The pipeline emits it directly so we don't touch per-metric
   // files at cold start.
+  //
+  // Note: the pipeline's `all_stops_total` field is the agency's
+  // most-recent-year stop count, NOT a lifetime sum. We carry it as
+  // `latest_year_stops` and compute true `lifetime_stops` below from the
+  // stats parquet.
   await conn.run(
     `CREATE TABLE agencies AS
      SELECT
@@ -89,7 +94,7 @@ const init = async (): Promise<DuckDBConnection> => {
        county,
        agency_type,
        census_geoid,
-       all_stops_total AS total_stops,
+       all_stops_total AS latest_year_stops,
        years_with_data,
        latest_year_with_data
      FROM read_json('${agencyPath}', maximum_object_size = 100000000)`,
@@ -128,6 +133,24 @@ const init = async (): Promise<DuckDBConnection> => {
   await conn.run("CREATE INDEX stops_slug ON stops (agency_slug)");
   await conn.run("CREATE INDEX stops_metric ON stops (metric)");
   await conn.run("CREATE INDEX stops_slug_metric ON stops (agency_slug, metric)");
+
+  // True lifetime stop count, summed across every reported year. This is
+  // what natural-language questions like "who runs the most stops" actually
+  // mean. We materialize it once here so list_agencies can ORDER BY it.
+  await conn.run(
+    `ALTER TABLE agencies ADD COLUMN lifetime_stops BIGINT`,
+  );
+  await conn.run(
+    `UPDATE agencies a
+     SET lifetime_stops = COALESCE(t.lifetime_stops, 0)
+     FROM (
+       SELECT agency_slug, SUM(total)::BIGINT AS lifetime_stops
+       FROM stops
+       WHERE metric = 'stops'
+       GROUP BY agency_slug
+     ) t
+     WHERE t.agency_slug = a.agency_slug`,
+  );
 
   return conn;
 };

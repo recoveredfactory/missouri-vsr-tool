@@ -1,9 +1,8 @@
 import { z } from "zod";
-import { zodToJsonSchema } from "zod-to-json-schema";
 
 import { getDb } from "../db.js";
 import { normalize } from "../duckutil.js";
-import { errorResult, registerTool, textResult } from "./registry.js";
+import { errorResult, inputSchemaFromZod, registerTool, textResult } from "./registry.js";
 
 const ListAgenciesInput = z.object({
   name_contains: z
@@ -18,13 +17,13 @@ const ListAgenciesInput = z.object({
     .describe(
       "Filter by Missouri county. Case-insensitive exact match (e.g. 'St. Louis County', 'Boone County').",
     ),
-  min_annual_stops: z
+  min_lifetime_stops: z
     .number()
     .int()
     .min(0)
     .optional()
     .describe(
-      "Filter to agencies whose total reported stops across all years meets or exceeds this minimum. Defaults to 0 (no filter).",
+      "Filter to agencies whose lifetime stop count (summed across every reported year) meets or exceeds this minimum. Defaults to 0 (no filter).",
     ),
   limit: z
     .number()
@@ -44,7 +43,7 @@ const listAgenciesHandler = async (raw: unknown) => {
   }
 
   const args: ListAgenciesArgs = parsed.data;
-  const minStops = args.min_annual_stops ?? 0;
+  const minStops = args.min_lifetime_stops ?? 0;
   const limit = args.limit ?? 200;
 
   const filters: string[] = [];
@@ -63,7 +62,7 @@ const listAgenciesHandler = async (raw: unknown) => {
   }
 
   if (minStops > 0) {
-    filters.push(`total_stops >= $${params.length + 1}`);
+    filters.push(`lifetime_stops >= $${params.length + 1}`);
     params.push(minStops);
   }
 
@@ -75,12 +74,13 @@ const listAgenciesHandler = async (raw: unknown) => {
       canonical_name,
       county,
       agency_type,
-      total_stops,
+      lifetime_stops,
+      latest_year_stops,
       years_with_data,
       latest_year_with_data
     FROM agencies
     ${where}
-    ORDER BY total_stops DESC NULLS LAST, canonical_name
+    ORDER BY lifetime_stops DESC NULLS LAST, canonical_name
     LIMIT ${limit}
   `;
 
@@ -109,7 +109,7 @@ const listAgenciesHandler = async (raw: unknown) => {
     filters: {
       name_contains: args.name_contains ?? null,
       county: args.county ?? null,
-      min_annual_stops: minStops,
+      min_lifetime_stops: minStops,
     },
     agencies: out,
   };
@@ -120,9 +120,7 @@ const listAgenciesHandler = async (raw: unknown) => {
 registerTool({
   name: "list_agencies",
   description:
-    "Lists Missouri law-enforcement agencies that file vehicle-stop reports, sorted by lifetime stop volume (largest first). Use this whenever a user names an agency loosely — match the natural-language name back to a stable agency_slug, then pass that slug to other tools. Each entry includes agency_slug (primary key), canonical_name, county, agency_type, total_stops across all reported years, the sorted list of years with data, and latest_year_with_data.",
-  inputSchema: zodToJsonSchema(ListAgenciesInput, {
-    target: "openApi3",
-  }) as Record<string, unknown>,
+    "Lists Missouri law-enforcement agencies that file vehicle-stop reports, sorted by lifetime stop volume (largest first). Use this whenever a user names an agency loosely — match the natural-language name back to a stable agency_slug, then pass that slug to other tools. Each entry includes agency_slug (primary key), canonical_name, county, agency_type, lifetime_stops (sum across every reported year), latest_year_stops (most recent year only), the sorted list of years with data, and latest_year_with_data.",
+  inputSchema: inputSchemaFromZod(ListAgenciesInput),
   handler: listAgenciesHandler,
 });

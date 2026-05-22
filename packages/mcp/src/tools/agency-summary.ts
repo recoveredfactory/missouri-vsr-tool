@@ -1,9 +1,8 @@
 import { z } from "zod";
-import { zodToJsonSchema } from "zod-to-json-schema";
 
 import { getDb } from "../db.js";
 import { normalize } from "../duckutil.js";
-import { errorResult, registerTool, textResult } from "./registry.js";
+import { errorResult, inputSchemaFromZod, registerTool, textResult } from "./registry.js";
 
 const SUMMARY_METRICS = [
   "stops",
@@ -45,7 +44,8 @@ const agencySummaryHandler = async (raw: unknown) => {
   const conn = await getDb();
 
   const agencyStmt = await conn.prepare(
-    `SELECT agency_slug, canonical_name, county, agency_type, total_stops,
+    `SELECT agency_slug, canonical_name, county, agency_type,
+            lifetime_stops, latest_year_stops,
             years_with_data, latest_year_with_data
      FROM agencies WHERE agency_slug = $1`,
   );
@@ -130,8 +130,6 @@ registerTool({
   name: "agency_summary",
   description:
     "Returns a curated multi-year summary for a single agency: stop counts, search counts, contraband finds, arrest and citation counts, plus their corresponding rates, plus the disparity index — all broken down by race. Defaults to the most recent five years on file. Use list_agencies first to resolve a natural-language name into an agency_slug.",
-  inputSchema: zodToJsonSchema(AgencySummaryInput, {
-    target: "openApi3",
-  }) as Record<string, unknown>,
+  inputSchema: inputSchemaFromZod(AgencySummaryInput),
   handler: agencySummaryHandler,
 });
