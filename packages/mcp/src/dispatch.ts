@@ -26,6 +26,7 @@ import "./tools/agency-summary.js";
 import "./tools/top-n-by.js";
 import "./tools/trend.js";
 import "./tools/disparity.js";
+import "./tools/compare.js";
 
 const isRpcRequest = (value: unknown): value is RpcRequest =>
   typeof value === "object" &&

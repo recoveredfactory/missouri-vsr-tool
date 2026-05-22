@@ -189,6 +189,25 @@ const cases: Array<[string, object]> = [
     },
   ],
   [
+    "tools/call compare search_rate across 3 agencies",
+    {
+      jsonrpc: "2.0",
+      id: 19,
+      method: "tools/call",
+      params: {
+        name: "compare",
+        arguments: {
+          metric: "search_rate",
+          agency_ids: [
+            "missouri-state-highway-patrol",
+            "columbia-police-dept",
+            "kansas-city-police-dept",
+          ],
+        },
+      },
+    },
+  ],
+  [
     "tools/call unknown",
     {
       jsonrpc: "2.0",
