@@ -92,6 +92,42 @@ const cases: Array<[string, object]> = [
     },
   ],
   [
+    "tools/call top_n_by search_rate",
+    {
+      jsonrpc: "2.0",
+      id: 12,
+      method: "tools/call",
+      params: {
+        name: "top_n_by",
+        arguments: { metric: "search_rate", n: 5 },
+      },
+    },
+  ],
+  [
+    "tools/call top_n_by search_rate_minus_hit_rate",
+    {
+      jsonrpc: "2.0",
+      id: 13,
+      method: "tools/call",
+      params: {
+        name: "top_n_by",
+        arguments: { metric: "search_rate_minus_hit_rate", n: 5 },
+      },
+    },
+  ],
+  [
+    "tools/call top_n_by hispanic_stop_share county=Boone",
+    {
+      jsonrpc: "2.0",
+      id: 14,
+      method: "tools/call",
+      params: {
+        name: "top_n_by",
+        arguments: { metric: "hispanic_stop_share", n: 5, ascending: false, county: "Boone County" },
+      },
+    },
+  ],
+  [
     "tools/call unknown",
     {
       jsonrpc: "2.0",

@@ -23,6 +23,7 @@ import "./tools/methodology.js";
 import "./tools/schema.js";
 import "./tools/agencies.js";
 import "./tools/agency-summary.js";
+import "./tools/top-n-by.js";
 
 const isRpcRequest = (value: unknown): value is RpcRequest =>
   typeof value === "object" &&
