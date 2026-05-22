@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { zodToJsonSchema } from "zod-to-json-schema";
 
 import {
   buildColorScale,
@@ -7,7 +6,7 @@ import {
   type Palette,
 } from "../colormap.js";
 import { getLocatorSvg } from "../db.js";
-import { errorResult, registerTool, type ToolResult } from "./registry.js";
+import { errorResult, inputSchemaFromZod, registerTool, type ToolResult } from "./registry.js";
 
 const cssEscape = (raw: string) => raw.replace(/[^a-zA-Z0-9_-]/g, "");
 
@@ -215,6 +214,6 @@ registerTool({
   name: "make_map",
   description:
     "Renders a styled Missouri locator map highlighting the agencies you pass in. Takes a {agency_slug: numeric_value} dict plus a title; returns the project's mo_locator.svg with CSS fill rules injected for each matching <path id=\"agency-{slug}\">. Sequential palette for magnitude metrics (stop counts, shares), diverging palette for above/below-baseline metrics (trend slopes, ratios). Returns both the SVG itself (as image content) and a small text summary describing the legend domain.",
-  inputSchema: zodToJsonSchema(MakeMapInput, { target: "openApi3" }) as Record<string, unknown>,
+  inputSchema: inputSchemaFromZod(MakeMapInput),
   handler: makeMapHandler,
 });

@@ -1,9 +1,8 @@
 import { z } from "zod";
-import { zodToJsonSchema } from "zod-to-json-schema";
 
 import { getDb } from "../db.js";
 import { normalize } from "../duckutil.js";
-import { errorResult, registerTool, textResult } from "./registry.js";
+import { errorResult, inputSchemaFromZod, registerTool, textResult } from "./registry.js";
 
 // Same metric vocabulary as top_n_by, expressed as DuckDB aggregate SQL
 // over a (start, end) window. value_expr and sample_expr both operate on
@@ -196,6 +195,6 @@ const compareHandler = async (raw: unknown) => {
 registerTool({
   name: "compare",
   description: `Side-by-side comparison of a named metric across up to 20 specified agencies, with an implicit statewide-median row for context. Available metrics: ${Object.keys(METRICS).join(", ")}. Each agency row includes the metric value, the gating sample size (so the reader can spot thin denominators), and the percent difference vs. the statewide median. Use list_agencies to resolve names into slugs first.`,
-  inputSchema: zodToJsonSchema(CompareInput, { target: "openApi3" }) as Record<string, unknown>,
+  inputSchema: inputSchemaFromZod(CompareInput),
   handler: compareHandler,
 });

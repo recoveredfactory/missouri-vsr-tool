@@ -1,9 +1,8 @@
 import { z } from "zod";
-import { zodToJsonSchema } from "zod-to-json-schema";
 
 import { getDb } from "../db.js";
 import { normalize } from "../duckutil.js";
-import { errorResult, registerTool, textResult } from "./registry.js";
+import { errorResult, inputSchemaFromZod, registerTool, textResult } from "./registry.js";
 
 type RaceColumn = "white" | "black" | "hispanic" | "asian" | "native_american" | "other";
 
@@ -193,6 +192,6 @@ registerTool({
   name: "disparity",
   description:
     "Implements the classic outcome test for racial disparity in traffic-stop searches (Knowles, Persico, Todd 2001). Three views: `search_rate` = search rate by race vs. white-non-Hispanic baseline; `hit_rate` = contraband hit rate by race vs. baseline (≥50 searches required); `outcome_test` = both side by side. Can scope to a single agency_slug, a county, or statewide. Defaults to 2020–2024. Returns ratios but does not editorialize on what they mean.",
-  inputSchema: zodToJsonSchema(DisparityInput, { target: "openApi3" }) as Record<string, unknown>,
+  inputSchema: inputSchemaFromZod(DisparityInput),
   handler: disparityHandler,
 });

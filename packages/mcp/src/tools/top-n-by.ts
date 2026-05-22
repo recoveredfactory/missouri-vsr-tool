@@ -1,9 +1,8 @@
 import { z } from "zod";
-import { zodToJsonSchema } from "zod-to-json-schema";
 
 import { getDb } from "../db.js";
 import { normalize } from "../duckutil.js";
-import { errorResult, registerTool, textResult } from "./registry.js";
+import { errorResult, inputSchemaFromZod, registerTool, textResult } from "./registry.js";
 
 type RaceColumn = "white" | "black" | "hispanic" | "asian" | "native_american" | "other";
 type AnyRace = RaceColumn | "total";
@@ -308,8 +307,6 @@ const metricList = Object.keys(METRICS).join(", ");
 registerTool({
   name: "top_n_by",
   description: `Ranks agencies by a named metric over a year window, with sample-size guards baked in. Available metrics: ${metricList}. Each metric carries its own minimum-sample-size threshold (e.g. search_rate requires ≥500 stops in the window; contraband_hit_rate requires ≥50 searches) and a one-line method note in the response. Defaults to the 2020–2024 window and the top 20. Call read_methodology() first if you're not sure what a metric means in this dataset.`,
-  inputSchema: zodToJsonSchema(TopNByInput, {
-    target: "openApi3",
-  }) as Record<string, unknown>,
+  inputSchema: inputSchemaFromZod(TopNByInput),
   handler: topNByHandler,
 });

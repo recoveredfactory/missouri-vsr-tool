@@ -1,10 +1,9 @@
 import { z } from "zod";
-import { zodToJsonSchema } from "zod-to-json-schema";
 
 import { getDb } from "../db.js";
 import { normalize } from "../duckutil.js";
 import { linreg } from "../stats.js";
-import { errorResult, registerTool, textResult } from "./registry.js";
+import { errorResult, inputSchemaFromZod, registerTool, textResult } from "./registry.js";
 
 // Each trend metric defines the per-year value to regress and the per-year
 // sample-size gate. The SQL produces one row per (agency, year) and the JS
@@ -300,6 +299,6 @@ const trendHandler = async (raw: unknown) => {
 registerTool({
   name: "trend",
   description: `Fits a linear OLS regression of yearly metric values against year, per agency, over a configurable window. Returns slope (units per year), 95% CI, two-sided p-value, n_years, and mean per-year sample size for each agency. Available metrics: ${Object.keys(METRICS).join(", ")}. Years where the per-year sample falls below the metric's threshold are dropped. Agencies with fewer than min_years qualifying years are dropped. Sort by slope (default), absolute_slope, or p_value. Defaults to the last 5 years (2020–2024).`,
-  inputSchema: zodToJsonSchema(TrendInput, { target: "openApi3" }) as Record<string, unknown>,
+  inputSchema: inputSchemaFromZod(TrendInput),
   handler: trendHandler,
 });
