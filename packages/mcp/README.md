@@ -1,32 +1,158 @@
-# Missouri VSR MCP Server
+# Missouri Vehicle Stops Report — MCP Server
 
-Public Model Context Protocol server in front of the Missouri Vehicle Stops Report dataset. Lets a journalist or researcher in Claude Desktop (or any MCP client) ask methodologically defensible questions against the data, with citations back to the underlying tools.
+A public [Model Context Protocol](https://modelcontextprotocol.io) server that lets a journalist or researcher in [Claude Desktop](https://claude.ai/download) (or any MCP client) ask methodologically defensible questions against [Missouri's mandatory vehicle-stops dataset](https://ago.mo.gov/home/vehicle-stops-report) — search rates, contraband hit rates, racial disparity ratios, year-over-year trends — and get answers with citations back to the curated tool that produced them. No SQL access, no model-invented metrics: every numeric path goes through a curated tool with a documented methodology and sample-size minimums baked in.
 
-See [issue #156](https://github.com/recoveredfactory/missouri-vsr-tool/issues/156) for the full spec.
+## How to connect
 
-## Status
+The server speaks Streamable HTTP MCP over a single endpoint:
 
-Scaffold. Lambda handler stub, no tools wired yet.
+```
+https://d1w5qatcgl0dry.cloudfront.net/
+```
 
-## Stack
+(Staging — this is what's live as of the latest deploy. A production endpoint at `mcp.vsr.recoveredfactory.net` is planned; for now use the CloudFront URL.)
 
-- Node.js / TypeScript
-- `@modelcontextprotocol/sdk` (Streamable HTTP transport)
-- `@duckdb/node-api` against the existing data CDN
-- Deployed via SST as a single `sst.aws.Function` with a Function URL
+### Claude Desktop (Mac/Windows)
 
-## Architectural choices
+Add to `~/Library/Application Support/Claude/claude_desktop_config.json` on macOS, or `%APPDATA%\Claude\claude_desktop_config.json` on Windows:
 
-- **No raw SQL escape hatch.** Every analytical path is a curated tool with documented methodology.
-- **Map output is styled SVG**, not PNG. `make_map` injects CSS into the existing `mo_locator.svg`.
-- See `memory/project_mcp_server.md` (private) or issue #156 for the full rationale.
+```json
+{
+  "mcpServers": {
+    "missouri-vsr": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "mcp-remote",
+        "https://d1w5qatcgl0dry.cloudfront.net/"
+      ]
+    }
+  }
+}
+```
 
-## Tool surface (target)
+Restart Claude Desktop. You should see a tool icon appear in the chat box. Tell it "use the Missouri VSR tool and call read_methodology" to confirm.
 
-1. `read_methodology()` + `read_schema()`
-2. `list_agencies(filters)` + `agency_summary(agency_id, year_range)`
-3. `top_n_by(metric, n, filters)`
-4. `trend(metric, group_by, window, min_sample_size)`
-5. `disparity(comparison_type, agency_filter, year_range)`
-6. `compare(metric, agency_ids, year_range)`
-7. `make_map(values, title, palette)` → SVG
+### Other clients
+
+Any MCP client that supports Streamable HTTP transport can connect to the same URL directly via POST. Each request is a JSON-RPC 2.0 message:
+
+```bash
+curl -X POST https://d1w5qatcgl0dry.cloudfront.net/ \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}'
+```
+
+## What's available
+
+| Tool | What it does |
+|---|---|
+| `read_methodology` | Long-form methodology doc — definitions of stop, search rate, hit rate, disparity index, outcome test, and what each does and doesn't prove. **Call this first.** |
+| `read_schema` | DuckDB schema for the three tables backing the server. |
+| `list_agencies` | Resolves loose agency names → stable slugs. Filters: name substring, county, min lifetime stops. |
+| `agency_summary` | Multi-year curated slice (stops / searches / contraband / arrests / citations + rates + disparity index) for one agency, broken down by race. |
+| `top_n_by` | Ranks agencies by one of seven curated metrics (search rate, contraband hit rate, search-rate-minus-hit-rate, Hispanic/Black stop share, disparity index, total stops). Per-metric sample-size minimums are baked in. |
+| `trend` | Linear OLS regression of an annual metric against year, per agency, with 95% CI and two-sided p-value. Filters thin years. |
+| `disparity` | Knowles/Persico/Todd (2001) outcome test — search rate by race + hit rate conditional on search + ratios vs. white non-Hispanic. Scopes to a single agency, a county, or statewide. |
+| `compare` | Side-by-side metric values for 1–20 named agencies + an implicit statewide-median row. |
+| `make_map` | Renders the project's `mo_locator.svg` with CSS fill rules injected for each passed-in agency slug. Returns a self-contained SVG. |
+
+Each tool returns sample sizes alongside its numeric output and refuses to compute rates for groups below documented minimums (reported as "insufficient data") — see `read_methodology` for the thresholds.
+
+## Three example transcripts
+
+Each example shows the question, the tool calls the model issued, and the kind of answer to expect. (Real screenshots will land here once the server clears its first week of use.)
+
+### 1. "Which Missouri agencies have rising Hispanic stop share over the last five years?"
+
+The model calls `read_methodology` to learn that "Hispanic" is an officer-recorded race line (not a separate ethnicity field), then `trend(metric: "hispanic_stop_share", window_years: 5, min_sample_size_per_year: 2000, min_years: 5)`. The tool fits OLS per agency and returns slopes with 95% CIs and p-values. Sample answer:
+
+> Three agencies show a statistically significant rise in Hispanic stop share over 2020–2024 (p < 0.05): **St Joseph PD** (+0.94 percentage points/year, p=0.04, R²=0.79), **Independence PD** (+0.92pp/year, p=0.01, R²=0.90), and **Marshall PD** (+0.87pp/year, p=0.008, R²=0.93). Sample sizes are healthy (mean 2,000–15,000 stops per year per agency). Note that "Hispanic" here is officer-perceived — see `read_methodology` for the caveat.
+
+### 2. "Show me agencies with high contraband hit rates and low search rates."
+
+The model recognizes this is the outcome-test framing and calls `top_n_by(metric: "search_rate_minus_hit_rate", ascending: true, n: 10)`. Low values = aggressive searching with low yield (an outcome-test signal). Sample answer:
+
+> Agencies with the most aggressive search-to-yield ratio (lowest search_rate_minus_hit_rate) over 2020–2024 — meaning many searches relative to how often contraband was actually found:
+>
+> | Agency | Search rate | Hit rate | Gap |
+> | --- | --- | --- | --- |
+> | Carter County Sheriff's Dept | 9.4% | 9.4% (73 finds in 774 searches) | -0.015 |
+> | Senath PD | 0.46% | 50.0% | 0.028 |
+> | ... |
+>
+> Interpretation belongs to the reader; the outcome test surfaces patterns consistent with a lower suspicion threshold being applied to whatever the agencies are searching, but selection effects can produce similar patterns (see `read_methodology`).
+
+### 3. "Map the disparity index for traffic stops in 2023, focused on counties around St. Louis."
+
+The model calls `list_agencies(county: "St. Louis County")` to get slugs, then `top_n_by(metric: "disparity_index_all_stops", year_range: [2023, 2023], county: "St. Louis County", n: 20)`, then passes the {slug: value} dict into `make_map(palette: "diverging", title: "Disparity index, St. Louis area, 2023")`. The result is a styled SVG of Missouri with the affected agencies colored by their disparity index, white non-Hispanic baseline at 1.0. The model embeds the SVG and notes that the diverging palette centers at zero, so red = above parity and blue = below.
+
+## Methodology
+
+Identical to what `read_methodology` returns at runtime. Reproduced here for offline reading.
+
+> The Missouri Attorney General's Office is required by [RSMo 590.650](https://revisor.mo.gov/main/OneSection.aspx?section=590.650) to collect vehicle-stop reports from every law enforcement agency in the state. Agencies file annual aggregate counts broken down by perceived driver race, stop reason, stop outcome, and search/contraband disposition. This server normalizes those filings from 2001–2024.
+>
+> A "stop" is a single vehicle-stop record as filed by the reporting agency. The unit is the stop, not the driver and not the encounter.
+>
+> Race is **officer-perceived**, not driver-self-reported. The categories are White, Black, Hispanic, Asian, Native American, Other. "Hispanic" is recorded as a race line on the reporting form (not a separate ethnicity field) — a deviation from the Census schema.
+>
+> - **Search rate** = `searches / stops`, reported as a percentage (0–100). Includes consent, probable-cause, and inventory searches.
+> - **Contraband hit rate** = `contraband_found / searches`, reported as a percentage (0–100). Drugs / weapons / currency / stolen property / alcohol / other.
+> - **Disparity index** = `stop_rate_minority / stop_rate_white_non_hispanic` (1.0 = parity).
+> - **Outcome test** (Knowles, Persico, Todd 2001): if officers applied the same threshold of suspicion across groups, the hit rate would equalize at the margin. A pattern where a group is searched more **and** finds contraband less is *consistent with* a lower threshold applied to that group — not direct proof of discrimination.
+>
+> Sample-size minimums: 500 stops for search-rate-style metrics; 50 searches for hit-rate-style metrics; 5 years of qualifying data for trend slopes. Tool calls below these thresholds return "insufficient data" for the affected group rather than computing an unreliable rate. This is intentional.
+
+## Limitations
+
+- Race is officer-perceived, not self-reported.
+- "Hispanic" is a race line, not a separate ethnicity field — a known deviation from Census conventions.
+- The reporting form was substantially revised in 2020. Pre-2020 metrics are normalized to canonical keys best-effort; some categories have no clean post-2020 equivalent.
+- 2001–2003 have partial coverage; many agencies' filings are missing.
+- OLS trend slopes are **directional, not predictive**. They assume linearity over the window and are sensitive to outlier years in short series.
+- The outcome test does **not** directly prove discrimination — selection effects can produce identical patterns. See the original [Knowles/Persico/Todd 2001](https://www.jstor.org/stable/2696570) paper.
+- The data records what was filed, not what happened. Agencies that under-report are under-represented; agencies that over-report (e.g. count non-traffic encounters) are over-represented.
+
+## Rate limits
+
+Public endpoint, no auth. AWS WAF rate-based rule: **~3,000 requests per 5-minute window per IP** (≈10/s sustained). Excess requests get a 403. If you have a legitimate use case that needs higher limits, [open an issue](https://github.com/recoveredfactory/missouri-vsr-tool/issues/new) — we can issue a higher tier or share a snapshot for offline use.
+
+## Architecture (text diagram)
+
+```
+                  ┌──────────────────────────────────────┐
+                  │  Pipeline (separate repo)            │
+                  │  - emits Parquet, JSON, mo_locator   │
+                  │    to S3 / CloudFront                │
+                  └────────────────┬─────────────────────┘
+                                   │ HTTPS (HTTP/1.1)
+                                   │ fetched at cold start
+                                   ▼
+   ┌────────┐    ┌─────────┐    ┌─────────────────────────────┐
+   │ Client │──▶│CloudFront│──▶│  Lambda (Node 22, 1GB)      │
+   │ (MCP)  │   │ + WAF    │   │  - JSON-RPC dispatch        │
+   │        │◀──│ rate-    │◀──│  - DuckDB in-memory         │
+   └────────┘   │ limit    │   │  - 9 curated tools          │
+                └─────────┘    └─────────────────────────────┘
+```
+
+CloudFront caches nothing (POST bodies must pass through); WAF gates traffic by IP; the Lambda's cold start pre-fetches the ~76MB of source data over HTTP/1.1 (working around an HTTP/2 streaming bug in DuckDB's httpfs), materializes a slim `stops` table, and stays warm for subsequent invocations.
+
+## Local development
+
+```bash
+pnpm install
+pnpm -F @missouri-vsr-tool/mcp build
+node packages/mcp/dist/smoke.js
+```
+
+The smoke runner exercises every tool end-to-end and writes any generated SVGs to `/tmp/mcp-smoke-*.svg` for eyeballing.
+
+## License
+
+MIT. See [LICENSE](../../LICENSE) in the repo root.
+
+## Contributing
+
+The MCP server lives in `packages/mcp/` of the [missouri-vsr-tool](https://github.com/recoveredfactory/missouri-vsr-tool) monorepo. Issues and PRs welcome — see [issue #156](https://github.com/recoveredfactory/missouri-vsr-tool/issues/156) for the original spec and design notes.

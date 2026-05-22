@@ -1,8 +1,9 @@
 # Missouri VSR Tool
 
 Monorepo for the Missouri VSR (Vehicle Stops Report) site. The web app lives in
-`packages/web` (SvelteKit + SST), with space reserved for future services in
-`packages/services`.
+`packages/web` (SvelteKit + SST). A public Model Context Protocol server over
+the same dataset lives in `packages/mcp` — see [its README](packages/mcp/README.md)
+for the connection snippet and tool surface.
 
 ## Dev
 
