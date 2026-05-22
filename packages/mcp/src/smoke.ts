@@ -208,6 +208,28 @@ const cases: Array<[string, object]> = [
     },
   ],
   [
+    "tools/call make_map sample",
+    {
+      jsonrpc: "2.0",
+      id: 20,
+      method: "tools/call",
+      params: {
+        name: "make_map",
+        arguments: {
+          title: "Sample map: search rate, top 4 agencies (smoke test)",
+          palette: "sequential",
+          legend_label: "search rate (%)",
+          values: {
+            "missouri-state-highway-patrol": 4.8,
+            "columbia-police-dept": 10.4,
+            "kansas-city-police-dept": 1.3,
+            "st-louis-county-police-dept": 6.5,
+          },
+        },
+      },
+    },
+  ],
+  [
     "tools/call unknown",
     {
       jsonrpc: "2.0",
@@ -223,6 +245,8 @@ const TRIM = Number(process.env.TRIM ?? 200);
 const trimText = (s: string, max = TRIM) =>
   s.length <= max ? s : `${s.slice(0, max)}… [${s.length} chars total]`;
 
+import { writeFileSync } from "node:fs";
+
 for (const [label, payload] of cases) {
   const result = await dispatch(JSON.stringify(payload));
   console.log(`\n=== ${label} → status ${result.status} ===`);
@@ -231,10 +255,16 @@ for (const [label, payload] of cases) {
     continue;
   }
   const parsed = JSON.parse(result.body);
-  if (
-    parsed.result?.content?.[0]?.type === "text"
-  ) {
-    parsed.result.content[0].text = trimText(parsed.result.content[0].text);
+  const content = parsed.result?.content;
+  if (Array.isArray(content)) {
+    for (const item of content) {
+      if (item?.type === "text") item.text = trimText(item.text);
+      if (item?.type === "image" && item.mimeType === "image/svg+xml") {
+        const out = `/tmp/mcp-smoke-${parsed.id ?? "x"}.svg`;
+        writeFileSync(out, Buffer.from(item.data, "base64"));
+        item.data = `(${item.data.length} base64 chars; written to ${out})`;
+      }
+    }
   }
   if (typeof parsed.result?.instructions === "string") {
     parsed.result.instructions = trimText(parsed.result.instructions);

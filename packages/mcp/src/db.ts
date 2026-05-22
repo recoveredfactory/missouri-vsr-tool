@@ -1,4 +1,4 @@
-import { createWriteStream, mkdtempSync } from "node:fs";
+import { createWriteStream, mkdtempSync, readFileSync } from "node:fs";
 import { Agent, get as httpsGet } from "node:https";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -14,6 +14,7 @@ const releasePath = () => process.env.DATA_RELEASE_PATH ?? DEFAULT_RELEASE_PATH;
 const agencyIndexUrl = () => `${baseUrl()}${releasePath()}/dist/agency_index.json`;
 const longStatsUrl = () =>
   `${baseUrl()}${releasePath()}/downloads/missouri_vsr_2000_2024_vsr_statistics.parquet`;
+const locatorSvgUrl = () => `${baseUrl()}${releasePath()}/dist/mo_locator.svg`;
 
 const downloadToTmp = (url: string, filename: string): Promise<string> => {
   const dir = mkdtempSync(join(tmpdir(), "vsr-mcp-"));
@@ -58,15 +59,18 @@ const downloadToTmp = (url: string, filename: string): Promise<string> => {
 
 let connPromise: Promise<DuckDBConnection> | null = null;
 
+let locatorSvgCache: string | null = null;
+
 const init = async (): Promise<DuckDBConnection> => {
-  // Pre-fetch Parquet and JSON to local disk via Node's HTTP/1.1 fetch. The
-  // upstream CloudFront serves the large Parquet cleanly over HTTP/1.1 but
-  // intermittently drops Snappy-compressed blocks over HTTP/2 — which is
-  // what DuckDB's httpfs uses. Downloading once at init bypasses that.
-  const [statsPath, agencyPath] = await Promise.all([
+  // Pre-fetch Parquet, JSON, and the locator SVG to local disk via HTTP/1.1.
+  // The upstream CloudFront drops Snappy-compressed Parquet blocks
+  // intermittently over HTTP/2; forcing HTTP/1.1 bypasses that.
+  const [statsPath, agencyPath, svgPath] = await Promise.all([
     downloadToTmp(longStatsUrl(), "stats.parquet"),
     downloadToTmp(agencyIndexUrl(), "agency_index.json"),
+    downloadToTmp(locatorSvgUrl(), "mo_locator.svg"),
   ]);
+  locatorSvgCache = readFileSync(svgPath, "utf-8");
 
   const instance = await DuckDBInstance.create(":memory:");
   const conn = await instance.connect();
@@ -133,6 +137,17 @@ export const getDb = (): Promise<DuckDBConnection> => {
   return connPromise;
 };
 
+export const getLocatorSvg = async (): Promise<string> => {
+  // Force the cold-start init to run; that populates locatorSvgCache as a
+  // side effect of fetching everything in parallel.
+  await getDb();
+  if (!locatorSvgCache) {
+    throw new Error("Locator SVG was not loaded at cold start.");
+  }
+  return locatorSvgCache;
+};
+
 export const resetDbForTesting = () => {
   connPromise = null;
+  locatorSvgCache = null;
 };
