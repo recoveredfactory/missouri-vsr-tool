@@ -162,6 +162,33 @@ const cases: Array<[string, object]> = [
     },
   ],
   [
+    "tools/call disparity outcome_test statewide",
+    {
+      jsonrpc: "2.0",
+      id: 17,
+      method: "tools/call",
+      params: {
+        name: "disparity",
+        arguments: { comparison_type: "outcome_test" },
+      },
+    },
+  ],
+  [
+    "tools/call disparity hit_rate for MSHP",
+    {
+      jsonrpc: "2.0",
+      id: 18,
+      method: "tools/call",
+      params: {
+        name: "disparity",
+        arguments: {
+          comparison_type: "hit_rate",
+          agency_id: "missouri-state-highway-patrol",
+        },
+      },
+    },
+  ],
+  [
     "tools/call unknown",
     {
       jsonrpc: "2.0",
