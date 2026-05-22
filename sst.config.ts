@@ -134,10 +134,89 @@ export default $config({
       },
     });
 
+    // WAF can't attach to Lambda Function URLs directly — it needs a
+    // CloudFront / API Gateway / ALB in front. We put CloudFront in front
+    // of the Lambda URL with a single rate-based rule, ~3000 req per 5 min
+    // per IP (≈10/s sustained). The Lambda URL stays public for emergency
+    // bypass, but the documented endpoint is the CloudFront one.
+    const cloudfrontProvider = new aws.Provider("McpWafProvider", {
+      region: "us-east-1",
+    });
+
+    const mcpWaf = new aws.wafv2.WebAcl(
+      "McpWaf",
+      {
+        scope: "CLOUDFRONT",
+        defaultAction: { allow: {} },
+        rules: [
+          {
+            name: "RateLimitPerIp",
+            priority: 1,
+            statement: {
+              rateBasedStatement: {
+                limit: 3000,
+                aggregateKeyType: "IP",
+              },
+            },
+            action: { block: {} },
+            visibilityConfig: {
+              cloudwatchMetricsEnabled: true,
+              metricName: "McpWafRateLimit",
+              sampledRequestsEnabled: true,
+            },
+          },
+        ],
+        visibilityConfig: {
+          cloudwatchMetricsEnabled: true,
+          metricName: "McpWaf",
+          sampledRequestsEnabled: true,
+        },
+      },
+      { provider: cloudfrontProvider },
+    );
+
+    const mcpOriginHost = mcp.url.apply((u) => new URL(u).hostname);
+
+    const mcpCdn = new aws.cloudfront.Distribution("McpCdn", {
+      enabled: true,
+      isIpv6Enabled: true,
+      httpVersion: "http2",
+      priceClass: "PriceClass_100",
+      webAclId: mcpWaf.arn,
+      origins: [
+        {
+          originId: "mcp-lambda-url",
+          domainName: mcpOriginHost,
+          customOriginConfig: {
+            httpPort: 80,
+            httpsPort: 443,
+            originProtocolPolicy: "https-only",
+            originSslProtocols: ["TLSv1.2"],
+          },
+        },
+      ],
+      defaultCacheBehavior: {
+        targetOriginId: "mcp-lambda-url",
+        viewerProtocolPolicy: "redirect-to-https",
+        allowedMethods: ["GET", "HEAD", "OPTIONS", "PUT", "POST", "PATCH", "DELETE"],
+        cachedMethods: ["GET", "HEAD"],
+        // AWS managed cache policy: CachingDisabled.
+        cachePolicyId: "4135ea2d-6df8-44a3-9df3-4b5a84be39ad",
+        // AWS managed origin request policy: AllViewerExceptHostHeader.
+        originRequestPolicyId: "b689b0a8-53d0-40ab-baf2-68738e2966ac",
+        compress: true,
+      },
+      restrictions: {
+        geoRestriction: { restrictionType: "none" },
+      },
+      viewerCertificate: { cloudfrontDefaultCertificate: true },
+    });
+
     return {
       dataCdnDistributionId: dataRouter?.distributionID,
       dataCdnDomain: dataRouter?.url,
-      mcpUrl: mcp.url,
+      mcpLambdaUrl: mcp.url,
+      mcpUrl: mcpCdn.domainName.apply((d) => `https://${d}/`),
     };
   },
 });
