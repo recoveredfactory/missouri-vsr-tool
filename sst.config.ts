@@ -120,7 +120,7 @@ export default $config({
       timeout: "30 seconds",
       url: {
         cors: {
-          allowMethods: ["GET", "POST", "OPTIONS"],
+          allowMethods: ["GET", "POST"],
           allowOrigins: ["*"],
           allowHeaders: ["content-type", "mcp-session-id", "mcp-protocol-version"],
         },
