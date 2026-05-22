@@ -39,6 +39,9 @@ importers:
       zod:
         specifier: ^3.25.28
         version: 3.25.76
+      zod-to-json-schema:
+        specifier: ^3.24.0
+        version: 3.25.2(zod@3.25.76)
     devDependencies:
       '@types/aws-lambda':
         specifier: ^8.10.146
@@ -2791,7 +2794,7 @@ snapshots:
       pkce-challenge: 4.1.0
       raw-body: 3.0.2
       zod: 3.25.76
-      zod-to-json-schema: 3.24.3(zod@3.25.76)
+      zod-to-json-schema: 3.25.2(zod@3.25.76)
     transitivePeerDependencies:
       - supports-color
 
@@ -4718,10 +4721,6 @@ snapshots:
   zod-to-json-schema@3.24.3(zod@3.24.2):
     dependencies:
       zod: 3.24.2
-
-  zod-to-json-schema@3.24.3(zod@3.25.76):
-    dependencies:
-      zod: 3.25.76
 
   zod-to-json-schema@3.25.2(zod@3.25.76):
     dependencies:

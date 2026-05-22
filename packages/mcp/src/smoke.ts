@@ -35,10 +35,67 @@ const cases: Array<[string, object]> = [
     },
   ],
   [
-    "tools/call unknown",
+    "tools/call list_agencies (no args)",
     {
       jsonrpc: "2.0",
       id: 6,
+      method: "tools/call",
+      params: { name: "list_agencies", arguments: { limit: 3 } },
+    },
+  ],
+  [
+    "tools/call list_agencies name_contains=highway",
+    {
+      jsonrpc: "2.0",
+      id: 7,
+      method: "tools/call",
+      params: {
+        name: "list_agencies",
+        arguments: { name_contains: "highway", limit: 5 },
+      },
+    },
+  ],
+  [
+    "tools/call list_agencies county=Boone",
+    {
+      jsonrpc: "2.0",
+      id: 8,
+      method: "tools/call",
+      params: {
+        name: "list_agencies",
+        arguments: { county: "Boone County", limit: 10 },
+      },
+    },
+  ],
+  [
+    "tools/call agency_summary missouri-state-hwy-patrol",
+    {
+      jsonrpc: "2.0",
+      id: 9,
+      method: "tools/call",
+      params: {
+        name: "agency_summary",
+        arguments: { agency_id: "missouri-state-highway-patrol", year_range: [2023, 2024] },
+      },
+    },
+  ],
+  [
+    "tools/call agency_summary unknown-agency",
+    {
+      jsonrpc: "2.0",
+      id: 10,
+      method: "tools/call",
+      params: {
+        name: "agency_summary",
+        arguments: { agency_id: "not-a-real-slug" },
+      },
+    },
+  ],
+  [
+    "tools/call unknown",
+    {
+      jsonrpc: "2.0",
+      id: 11,
       method: "tools/call",
       params: { name: "definitely_not_a_tool", arguments: {} },
     },
@@ -46,7 +103,8 @@ const cases: Array<[string, object]> = [
   ["notifications/initialized", { jsonrpc: "2.0", method: "notifications/initialized" }],
 ];
 
-const trimText = (s: string, max = 200) =>
+const TRIM = Number(process.env.TRIM ?? 200);
+const trimText = (s: string, max = TRIM) =>
   s.length <= max ? s : `${s.slice(0, max)}… [${s.length} chars total]`;
 
 for (const [label, payload] of cases) {

@@ -21,6 +21,8 @@ import { getTool, listTools } from "./tools/registry.js";
 // Importing the tool modules registers them in the registry as a side effect.
 import "./tools/methodology.js";
 import "./tools/schema.js";
+import "./tools/agencies.js";
+import "./tools/agency-summary.js";
 
 const isRpcRequest = (value: unknown): value is RpcRequest =>
   typeof value === "object" &&
