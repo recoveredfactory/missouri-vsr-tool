@@ -18,9 +18,9 @@ Race in this dataset is **officer-perceived**, not driver-self-reported. The cat
 
 - **Stop rate**: stops per 1,000 driving-age residents of the matching race in the agency's jurisdiction. Population denominators come from the most recent ACS or decennial census available for the year being reported. For pre-2020 years the dataset includes the historical "disparity index" denominators the AG's office used at the time.
 
-- **Search rate**: \`searches / stops\` for the agency × year × race. Includes consent searches, probable-cause searches, and inventory searches. Does not distinguish search type for the top-line search-rate metric; per-type breakdowns are available via the \`probable-cause--\` metric family.
+- **Search rate**: \`searches / stops\` for the agency × year × race, reported as a percentage (0–100 scale, **not** a 0–1 decimal). Includes consent searches, probable-cause searches, and inventory searches. Does not distinguish search type for the top-line search-rate metric; per-type breakdowns are available via the \`probable-cause--\` metric family.
 
-- **Contraband hit rate**: \`contraband_found / searches\` for the agency × year × race. Counts a search as a "hit" if any contraband (drugs, weapons, currency, stolen property, alcohol, other) was recovered. Searches with no contraband recorded are counted as misses.
+- **Contraband hit rate**: \`contraband_found / searches\` for the agency × year × race, reported as a percentage (0–100 scale). Counts a search as a "hit" if any contraband (drugs, weapons, currency, stolen property, alcohol, other) was recovered. Searches with no contraband recovered are counted as misses.
 
 - **Search rate minus hit rate**: a single-number proxy for the outcome test (see below). When two agencies have the same search rate, the one with the lower hit rate is searching more aggressively at the margin.
 

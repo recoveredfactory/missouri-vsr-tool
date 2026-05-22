@@ -128,6 +128,40 @@ const cases: Array<[string, object]> = [
     },
   ],
   [
+    "tools/call trend hispanic_stop_share window 5 years",
+    {
+      jsonrpc: "2.0",
+      id: 15,
+      method: "tools/call",
+      params: {
+        name: "trend",
+        arguments: {
+          metric: "hispanic_stop_share",
+          min_sample_size_per_year: 2000,
+          min_years: 5,
+          limit: 5,
+        },
+      },
+    },
+  ],
+  [
+    "tools/call trend search_rate window 10 years",
+    {
+      jsonrpc: "2.0",
+      id: 16,
+      method: "tools/call",
+      params: {
+        name: "trend",
+        arguments: {
+          metric: "search_rate",
+          window_years: 10,
+          min_sample_size_per_year: 5000,
+          limit: 5,
+        },
+      },
+    },
+  ],
+  [
     "tools/call unknown",
     {
       jsonrpc: "2.0",
