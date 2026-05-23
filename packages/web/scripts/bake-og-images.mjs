@@ -152,51 +152,18 @@ while ((m = circleRe.exec(locatorSvg))) {
   centroidByslug.set(m[1], { cx: Number(m[2]), cy: Number(m[3]) });
 }
 
-// ViewBox bounds, parsed once. SVG viewBox format is "minX minY w h" —
-// we need these so embedded base PNGs can be placed in the same user
-// coordinate system the highlight paths use (state-plane-ish lon/lat,
-// not pixels).
-const [VB_MIN_X, VB_MIN_Y, VB_W, VB_H] = VIEWBOX.split(/\s+/).map(Number);
-
-// Pre-rasterize the base map (state outline + roads, no highlight) once
-// per output size and cache the result. The expensive part of resvg's
-// per-call work here is parsing the ~50 road paths in the source SVG;
-// pre-rasterizing means each per-agency render just decodes a small PNG
-// and overlays one circle or polygon on top.
-const basePngBySize = new Map();
-const getBase = (pxSize) => {
-  const cached = basePngBySize.get(pxSize);
-  if (cached) return cached;
-  const svg = `<?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="${VIEWBOX}" preserveAspectRatio="xMidYMid meet">
-  <path d="${STATE_PATH}" fill="#f1f5f9" stroke="#0f172a" stroke-width="0.025" stroke-linejoin="round" />
-  ${ROADS_SVG}
-</svg>`;
-  const png = new Resvg(svg, { fitTo: { mode: "width", value: pxSize } })
-    .render()
-    .asPng();
-  const entry = {
-    buffer: png,
-    dataUrl: `data:image/png;base64,${png.toString("base64")}`,
-  };
-  basePngBySize.set(pxSize, entry);
-  return entry;
-};
-
 // Render a mini-map at the given pixel size. `mode`:
 //   "none"        — state outline + roads, no highlight
 //   "dots"        — state + roads + a list of centroid dots
 //   "jurisdiction"— state + roads + one filled polygon
 //
-// For modes with a highlight, we compose by stacking the pre-rasterized
-// base PNG (via <image>) under the highlight in a tiny SVG. resvg only
-// has to decode the embedded PNG and rasterize the overlay — much
-// cheaper than re-parsing the full base every call.
+// Re-rasterizing the full base (state + ~50 roads) per call is, somewhat
+// surprisingly, much faster than pre-rendering the base once and
+// compositing via an <image> element — resvg's PNG-decode + base64 path
+// cost more than rasterizing the source paths from scratch (measured at
+// ~6× slowdown when we tried the composite approach).
 const renderMapPng = (opts, pxSize = 300) => {
   const { mode = "none", dots = [], path = null } = opts ?? {};
-  const base = getBase(pxSize);
-  if (mode === "none") return base.dataUrl;
-
   let highlight = "";
   if (mode === "jurisdiction" && path) {
     highlight = `<path d="${path}" fill="#047857" stroke="#065f46" stroke-width="0.025" stroke-linejoin="round" opacity="0.9" />`;
@@ -210,13 +177,11 @@ const renderMapPng = (opts, pxSize = 300) => {
           `<circle cx="${cx}" cy="${cy}" r="${r}" fill="#047857" stroke="#ffffff" stroke-width="${stroke}" />`,
       )
       .join("");
-  } else {
-    return base.dataUrl;
   }
-
   const svg = `<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="${VIEWBOX}" preserveAspectRatio="xMidYMid meet">
-  <image href="${base.dataUrl}" x="${VB_MIN_X}" y="${VB_MIN_Y}" width="${VB_W}" height="${VB_H}" preserveAspectRatio="xMidYMid meet" />
+  <path d="${STATE_PATH}" fill="#f1f5f9" stroke="#0f172a" stroke-width="0.025" stroke-linejoin="round" />
+  ${ROADS_SVG}
   ${highlight}
 </svg>`;
   const png = new Resvg(svg, { fitTo: { mode: "width", value: pxSize } })
@@ -225,9 +190,9 @@ const renderMapPng = (opts, pxSize = 300) => {
   return `data:image/png;base64,${png.toString("base64")}`;
 };
 
-// Pre-rendered no-highlight base — used for the home card and as a
-// fallback when an agency has neither a jurisdiction nor a centroid.
-const baseMapDataUrl = getBase(300).dataUrl;
+// Pre-render the no-highlight base map once — used for the home card and
+// as a fallback when an agency has neither a jurisdiction nor a centroid.
+const baseMapDataUrl = renderMapPng({ mode: "none" });
 
 // ---------- helpers ----------
 
