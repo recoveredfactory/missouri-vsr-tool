@@ -13,6 +13,7 @@
 import { createRequire } from "node:module";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
+import os from "node:os";
 import path from "node:path";
 import satori from "satori";
 import { html as htmlToVnode } from "satori-html";
@@ -112,12 +113,35 @@ const ROADS_SVG =
     .join("");
 
 // Per-agency jurisdiction polygons (county outlines for sheriffs,
-// city outlines for municipal PDs, etc.).
-const jurisdictionPathBySlug = new Map();
+// city outlines for municipal PDs, etc.). Each entry also carries the
+// polygon's bounding-box size so the renderer can skip the polygon when
+// it would be sub-pixel small (small-town city limits in a 300 px inset).
+const jurisdictionBySlug = new Map();
 const jurisRe = /<path[^>]*id="agency-([^"]+)"[^>]*\bd="([^"]+)"/g;
 let jm;
 while ((jm = jurisRe.exec(locatorSvg))) {
-  jurisdictionPathBySlug.set(jm[1], jm[2]);
+  const slug = jm[1];
+  const d = jm[2];
+  // Pull every numeric coordinate out of the path. The locator SVG only
+  // uses absolute M/L commands with space-separated x y pairs, so we can
+  // just collect all signed decimals and pair them up.
+  const nums = d.match(/-?\d+(?:\.\d+)?/g);
+  let w = 0;
+  let h = 0;
+  if (nums && nums.length >= 4) {
+    let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+    for (let i = 0; i + 1 < nums.length; i += 2) {
+      const x = Number(nums[i]);
+      const y = Number(nums[i + 1]);
+      if (x < minX) minX = x;
+      if (x > maxX) maxX = x;
+      if (y < minY) minY = y;
+      if (y > maxY) maxY = y;
+    }
+    w = maxX - minX;
+    h = maxY - minY;
+  }
+  jurisdictionBySlug.set(slug, { d, maxDim: Math.max(w, h) });
 }
 
 // Centroid points by slug.
@@ -128,12 +152,51 @@ while ((m = circleRe.exec(locatorSvg))) {
   centroidByslug.set(m[1], { cx: Number(m[2]), cy: Number(m[3]) });
 }
 
+// ViewBox bounds, parsed once. SVG viewBox format is "minX minY w h" —
+// we need these so embedded base PNGs can be placed in the same user
+// coordinate system the highlight paths use (state-plane-ish lon/lat,
+// not pixels).
+const [VB_MIN_X, VB_MIN_Y, VB_W, VB_H] = VIEWBOX.split(/\s+/).map(Number);
+
+// Pre-rasterize the base map (state outline + roads, no highlight) once
+// per output size and cache the result. The expensive part of resvg's
+// per-call work here is parsing the ~50 road paths in the source SVG;
+// pre-rasterizing means each per-agency render just decodes a small PNG
+// and overlays one circle or polygon on top.
+const basePngBySize = new Map();
+const getBase = (pxSize) => {
+  const cached = basePngBySize.get(pxSize);
+  if (cached) return cached;
+  const svg = `<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="${VIEWBOX}" preserveAspectRatio="xMidYMid meet">
+  <path d="${STATE_PATH}" fill="#f1f5f9" stroke="#0f172a" stroke-width="0.025" stroke-linejoin="round" />
+  ${ROADS_SVG}
+</svg>`;
+  const png = new Resvg(svg, { fitTo: { mode: "width", value: pxSize } })
+    .render()
+    .asPng();
+  const entry = {
+    buffer: png,
+    dataUrl: `data:image/png;base64,${png.toString("base64")}`,
+  };
+  basePngBySize.set(pxSize, entry);
+  return entry;
+};
+
 // Render a mini-map at the given pixel size. `mode`:
 //   "none"        — state outline + roads, no highlight
 //   "dots"        — state + roads + a list of centroid dots
 //   "jurisdiction"— state + roads + one filled polygon
+//
+// For modes with a highlight, we compose by stacking the pre-rasterized
+// base PNG (via <image>) under the highlight in a tiny SVG. resvg only
+// has to decode the embedded PNG and rasterize the overlay — much
+// cheaper than re-parsing the full base every call.
 const renderMapPng = (opts, pxSize = 300) => {
   const { mode = "none", dots = [], path = null } = opts ?? {};
+  const base = getBase(pxSize);
+  if (mode === "none") return base.dataUrl;
+
   let highlight = "";
   if (mode === "jurisdiction" && path) {
     highlight = `<path d="${path}" fill="#047857" stroke="#065f46" stroke-width="0.025" stroke-linejoin="round" opacity="0.9" />`;
@@ -147,11 +210,13 @@ const renderMapPng = (opts, pxSize = 300) => {
           `<circle cx="${cx}" cy="${cy}" r="${r}" fill="#047857" stroke="#ffffff" stroke-width="${stroke}" />`,
       )
       .join("");
+  } else {
+    return base.dataUrl;
   }
+
   const svg = `<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="${VIEWBOX}" preserveAspectRatio="xMidYMid meet">
-  <path d="${STATE_PATH}" fill="#f1f5f9" stroke="#0f172a" stroke-width="0.025" stroke-linejoin="round" />
-  ${ROADS_SVG}
+  <image href="${base.dataUrl}" x="${VB_MIN_X}" y="${VB_MIN_Y}" width="${VB_W}" height="${VB_H}" preserveAspectRatio="xMidYMid meet" />
   ${highlight}
 </svg>`;
   const png = new Resvg(svg, { fitTo: { mode: "width", value: pxSize } })
@@ -160,9 +225,9 @@ const renderMapPng = (opts, pxSize = 300) => {
   return `data:image/png;base64,${png.toString("base64")}`;
 };
 
-// Pre-render the no-highlight base map once — used for the home card and
-// as a fallback when an agency has neither a jurisdiction nor a centroid.
-const baseMapDataUrl = renderMapPng({ mode: "none" });
+// Pre-rendered no-highlight base — used for the home card and as a
+// fallback when an agency has neither a jurisdiction nor a centroid.
+const baseMapDataUrl = getBase(300).dataUrl;
 
 // ---------- helpers ----------
 
@@ -356,21 +421,31 @@ const buildHome = async () => {
 };
 
 const build287g = async () => {
-  // Highlight every 287(g) participant on the inset map. Pulled from the
-  // agency_index — agencies tagged as participants are flagged with a
-  // truthy `agreement_287g_signed_date` or similar; fall back gracefully.
+  // Mirror the live /287g page's participant definition exactly: an
+  // agency counts when `program_287g.agreements` is a non-empty array
+  // (see packages/web/src/routes/287g/+page.server.ts). The earlier
+  // truthy `program_287g` check would happen to match today, but the
+  // page filter is the source of truth — keep them in lock-step.
   let participantSlugs = [];
   try {
     const res = await fetch(`${CDN_BASE}${RELEASE_PATH}/dist/agency_index.json`);
     if (res.ok) {
       const agencies = await res.json();
       participantSlugs = agencies
-        .filter((a) => a?.program_287g)
+        .filter(
+          (a) =>
+            Array.isArray(a?.program_287g?.agreements) &&
+            a.program_287g.agreements.length > 0,
+        )
         .map((a) => a.agency_slug);
     }
   } catch {
     // best effort
   }
+  // The map can only draw dots for participants with a centroid in
+  // mo_locator.svg (state-wide agencies have none), so `highlights`
+  // is a subset of `participantSlugs`. The headline stat shows the
+  // full participant count to match the page.
   const highlights = participantSlugs
     .map((slug) => centroidByslug.get(slug))
     .filter(Boolean);
@@ -384,13 +459,15 @@ const build287g = async () => {
       eyebrow: "287(g) in Missouri",
       title: "How participating agencies stop Missourians",
       subtitle: "Stop volume, search and arrest rates, demographics.",
-      stat: highlights.length ? String(highlights.length) : null,
-      statLabel: highlights.length ? "agencies in the program" : null,
+      stat: participantSlugs.length ? String(participantSlugs.length) : null,
+      statLabel: participantSlugs.length ? "agencies in the program" : null,
       mapDataUrl,
     }),
   );
   await writePng("287g.png", png);
-  console.log(`✓ 287g.png (${highlights.length} participants mapped)`);
+  console.log(
+    `✓ 287g.png (${participantSlugs.length} participants, ${highlights.length} mapped)`,
+  );
 };
 
 const buildAgency = async (agency) => {
@@ -409,16 +486,27 @@ const buildAgency = async (agency) => {
 
   // Map highlight priority: jurisdiction polygon (county/city outline)
   // → centroid dot → nothing. State agencies always get the bare map.
+  // Tiny polygons (small-town city limits) fall through to the centroid
+  // because their fill would render sub-pixel in a 300 px inset.
+  // Threshold is in viewBox units; the locator viewBox is ~5.24 wide, so
+  // 0.1 units ≈ 6 px at 300 px output — below that the polygon is
+  // invisible and the dot is what readers actually see.
+  const MIN_VISIBLE_DIM = 0.1;
   let mapDataUrl;
   if (isStateAgency) {
     mapDataUrl = baseMapDataUrl;
   } else {
-    const jurisdiction = jurisdictionPathBySlug.get(agency.agency_slug);
+    const jurisdiction = jurisdictionBySlug.get(agency.agency_slug);
     const centroid = centroidByslug.get(agency.agency_slug);
-    if (jurisdiction) {
-      mapDataUrl = renderMapPng({ mode: "jurisdiction", path: jurisdiction }, 300);
+    const jurisdictionVisible = jurisdiction && jurisdiction.maxDim >= MIN_VISIBLE_DIM;
+    if (jurisdictionVisible) {
+      mapDataUrl = renderMapPng({ mode: "jurisdiction", path: jurisdiction.d }, 300);
     } else if (centroid) {
       mapDataUrl = renderMapPng({ mode: "dots", dots: [centroid] }, 300);
+    } else if (jurisdiction) {
+      // Polygon exists but is sub-pixel and there's no centroid — render
+      // it anyway rather than dropping the highlight entirely.
+      mapDataUrl = renderMapPng({ mode: "jurisdiction", path: jurisdiction.d }, 300);
     } else {
       mapDataUrl = baseMapDataUrl;
     }
@@ -454,7 +542,19 @@ const buildAllAgencies = async () => {
   console.log(`Baking ${agencies.length} agency cards…`);
   const t0 = Date.now();
   let done = 0;
-  const CONCURRENCY = 6;
+  // resvg-js releases the JS thread during native rasterization, so
+  // Promise.all'd renderers actually run on separate cores. Per card
+  // we do one satori call (pure JS, queued on the single event loop)
+  // plus two resvg calls (each grabs a core). Steady state we want
+  // enough in flight that there's always one in satori plus most cores
+  // busy in resvg — cpus + a small slack is the sweet spot. More than
+  // that just buys queueing and memory pressure with no extra throughput.
+  // Override with BAKE_OG_CONCURRENCY for one-off tuning.
+  const envConcurrency = Number(process.env.BAKE_OG_CONCURRENCY);
+  const CONCURRENCY = Number.isFinite(envConcurrency) && envConcurrency > 0
+    ? Math.floor(envConcurrency)
+    : Math.max(4, os.cpus().length + 4);
+  console.log(`  concurrency: ${CONCURRENCY}`);
   const queue = [...agencies];
   await Promise.all(
     Array.from({ length: CONCURRENCY }, async () => {
