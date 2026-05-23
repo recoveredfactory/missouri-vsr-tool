@@ -24,7 +24,7 @@ const RACE_LABELS: Record<RaceColumn, string> = {
  * The query is parameterised on $start (int), $end (int), and any extra
  * filters bound by the caller below.
  */
-interface MetricSpec {
+export interface MetricSpec {
   description: string;
   /** Numeric n the min_sample_size guard applies to (e.g. total stops in window). */
   sampleField: string;
@@ -59,7 +59,7 @@ WITH agg AS (
 )
 `;
 
-const METRICS: Record<string, MetricSpec> = {
+export const METRICS: Record<string, MetricSpec> = {
   search_rate: {
     description: "Fraction of stops that resulted in a search, summed across the window: SUM(searches) / SUM(stops).",
     sampleField: "denominator",
@@ -77,6 +77,28 @@ const METRICS: Record<string, MetricSpec> = {
     method:
       "Aggregate contraband-recovered count divided by aggregate search count across the window. Counts a search as a hit if any contraband category was recovered.",
     cte: buildStandard("contraband-total", "searches", "total", "total"),
+    valueExpr: "numerator / NULLIF(denominator, 0)",
+    secondarySample: "numerator",
+  },
+  citation_rate: {
+    description:
+      "Fraction of stops that resulted in a citation: SUM(citations) / SUM(stops), reported as 0–1. (To match the 0–100 percentages elsewhere, multiply by 100.)",
+    sampleField: "denominator",
+    defaultMinSample: 500,
+    method:
+      "Aggregate citation count divided by aggregate stop count across the window, per agency. Equivalent to a stop-weighted mean of the annual citation rate.",
+    cte: buildStandard("citations", "stops", "total", "total"),
+    valueExpr: "numerator / NULLIF(denominator, 0)",
+    secondarySample: "numerator",
+  },
+  arrest_rate: {
+    description:
+      "Fraction of stops that resulted in an arrest: SUM(arrests) / SUM(stops), reported as 0–1. (To match the 0–100 percentages elsewhere, multiply by 100.)",
+    sampleField: "denominator",
+    defaultMinSample: 500,
+    method:
+      "Aggregate arrest count divided by aggregate stop count across the window, per agency. Equivalent to a stop-weighted mean of the annual arrest rate.",
+    cte: buildStandard("arrests", "stops", "total", "total"),
     valueExpr: "numerator / NULLIF(denominator, 0)",
     secondarySample: "numerator",
   },
@@ -179,7 +201,15 @@ const TopNByInput = z.object({
     .describe(
       "Named metric to rank agencies by. Each name corresponds to a specific aggregation defined in the methodology — call read_methodology() for definitions.",
     ),
-  n: z.number().int().min(1).max(200).optional().describe("Number of agencies to return. Default 20."),
+  n: z
+    .number()
+    .int()
+    .min(1)
+    .max(1000)
+    .optional()
+    .describe(
+      "Number of agencies to return. Default 20. Bump up to 1000 when you need the full distribution for histogram/scatter analysis — Missouri has ~600 reporting agencies, so 1000 returns essentially everything qualifying.",
+    ),
   ascending: z
     .boolean()
     .optional()

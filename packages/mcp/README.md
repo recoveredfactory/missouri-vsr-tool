@@ -55,7 +55,7 @@ curl -X POST https://d1w5qatcgl0dry.cloudfront.net/ \
 | `trend` | Linear OLS regression of an annual metric against year, per agency, with 95% CI and two-sided p-value. Filters thin years. |
 | `disparity` | Knowles/Persico/Todd (2001) outcome test — search rate by race + hit rate conditional on search + ratios vs. white non-Hispanic. Scopes to a single agency, a county, or statewide. |
 | `compare` | Side-by-side metric values for 1–20 named agencies + an implicit statewide-median row. |
-| `make_map` | Renders the project's `mo_locator.svg` with CSS fill rules injected for each passed-in agency slug. Returns a self-contained SVG. |
+| `make_map` | Renders the project's `mo_locator.svg` with CSS fill rules injected for each passed-in agency slug, rasterized to PNG (most chat clients can't render SVG image content). |
 
 Each tool returns sample sizes alongside its numeric output and refuses to compute rates for groups below documented minimums (reported as "insufficient data") — see `read_methodology` for the thresholds.
 
@@ -85,7 +85,7 @@ The model recognizes this is the outcome-test framing and calls `top_n_by(metric
 
 ### 3. "Map the disparity index for traffic stops in 2023, focused on counties around St. Louis."
 
-The model calls `list_agencies(county: "St. Louis County")` to get slugs, then `top_n_by(metric: "disparity_index_all_stops", year_range: [2023, 2023], county: "St. Louis County", n: 20)`, then passes the {slug: value} dict into `make_map(palette: "diverging", title: "Disparity index, St. Louis area, 2023")`. The result is a styled SVG of Missouri with the affected agencies colored by their disparity index, white non-Hispanic baseline at 1.0. The model embeds the SVG and notes that the diverging palette centers at zero, so red = above parity and blue = below.
+The model calls `list_agencies(county: "St. Louis County")` to get slugs, then `top_n_by(metric: "disparity_index_all_stops", year_range: [2023, 2023], county: "St. Louis County", n: 20)`, then passes the {slug: value} dict into `make_map(palette: "diverging", title: "Disparity index, St. Louis area, 2023")`. The result is a PNG of Missouri with the affected agencies colored by their disparity index, white non-Hispanic baseline at 1.0. The model embeds the image and notes that the diverging palette centers at zero, so red = above parity and blue = below.
 
 ## Methodology
 
@@ -147,7 +147,7 @@ pnpm -F @missouri-vsr-tool/mcp build
 node packages/mcp/dist/smoke.js
 ```
 
-The smoke runner exercises every tool end-to-end and writes any generated SVGs to `/tmp/mcp-smoke-*.svg` for eyeballing.
+The smoke runner exercises every tool end-to-end and writes any generated images to `/tmp/mcp-smoke-*.{png,svg}` for eyeballing.
 
 ## License
 

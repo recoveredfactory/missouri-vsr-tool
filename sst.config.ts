@@ -130,7 +130,7 @@ export default $config({
         DATA_RELEASE_PATH: env.PUBLIC_DATA_RELEASE_PATH ?? "",
       },
       nodejs: {
-        install: ["@duckdb/node-api"],
+        install: ["@duckdb/node-api", "@resvg/resvg-js"],
       },
     });
 

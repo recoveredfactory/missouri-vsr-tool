@@ -128,6 +128,23 @@ const cases: Array<[string, object]> = [
     },
   ],
   [
+    "tools/call distribution citation_rate min 2500 stops",
+    {
+      jsonrpc: "2.0",
+      id: 30,
+      method: "tools/call",
+      params: {
+        name: "distribution",
+        arguments: {
+          metric: "citation_rate",
+          min_sample_size: 2500,
+          bins: 12,
+          include_values: false,
+        },
+      },
+    },
+  ],
+  [
     "tools/call trend hispanic_stop_share window 5 years",
     {
       jsonrpc: "2.0",
@@ -259,8 +276,9 @@ for (const [label, payload] of cases) {
   if (Array.isArray(content)) {
     for (const item of content) {
       if (item?.type === "text") item.text = trimText(item.text);
-      if (item?.type === "image" && item.mimeType === "image/svg+xml") {
-        const out = `/tmp/mcp-smoke-${parsed.id ?? "x"}.svg`;
+      if (item?.type === "image" && typeof item.mimeType === "string") {
+        const ext = item.mimeType === "image/png" ? "png" : item.mimeType === "image/svg+xml" ? "svg" : "bin";
+        const out = `/tmp/mcp-smoke-${parsed.id ?? "x"}.${ext}`;
         writeFileSync(out, Buffer.from(item.data, "base64"));
         item.data = `(${item.data.length} base64 chars; written to ${out})`;
       }

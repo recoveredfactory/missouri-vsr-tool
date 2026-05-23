@@ -1,3 +1,4 @@
+import { Resvg } from "@resvg/resvg-js";
 import { z } from "zod";
 
 import {
@@ -7,6 +8,11 @@ import {
 } from "../colormap.js";
 import { getLocatorSvg } from "../db.js";
 import { errorResult, inputSchemaFromZod, registerTool, type ToolResult } from "./registry.js";
+
+// Rendered PNG width in pixels. The Missouri locator SVG renders cleanly at
+// this size; ~1400px gives readable agency dots without bloating the base64
+// payload past the MCP image content limits typical chat clients enforce.
+const PNG_WIDTH = 1400;
 
 const cssEscape = (raw: string) => raw.replace(/[^a-zA-Z0-9_-]/g, "");
 
@@ -169,22 +175,47 @@ const makeMapHandler = async (raw: unknown): Promise<ToolResult> => {
 `;
   svg = svg.replace(/(<\/svg>\s*)$/, `${titleAndLegend}$1`);
 
+  // Rasterize the styled SVG to PNG. Most chat clients (Claude Desktop,
+  // claude.ai) will not display SVG image content from MCP — only raster
+  // formats — so we ship PNG as the primary image content and keep the
+  // underlying SVG referenced in the text summary for callers that want to
+  // save the vector original.
+  let pngBase64: string;
+  try {
+    const resvg = new Resvg(svg, {
+      fitTo: { mode: "width", value: PNG_WIDTH },
+      background: "#ffffff",
+      // resvg needs a real font to draw the title and legend ticks. Lambda's
+      // Amazon Linux runtime ships DejaVu via fontconfig at /usr/share/fonts;
+      // loadSystemFonts pulls those in. We do not list a default family
+      // because the SVG itself names Inter / ui-sans-serif / system-ui /
+      // sans-serif, and resvg falls through to the first one it can find.
+      font: { loadSystemFonts: true },
+    });
+    pngBase64 = resvg.render().asPng().toString("base64");
+  } catch (err) {
+    return errorResult(
+      `Failed to rasterize map SVG to PNG: ${err instanceof Error ? err.message : String(err)}`,
+    );
+  }
+
   const summary = {
-    map_format: "image/svg+xml",
+    map_format: "image/png",
+    width_px: PNG_WIDTH,
     title: args.title,
     palette,
     legend_label: args.legend_label ?? null,
     domain: scale.domain,
     n_agencies_colored: entries.length,
-    note: "This output is a styled copy of the project's mo_locator.svg with CSS fill rules injected for each requested agency_slug. Unmapped agencies render as faint base polygons. The SVG is self-contained and can be saved to a file or pasted into a document.",
+    note: "Rasterized from the project's mo_locator.svg with CSS fill rules injected for each requested agency_slug. Unmapped agencies render as a faint base layer. PNG is returned as the image content; the underlying vector is regenerated on each call from the same data.",
   };
 
   return {
     content: [
       {
         type: "image",
-        data: Buffer.from(svg, "utf-8").toString("base64"),
-        mimeType: "image/svg+xml",
+        data: pngBase64,
+        mimeType: "image/png",
       },
       {
         type: "text",
