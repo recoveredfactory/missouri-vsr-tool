@@ -2,7 +2,7 @@ import { z } from "zod";
 
 import { getDb } from "../db.js";
 import { normalize } from "../duckutil.js";
-import { RANKING_CAVEAT } from "./list-metrics.js";
+import { RANKING_CAVEAT, RESEARCH_PROMPT } from "./caveats.js";
 import { errorResult, inputSchemaFromZod, registerTool, textResult } from "./registry.js";
 
 type RaceColumn = "white" | "black" | "hispanic" | "asian" | "native_american" | "other";
@@ -339,6 +339,7 @@ const topNByHandler = async (raw: unknown) => {
       agency_type: args.agency_type ?? null,
     },
     ranking_caveat: RANKING_CAVEAT,
+    further_research_prompt: RESEARCH_PROMPT,
     results: data,
   };
 

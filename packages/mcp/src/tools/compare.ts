@@ -2,6 +2,7 @@ import { z } from "zod";
 
 import { getDb } from "../db.js";
 import { normalize } from "../duckutil.js";
+import { RESEARCH_PROMPT } from "./caveats.js";
 import { errorResult, inputSchemaFromZod, registerTool, textResult } from "./registry.js";
 
 // Same metric vocabulary as top_n_by, expressed as DuckDB aggregate SQL
@@ -187,6 +188,7 @@ const compareHandler = async (raw: unknown) => {
       note: "Median of all agencies in the dataset that had any data for this metric in the window. Not weighted by stop volume.",
     },
     requested_agencies: rows,
+    further_research_prompt: RESEARCH_PROMPT,
   };
 
   return textResult(JSON.stringify(payload, null, 2));

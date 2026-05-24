@@ -2,6 +2,7 @@ import { z } from "zod";
 
 import { getDb } from "../db.js";
 import { normalize } from "../duckutil.js";
+import { RESEARCH_PROMPT } from "./caveats.js";
 import { errorResult, inputSchemaFromZod, registerTool, textResult } from "./registry.js";
 
 type RaceColumn = "white" | "black" | "hispanic" | "asian" | "native_american" | "other";
@@ -182,6 +183,7 @@ const disparityHandler = async (raw: unknown) => {
           ? "Search rate by race over the window, with ratio vs. white non-Hispanic. search_rate_pct = 100 * SUM(searches by race) / SUM(stops by race)."
           : "Contraband hit rate by race over the window, with ratio vs. white non-Hispanic. hit_rate_pct = 100 * SUM(contraband_found by race) / SUM(searches by race). Requires ≥50 searches per race to report; otherwise insufficient_data is returned for that race.",
     sample_size_minimum_for_hit_rate: HIT_RATE_MIN_SEARCHES,
+    further_research_prompt: RESEARCH_PROMPT,
     results: view,
   };
 

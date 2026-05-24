@@ -3,6 +3,7 @@ import { z } from "zod";
 import { getDb } from "../db.js";
 import { normalize } from "../duckutil.js";
 import { linreg } from "../stats.js";
+import { RESEARCH_PROMPT } from "./caveats.js";
 import { errorResult, inputSchemaFromZod, registerTool, textResult } from "./registry.js";
 
 // Each trend metric defines the per-year value to regress and the per-year
@@ -291,6 +292,7 @@ const trendHandler = async (raw: unknown) => {
     sort_by: sortBy,
     n_groups_considered: byAgency.size,
     n_groups_returned: Math.min(results.length, limit),
+    further_research_prompt: RESEARCH_PROMPT,
     results: results.slice(0, limit),
   };
   return textResult(JSON.stringify(payload, null, 2));

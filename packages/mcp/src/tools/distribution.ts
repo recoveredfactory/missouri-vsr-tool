@@ -2,6 +2,7 @@ import { z } from "zod";
 
 import { getDb } from "../db.js";
 import { normalize } from "../duckutil.js";
+import { RESEARCH_PROMPT } from "./caveats.js";
 import {
   errorResult,
   inputSchemaFromZod,
@@ -253,6 +254,7 @@ const distributionHandler = async (raw: unknown) => {
     summary,
     histogram: hist,
     values: includeValues ? rows : null,
+    further_research_prompt: RESEARCH_PROMPT,
   };
 
   return textResult(JSON.stringify(payload, null, 2));

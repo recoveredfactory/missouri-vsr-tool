@@ -112,6 +112,25 @@ If a user asks a question that requires any of the above, **say so plainly** rat
 
 ---
 
+## For reporting: extending beyond this data
+
+This dataset alone is rarely the story. It establishes the pattern; it doesn't establish the context. Before a journalist publishes on anything surfaced here, push them to cross-check against sources outside this server:
+
+- **Local news archives** for the specific agency × year window. Missouri outlets: St. Louis Post-Dispatch, Kansas City Star, Springfield News-Leader, Columbia Missourian, regional weeklies. National outlets that cover policing: ProPublica, The Marshall Project.
+- **Court records and government actions:** DOJ Civil Rights Division consent decrees, state AG enforcement, federal civil-rights litigation. PACER and CourtListener are searchable.
+- **Academic literature:** the **Further Reading** section below is the curated, edited stable-link list. Cite from there, not from invented references.
+- **Local advocacy reports:** ACLU of Missouri, NAACP MO chapters, named academic researchers.
+
+**Important — what to do and not do:**
+
+- This server **does not** search the web or verify URLs. If you (the model) have web-search tools, use them and report what you actually find. Include null results — small-town Missouri agencies and pre-2010 years often have very thin archive coverage. A null result is more useful than a vague hedge.
+- If you do not have web search, **prompt the user** to run targeted searches (give them the specific agency_slug, canonical_name, and year range from the tool results) and feed back what they find.
+- **Do not invent** specific headlines, URLs, paper titles, quotes, or incident details. A handful of verified sources beats a long list of plausible-sounding fabrications. If you cannot verify a claim, say so explicitly.
+
+Every analytical tool response embeds this same guidance under a \`further_research_prompt\` field so you see it at use-time, not just here.
+
+---
+
 ## Further reading (curated link list)
 
 Every external link in this document points to a stable, mainstream explainer. The list is maintained by hand in this server's source; additions go through PR review. If you cite a method this server uses in a published piece, link to the explainer here so your readers can follow the math.

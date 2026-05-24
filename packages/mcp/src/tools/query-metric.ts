@@ -8,7 +8,7 @@ import {
   registerTool,
   textResult,
 } from "./registry.js";
-import { RANKING_CAVEAT } from "./list-metrics.js";
+import { RANKING_CAVEAT, RESEARCH_PROMPT } from "./caveats.js";
 
 const RACE_LABEL_TO_COLUMN: Record<string, string> = {
   total: "total",
@@ -255,6 +255,7 @@ const handler = async (raw: unknown) => {
             ? "value is a population denominator (ACS / decennial), not a stop count."
             : "value is a raw count for that agency × year. Sum-able across years if the question warrants.",
     ranking_caveat: RANKING_CAVEAT,
+    further_research_prompt: RESEARCH_PROMPT,
     sample_size_companion:
       "Each per_year row includes stops_total_year — that agency's total stops in that year, regardless of the metric you queried. Use it as a volatility guardrail; treat any value drawn from <100 underlying stops with extreme caution.",
     agencies,

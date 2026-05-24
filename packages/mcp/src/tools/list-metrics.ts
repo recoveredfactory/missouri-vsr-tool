@@ -1,20 +1,13 @@
 import { z } from "zod";
 
 import { getMetricCoverage } from "../db.js";
+import { RANKING_CAVEAT, RESEARCH_PROMPT } from "./caveats.js";
 import {
   errorResult,
   inputSchemaFromZod,
   registerTool,
   textResult,
 } from "./registry.js";
-
-export const RANKING_CAVEAT = [
-  "Raw rankings are useful for orientation, not for the headline.",
-  "Watch for small-denominator volatility: a single agency-year with 23 stops can produce a 'top' search rate that flips next year.",
-  "MSHP and a few large municipalities dominate raw counts. Rate metrics correct for that, but small agencies can still spike on rates.",
-  "Look at a range (top 10–20), not just #1 vs #2 — relative order inside the top tier usually isn't stable.",
-  "For rate-type metrics, the underlying count column is your guardrail. If it isn't returned, ask for it via query_metric or top_n_by.",
-].join(" ");
 
 const TYPE_NOTE = [
   "type_heuristic is inferred from the slug, not from the values:",
@@ -82,6 +75,7 @@ const handler = async (raw: unknown) => {
     },
     type_heuristic_note: TYPE_NOTE,
     ranking_caveat: RANKING_CAVEAT,
+    further_research_prompt: RESEARCH_PROMPT,
     use_query_metric_for:
       "Reading raw values of any canonical_key for one or more agencies. No cross-year aggregation, no derivations — exactly what the agency filed.",
     use_top_n_by_for:

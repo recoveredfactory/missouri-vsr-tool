@@ -2,6 +2,7 @@ import { z } from "zod";
 
 import { getDb } from "../db.js";
 import { normalize } from "../duckutil.js";
+import { RESEARCH_PROMPT } from "./caveats.js";
 import { errorResult, inputSchemaFromZod, registerTool, textResult } from "./registry.js";
 
 const SUMMARY_METRICS = [
@@ -120,6 +121,7 @@ const agencySummaryHandler = async (raw: unknown) => {
       : null,
     metrics_returned: SUMMARY_METRICS,
     note: "Counts (stops/searches/contraband-total/arrests/citations) are raw integers. Rates (search-rate/contraband-hit-rate/arrest-rate/citation-rate) are already in percentage points (0–100 scale, NOT 0–1 decimals). disparity-index--all-stops is a ratio against the white non-Hispanic baseline (1.0 = parity). For deeper interpretation see read_methodology.",
+    further_research_prompt: RESEARCH_PROMPT,
     data,
   };
 
