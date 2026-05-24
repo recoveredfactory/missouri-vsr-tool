@@ -5,7 +5,10 @@
   "type": "module",
   "main": "src/index.ts",
   "scripts": {
+    "sync:about": "node scripts/sync-about-data.mjs",
+    "prebuild": "pnpm sync:about",
     "build": "tsc",
+    "precheck": "pnpm sync:about",
     "check": "tsc --noEmit"
   },
   "dependencies": {

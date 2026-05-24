@@ -8,7 +8,7 @@ This server exposes the Missouri Vehicle Stops Report dataset (per-agency, per-y
 
 ## Before you answer
 
-Before answering any substantive question, **call \`read_methodology()\` and \`read_schema()\` first.** The dataset has specific definitions (what counts as a "stop", how race is recorded, what "disparity index" means here) that are easy to get wrong from name alone.
+Before answering any substantive question, **call \`read_methodology()\` and \`read_schema()\` first.** The methodology doc covers what counts as a "stop", how race is recorded, what "disparity index" means here, and — critically — **which cross-tabs the dataset does NOT support** (race × gender, race × age, anything sub-annual, anything below the agency-year). Skipping it leads to invented metrics and false cross-tabs that look plausible but don't exist in the data.
 
 ## How to cite
 
