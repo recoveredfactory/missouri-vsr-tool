@@ -18,18 +18,41 @@ Race in this dataset is **officer-perceived**, not driver-self-reported. The cat
 - **Search rate**: \`searches / stops\` for the agency × year × race, reported as a **percentage (0–100 scale, not a 0–1 decimal)**. Includes consent, probable-cause, and inventory searches. Does not distinguish search type for the top-line search-rate metric; per-type breakdowns are available via the \`probable-cause--\` metric family.
 - **Contraband hit rate**: \`contraband_found / searches\` for the agency × year × race, reported as a **percentage (0–100 scale)**. Counts a search as a "hit" if any contraband (drugs, weapons, currency, stolen property, alcohol, other) was recovered.
 - **Search rate minus hit rate**: a single-number proxy for the outcome test (see below). When two agencies have the same search rate, the one with the lower hit rate is searching more aggressively at the margin.
-- **Disparity index**: \`stop_rate_minority / stop_rate_white_non_hispanic\`. A value of 1.0 means parity with white drivers; values above 1.0 mean the minority race is stopped at a higher rate per resident. The denominator is white non-Hispanic by convention. Multiple variants exist for different population baselines (decennial vs. ACS; all-stops vs. resident-stops); call \`read_schema()\` for the full list.
+- **Disparity index**: \`stop_rate_minority / stop_rate_white_non_hispanic\`. A value of 1.0 means parity with white drivers; values above 1.0 mean the minority race is stopped at a higher rate per resident. The denominator is white non-Hispanic by convention. Multiple variants exist for different population baselines (decennial vs. ACS; all-stops vs. resident-stops); call \`read_schema()\` for the full list. **Warning:** statewide or county-rolled disparity indexes can flip direction once you break them out by agency — see [Simpson's paradox](https://en.wikipedia.org/wiki/Simpson%27s_paradox). Always report disparity at the agency-year level alongside any aggregate.
 - **Resident vs. non-resident stops**: agencies distinguish stops of jurisdiction residents from non-residents. The "resident-stops" disparity variants use only resident stops in the numerator, which controls for through-traffic patterns at the cost of smaller sample sizes.
 
 ### The outcome test (Knowles, Persico & Todd 2001)
 
-The \`disparity\` tool implements the classic outcome test for racial bias in search decisions. The intuition: if officers applied the same threshold of suspicion to all drivers, the contraband hit rate would be equalized across groups at the margin. A pattern where one race is searched at a higher rate **and** contraband is found at a lower rate is consistent with a lower threshold of suspicion being applied to that race. The outcome test does **not** directly prove discrimination — selection effects (different distributions of suspicious behavior, different stop contexts) can produce similar patterns — but it is the standard quantitative test in the policing literature.
+The \`disparity\` tool implements the classic outcome test for racial bias in search decisions, originally proposed in [Knowles, Persico & Todd, *Racial Bias in Motor Vehicle Searches: Theory and Evidence* (2001)](https://www.jstor.org/stable/2696570). The intuition: if officers applied the same threshold of suspicion to all drivers, the contraband hit rate would be equalized across groups at the margin. A pattern where one race is searched at a higher rate **and** contraband is found at a lower rate is consistent with a lower threshold of suspicion being applied to that race.
+
+The outcome test does **not** directly prove discrimination — [selection effects](https://en.wikipedia.org/wiki/Selection_bias) (different distributions of suspicious behavior, different stop contexts, different denominator populations) can produce identical patterns. It is the standard quantitative test in the policing literature, not a verdict. For a public-friendly walk-through of how outcome tests, benchmark tests, and threshold tests are used together — and where each one fails — the [Stanford Open Policing Project](https://openpolicing.stanford.edu/) is the canonical explainer.
 
 The tool returns search rate and hit rate by race and the ratio (minority / white non-Hispanic) for each. It does **not** editorialize on what the pattern means in the result body; that interpretation is on you.
 
 ### Trend methodology
 
-The \`trend\` tool fits a simple ordinary-least-squares linear regression of the annual metric value on the year, per group. It returns slope (units per year), 95% confidence interval, two-sided p-value (Student's t on n-2 degrees of freedom), \`n_years\` in the window, and the mean annual sample size. Groups whose annual sample sizes fall below the per-metric minimum are excluded. Treat the slope as directional: it is not predictive, it does not handle non-linear trends, and it is sensitive to outlier years in short windows.
+The \`trend\` tool fits an **ordinary least squares (OLS) linear regression** of the annual metric value on the year, per group. It returns slope (units per year), 95% confidence interval, two-sided p-value (Student's t on n−2 degrees of freedom), \`n_years\` in the window, and the mean annual sample size.
+
+**Why OLS?** It's the textbook default: transparent (you can re-derive the slope on a napkin), easy to explain in print ("average change per year, assuming the trend is roughly a straight line"), and any stats reviewer can verify it. The assumptions — linearity, independent yearly observations, roughly normal residuals — are stated upfront so a reader can decide whether to trust the fit. → [OLS on Wikipedia](https://en.wikipedia.org/wiki/Ordinary_least_squares).
+
+**What OLS doesn't do.** It assumes the trend is linear; a step change (e.g. a policy shift in 2021) gets averaged into a line through it. A single outlier year can drag the slope. The p-value tests whether the slope differs from zero — **not** whether the trend is "meaningful" or large. See the next section before treating p<0.05 as a story.
+
+**If you want a second opinion** — not implemented here, but easy to compute by hand from the same per-year counts the tool can return:
+
+- **[Theil–Sen estimator](https://en.wikipedia.org/wiki/Theil%E2%80%93Sen_estimator)** — robust median-of-slopes; nearly immune to a single outlier year. Reach for this when one year looks weird.
+- **[Mann–Kendall trend test](https://en.wikipedia.org/wiki/Mann%E2%80%93Kendall_trend_test)** — nonparametric "is there a monotonic trend, yes/no" without committing to linearity or a slope magnitude. Useful when the metric is noisy.
+- **Just look at the per-year values.** For an 8-year window, the chart usually tells the story OLS is summarizing in one number. Ask the tool for the underlying counts and eyeball them.
+
+Groups whose annual sample sizes fall below the per-metric minimum are excluded. Treat the slope as directional, not predictive.
+
+### How to read the p-values and confidence intervals these tools return
+
+The trend tool returns a two-sided p-value and a 95% [confidence interval](https://en.wikipedia.org/wiki/Confidence_interval) for the slope. Two things journalists routinely get wrong:
+
+1. **The p-value is not the probability the trend is real.** It is the probability of observing a slope at least this large *if the true slope were zero*. A small p-value means "this slope would be surprising under the null hypothesis of no trend" — not "there is a 95% chance this trend is real." → [p-value on Wikipedia](https://en.wikipedia.org/wiki/P-value).
+2. **p<0.05 is a convention, not a finding.** The American Statistical Association's 2016 statement is the canonical citation for what statistical significance does and doesn't mean — required reading before any "statistically significant" claim goes to print. → [ASA Statement on Statistical Significance and P-Values (Wasserstein & Lazar, 2016)](https://amstat.tandfonline.com/doi/full/10.1080/00031305.2016.1154108).
+
+The confidence interval is usually more journalistically useful than the p-value: it gives the *size* of the uncertainty in real units (percentage points per year, stops per year, etc.), which is the actual thing readers care about.
 
 ### Sample-size minimums
 
@@ -73,6 +96,31 @@ The row model is **one metric, per agency, per year, broken down by race only**.
 **No cross-agency event linkage.** Multi-agency stops (e.g., MSHP plus a county sheriff at the same scene) are not deduplicated or linked.
 
 If a user asks a question that requires any of the above, **say so plainly** rather than approximating with adjacent metrics. The right answer is often "the Missouri VSR doesn't collect that; you'd need [other dataset]."
+
+---
+
+## Further reading (curated link list)
+
+Every external link in this document points to a stable, mainstream explainer. The list is maintained by hand in this server's source; additions go through PR review. If you cite a method this server uses in a published piece, link to the explainer here so your readers can follow the math.
+
+**Statistical methods**
+
+- Ordinary least squares regression — https://en.wikipedia.org/wiki/Ordinary_least_squares
+- Theil–Sen estimator (robust slope) — https://en.wikipedia.org/wiki/Theil%E2%80%93Sen_estimator
+- Mann–Kendall trend test (nonparametric monotonic-trend test) — https://en.wikipedia.org/wiki/Mann%E2%80%93Kendall_trend_test
+- p-value — https://en.wikipedia.org/wiki/P-value
+- Confidence interval — https://en.wikipedia.org/wiki/Confidence_interval
+- ASA Statement on Statistical Significance and P-Values (Wasserstein & Lazar, 2016) — https://amstat.tandfonline.com/doi/full/10.1080/00031305.2016.1154108
+
+**Bias, confounding, and how data can mislead**
+
+- Selection bias — https://en.wikipedia.org/wiki/Selection_bias
+- Simpson's paradox — https://en.wikipedia.org/wiki/Simpson%27s_paradox
+
+**Outcome test and policing-data methodology**
+
+- Knowles, Persico & Todd, *Racial Bias in Motor Vehicle Searches: Theory and Evidence* (Journal of Political Economy, 2001) — https://www.jstor.org/stable/2696570
+- Stanford Open Policing Project (public-friendly explainers + open data) — https://openpolicing.stanford.edu/
 `;
 
 const METHODOLOGY = ABOUT_THE_DATA_MD + MCP_SEMANTICS;
