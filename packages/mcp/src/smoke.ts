@@ -92,6 +92,63 @@ const cases: Array<[string, object]> = [
     },
   ],
   [
+    "tools/call list_metrics contains=resident",
+    {
+      jsonrpc: "2.0",
+      id: 40,
+      method: "tools/call",
+      params: {
+        name: "list_metrics",
+        arguments: { contains: "resident" },
+      },
+    },
+  ],
+  [
+    "tools/call query_metric resident-stops top 5",
+    {
+      jsonrpc: "2.0",
+      id: 41,
+      method: "tools/call",
+      params: {
+        name: "query_metric",
+        arguments: {
+          canonical_key: "resident-stops",
+          year_range: [2022, 2024],
+          top_n: 5,
+        },
+      },
+    },
+  ],
+  [
+    "tools/call query_metric unknown key",
+    {
+      jsonrpc: "2.0",
+      id: 42,
+      method: "tools/call",
+      params: {
+        name: "query_metric",
+        arguments: { canonical_key: "not-a-real-canonical-key" },
+      },
+    },
+  ],
+  [
+    "tools/call top_n_by resident_stop_share ascending",
+    {
+      jsonrpc: "2.0",
+      id: 43,
+      method: "tools/call",
+      params: {
+        name: "top_n_by",
+        arguments: {
+          metric: "resident_stop_share",
+          ascending: true,
+          year_range: [2022, 2024],
+          n: 5,
+        },
+      },
+    },
+  ],
+  [
     "tools/call top_n_by search_rate",
     {
       jsonrpc: "2.0",

@@ -61,6 +61,102 @@ let connPromise: Promise<DuckDBConnection> | null = null;
 
 let locatorSvgCache: string | null = null;
 
+let metricCoverageCache: MetricCoverage[] | null = null;
+
+export interface MetricCoverage {
+  canonical_key: string;
+  family: string;
+  type_heuristic: "count" | "rate" | "ratio" | "population";
+  years_present: number[];
+  races_populated: string[];
+  n_agency_years: number;
+  n_agencies: number;
+}
+
+const RACE_COLUMNS: Array<{ col: string; label: string }> = [
+  { col: "total", label: "Total" },
+  { col: "white", label: "White" },
+  { col: "black", label: "Black" },
+  { col: "hispanic", label: "Hispanic" },
+  { col: "asian", label: "Asian" },
+  { col: "native_american", label: "Native American" },
+  { col: "other", label: "Other" },
+];
+
+const inferType = (slug: string): MetricCoverage["type_heuristic"] => {
+  if (slug.includes("disparity-index")) return "ratio";
+  if (slug.includes("population")) return "population";
+  if (/(^|--|-)rate(--|$)/.test(slug)) return "rate";
+  return "count";
+};
+
+const scanMetricCoverage = async (
+  conn: DuckDBConnection,
+): Promise<MetricCoverage[]> => {
+  // Per-metric aggregates: which races have any non-null value, and total
+  // sample size. Cheap — one scan over the stops table (~3M rows).
+  const aggSql = `
+    SELECT metric,
+           COUNT(*)::BIGINT AS n_agency_years,
+           COUNT(DISTINCT agency_slug)::BIGINT AS n_agencies,
+           ${RACE_COLUMNS.map(
+             (r) => `SUM(CASE WHEN ${r.col} IS NOT NULL THEN 1 ELSE 0 END)::BIGINT AS ${r.col}_n`,
+           ).join(",\n           ")}
+    FROM stops
+    GROUP BY metric
+    ORDER BY metric
+  `;
+  const aggReader = await (await conn.prepare(aggSql)).runAndReadAll();
+  const aggRows = aggReader.getRows();
+  const aggCols = aggReader.columnNames();
+
+  // Per-metric distinct years. DuckDB's LIST() inside GROUP BY returns an
+  // array directly; we just sort it in JS to keep the SQL simple.
+  const yearsSql = `
+    SELECT metric, year
+    FROM (
+      SELECT DISTINCT metric, year
+      FROM stops
+      WHERE total IS NOT NULL
+         OR white IS NOT NULL
+         OR black IS NOT NULL
+         OR hispanic IS NOT NULL
+         OR asian IS NOT NULL
+         OR native_american IS NOT NULL
+         OR other IS NOT NULL
+    )
+    ORDER BY metric, year
+  `;
+  const yearsReader = await (await conn.prepare(yearsSql)).runAndReadAll();
+  const yearsByMetric = new Map<string, number[]>();
+  for (const [metric, year] of yearsReader.getRows()) {
+    const key = String(metric);
+    const list = yearsByMetric.get(key) ?? [];
+    list.push(Number(year));
+    yearsByMetric.set(key, list);
+  }
+
+  return aggRows.map((row): MetricCoverage => {
+    const obj: Record<string, unknown> = {};
+    aggCols.forEach((c, i) => {
+      obj[c] = row[i];
+    });
+    const slug = String(obj.metric);
+    const racesPopulated = RACE_COLUMNS.filter(
+      (r) => Number(obj[`${r.col}_n`]) > 0,
+    ).map((r) => r.label);
+    return {
+      canonical_key: slug,
+      family: slug.split("--")[0],
+      type_heuristic: inferType(slug),
+      years_present: yearsByMetric.get(slug) ?? [],
+      races_populated: racesPopulated,
+      n_agency_years: Number(obj.n_agency_years),
+      n_agencies: Number(obj.n_agencies),
+    };
+  });
+};
+
 const init = async (): Promise<DuckDBConnection> => {
   // Pre-fetch Parquet, JSON, and the locator SVG to local disk via HTTP/1.1.
   // The upstream CloudFront drops Snappy-compressed Parquet blocks
@@ -152,6 +248,11 @@ const init = async (): Promise<DuckDBConnection> => {
      WHERE t.agency_slug = a.agency_slug`,
   );
 
+  // One-shot empirical scan: which canonical_keys are present, what years
+  // each one covers, which race columns are populated. Cached for the
+  // Lambda lifetime; consumed by list_metrics and query_metric.
+  metricCoverageCache = await scanMetricCoverage(conn);
+
   return conn;
 };
 
@@ -170,7 +271,16 @@ export const getLocatorSvg = async (): Promise<string> => {
   return locatorSvgCache;
 };
 
+export const getMetricCoverage = async (): Promise<MetricCoverage[]> => {
+  await getDb();
+  if (!metricCoverageCache) {
+    throw new Error("Metric coverage was not scanned at cold start.");
+  }
+  return metricCoverageCache;
+};
+
 export const resetDbForTesting = () => {
   connPromise = null;
   locatorSvgCache = null;
+  metricCoverageCache = null;
 };

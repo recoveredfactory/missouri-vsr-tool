@@ -50,14 +50,16 @@ curl -X POST https://d1w5qatcgl0dry.cloudfront.net/ \
 | `read_methodology` | Long-form methodology doc — definitions of stop, search rate, hit rate, disparity index, outcome test, and what each does and doesn't prove. **Call this first.** |
 | `read_schema` | DuckDB schema for the three tables backing the server. |
 | `list_agencies` | Resolves loose agency names → stable slugs. Filters: name substring, county, min lifetime stops. |
+| `list_metrics` | Empirically scanned index of every canonical_key in the loaded data — years present, race columns populated, agency-year row count, type heuristic (count / rate / ratio / population). Call this when you're not sure a metric exists. |
+| `query_metric` | Raw per-agency × per-year values for any canonical_key. No cross-year aggregation, no derivations — exactly what the agency filed. Optional ranking by latest-year value. Pair with `list_metrics` to discover keys. |
 | `agency_summary` | Multi-year curated slice (stops / searches / contraband / arrests / citations + rates + disparity index) for one agency, broken down by race. |
-| `top_n_by` | Ranks agencies by one of seven curated metrics (search rate, contraband hit rate, search-rate-minus-hit-rate, Hispanic/Black stop share, disparity index, total stops). Per-metric sample-size minimums are baked in. |
+| `top_n_by` | Ranks agencies by one of ten curated **derived** metrics (search rate, contraband hit rate, citation rate, arrest rate, search-rate-minus-hit-rate, Hispanic/Black stop share, resident stop share, disparity index, total stops). Per-metric sample-size minimums baked in. For raw values of any canonical_key, use `query_metric`. |
 | `trend` | Linear OLS regression of an annual metric against year, per agency, with 95% CI and two-sided p-value. Filters thin years. |
 | `disparity` | Knowles/Persico/Todd (2001) outcome test — search rate by race + hit rate conditional on search + ratios vs. white non-Hispanic. Scopes to a single agency, a county, or statewide. |
 | `compare` | Side-by-side metric values for 1–20 named agencies + an implicit statewide-median row. |
 | `make_map` | Renders the project's `mo_locator.svg` with CSS fill rules injected for each passed-in agency slug, rasterized to PNG (most chat clients can't render SVG image content). |
 
-Each tool returns sample sizes alongside its numeric output and refuses to compute rates for groups below documented minimums (reported as "insufficient data") — see `read_methodology` for the thresholds.
+The split between `query_metric` (raw reads) and `top_n_by` (curated derivations) is intentional: derivations need sample-size guards and methodology notes; raw reads just need to surface what the agency filed. Every ranking response includes a `ranking_caveat` field — read it before quoting an order.
 
 ## Three example transcripts
 

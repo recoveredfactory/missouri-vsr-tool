@@ -2,6 +2,7 @@ import { z } from "zod";
 
 import { getDb } from "../db.js";
 import { normalize } from "../duckutil.js";
+import { RANKING_CAVEAT } from "./list-metrics.js";
 import { errorResult, inputSchemaFromZod, registerTool, textResult } from "./registry.js";
 
 type RaceColumn = "white" | "black" | "hispanic" | "asian" | "native_american" | "other";
@@ -193,6 +194,17 @@ WITH agg AS (
 )`,
     valueExpr: "value",
   },
+  resident_stop_share: {
+    description:
+      "Share of stops that were of jurisdiction residents (vs. non-residents), reported as a percentage 0–100: 100 * SUM(resident-stops) / SUM(stops). A LOW share means an agency is stopping mostly non-residents — typical of highway / through-traffic enforcement; flag for revenue-from-outsiders patterns. Only post-2020 reporting forms include the resident/non-resident split.",
+    sampleField: "denominator",
+    defaultMinSample: 500,
+    method:
+      "Aggregate resident-stops count divided by aggregate stops count across the window, per agency. Multiplied by 100 to match the other share metrics' 0–100 scale.",
+    cte: buildStandard("resident-stops", "stops", "total", "total"),
+    valueExpr: "100 * numerator / NULLIF(denominator, 0)",
+    secondarySample: "numerator",
+  },
 };
 
 const TopNByInput = z.object({
@@ -326,6 +338,7 @@ const topNByHandler = async (raw: unknown) => {
       county: args.county ?? null,
       agency_type: args.agency_type ?? null,
     },
+    ranking_caveat: RANKING_CAVEAT,
     results: data,
   };
 

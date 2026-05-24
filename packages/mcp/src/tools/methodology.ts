@@ -8,6 +8,19 @@ const MCP_SEMANTICS = `
 
 The narrative above describes the dataset as published. The notes below describe how this MCP server's curated tools compute and report rates, what statistical machinery they apply, and where they refuse to answer.
 
+### Two ways to query: raw reads vs. curated derivations
+
+This server's tool surface splits along one axis. **Know which side you're on before quoting a number.**
+
+- **Raw reads** — \`query_metric(canonical_key, ...)\` and \`list_metrics()\`. Any of the ~118 canonical_keys in the dataset is queryable. Returns per-agency × per-year values exactly as filed (or as the pipeline pre-computed at the source). **No cross-year aggregation, no derivations.** Use this when you need resident-stops, non-resident-stops, age/gender breakdowns, probable-cause variants, contraband-by-type, anything top_n_by doesn't cover. \`list_metrics()\` is the empirical index — call it first when you're not sure a metric exists.
+- **Curated derivations** — \`top_n_by\`, \`trend\`, \`disparity\`, \`compare\`, \`agency_summary\`. Rates, ratios, OLS slopes, outcome tests — anything computed across metrics or across years. These have sample-size guards baked in because the denominator is itself a separate metric and small denominators produce unstable rates.
+
+Why the split: cross-metric and cross-year derivations are where it's easy to invent something the data doesn't support (e.g. averaging pre-computed rates across years, or comparing a 0–1 decimal to a 0–100 percentage). Raw reads can't do that — the number is the number the agency filed.
+
+### On ranking (raw or derived)
+
+Every ranking response from this server includes a \`ranking_caveat\` field. Read it before quoting an order. Briefly: a #1 or top-5 rank can be a small-denominator artifact (one weird year at a small agency), or it can be dominated by raw size (MSHP files ~10× the count of any municipality and will always lead total_stops). Treat rankings as **orientation, not as the story**: look at a range of the top 10–20 agencies, compare to the per-year stops_total_year column for size context, and don't put much stock in relative order *within* the top tier.
+
 ### Race categories (as the tools report them)
 
 Race in this dataset is **officer-perceived**, not driver-self-reported. The categories are: White, Black, Hispanic, Asian, Native American, Other. "Hispanic" is recorded as a race-line on the reporting form (not a separate ethnicity field), which is a known deviation from the Census schema. When this server reports a "Hispanic stop share," it means the share of stops where the officer recorded the driver's race as Hispanic.

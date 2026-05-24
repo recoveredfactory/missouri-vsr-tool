@@ -23,6 +23,8 @@ import "./tools/methodology.js";
 import "./tools/schema.js";
 import "./tools/agencies.js";
 import "./tools/agency-summary.js";
+import "./tools/list-metrics.js";
+import "./tools/query-metric.js";
 import "./tools/top-n-by.js";
 import "./tools/distribution.js";
 import "./tools/trend.js";

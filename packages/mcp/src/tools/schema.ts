@@ -26,7 +26,7 @@ One row per agency × year × metric. This is a wide-format table — race break
 |---|---|---|
 | \`agency_slug\` | TEXT | Foreign key to \`agencies.agency_slug\`. |
 | \`year\` | INTEGER | Calendar year of the filing. |
-| \`metric\` | TEXT | Canonical metric key. See the full list via \`list_metrics()\` or the metric enum in the \`top_n_by\` tool. Examples: \`stops\`, \`searches\`, \`search-rate\`, \`contraband-hit-rate\`, \`disparity-index--all-stops\`, \`stop-outcome--warning\`. |
+| \`metric\` | TEXT | Canonical metric key. Call \`list_metrics()\` for the full empirically scanned set (years covered, race columns populated). Examples: \`stops\`, \`searches\`, \`search-rate\`, \`contraband-hit-rate\`, \`disparity-index--all-stops\`, \`stop-outcome--warning\`, \`resident-stops\`. |
 | \`Total\` | DOUBLE | Total value for the metric in that agency × year, across all races. For count metrics this is a raw count; for rate metrics it is the all-race rate. |
 | \`White\` | DOUBLE | Value for white drivers. |
 | \`Black\` | DOUBLE | Value for Black drivers. |
@@ -53,9 +53,14 @@ Free-text notes that some agencies submit with their annual filings. Sparsely po
 - The schema was **substantially revised in 2020**. Pre-2020 metrics are normalized to a unified canonical key where possible, but some categories have no clean post-2020 equivalent and vice versa.
 - The dataset includes 600+ reporting agencies across 24+ years. Cold-start DuckDB load is approximately one second.
 
-## What you cannot do here
+## How to query without raw SQL
 
-There is no raw \`query()\` tool. Every analytical path is a curated tool with sample-size guards and methodology documentation. If a question requires a query that the existing tools do not support, surface that to the user — do not approximate.
+There is no raw \`query()\` tool. The analytical surface splits along one axis:
+
+- **Raw reads** via \`query_metric(canonical_key, ...)\`: per-agency × per-year values of any canonical_key, exactly as filed. No aggregation across years, no derivations. Use \`list_metrics()\` first to find the right key and confirm what years and race columns it covers.
+- **Curated derivations** via \`top_n_by\`, \`trend\`, \`disparity\`, \`compare\`, \`agency_summary\`: rates, ratios, statistical fits, and other computed metrics with sample-size guards baked in.
+
+If a question requires a derivation neither tool computes, surface that to the user — do not approximate by combining unrelated tool outputs.
 `;
 
 registerTool({
