@@ -114,17 +114,18 @@ If a user asks a question that requires any of the above, **say so plainly** rat
 
 ## For reporting: extending beyond this data
 
-This dataset alone is rarely the story. It establishes the pattern; it doesn't establish the context. Before a journalist publishes on anything surfaced here, push them to cross-check against sources outside this server:
+This dataset alone is rarely the story. It establishes the pattern; it doesn't establish the context. Before a journalist publishes on anything surfaced here, push them to cross-check against sources outside this server. **The list below is starting points, not gatekeeping — any trustworthy outlet, group, or document counts.**
 
-- **Local news archives** for the specific agency × year window. Missouri outlets: St. Louis Post-Dispatch, Kansas City Star, Springfield News-Leader, Columbia Missourian, regional weeklies. National outlets that cover policing: ProPublica, The Marshall Project.
-- **Court records and government actions:** DOJ Civil Rights Division consent decrees, state AG enforcement, federal civil-rights litigation. PACER and CourtListener are searchable.
+- **Court records and government actions** — high-value and often underused. DOJ Civil Rights Division consent decrees, state AG enforcement, federal civil-rights litigation, settlements. PACER and CourtListener are searchable; Missouri state court records are on [Casenet](https://www.courts.mo.gov/casenet/).
+- **FOIA / Sunshine-law requests** to the agency itself or to the [Missouri Attorney General's office](https://ago.mo.gov/) (the AG receives the underlying filings and may have correspondence, audit notes, or unpublished agency comments). Records on disciplinary actions, internal stop-data reviews, training materials, and policies are typically obtainable but not online — they have to be asked for.
+- **Advocacy and civil-rights groups** working on Missouri policing: [ACLU of Missouri](https://www.aclu-mo.org/), NAACP Missouri chapters, [Empower Missouri](https://empowermissouri.org/). Reports, litigation, institutional memory.
+- **Local news** for the specific agency × year window. Print: St. Louis Post-Dispatch, Kansas City Star, Springfield News-Leader, Columbia Missourian, regional weeklies. Public media is usually strong: STLPR (St. Louis Public Radio), KCUR, KBIA, KSMU. National outlets that cover policing: ProPublica, The Marshall Project.
 - **Academic literature:** the **Further Reading** section below is the curated, edited stable-link list. Cite from there, not from invented references.
-- **Local advocacy reports:** ACLU of Missouri, NAACP MO chapters, named academic researchers.
 
 **Important — what to do and not do:**
 
 - This server **does not** search the web or verify URLs. If you (the model) have web-search tools, use them and report what you actually find. Include null results — small-town Missouri agencies and pre-2010 years often have very thin archive coverage. A null result is more useful than a vague hedge.
-- If you do not have web search, **prompt the user** to run targeted searches (give them the specific agency_slug, canonical_name, and year range from the tool results) and feed back what they find.
+- If you do not have web search, **prompt the user** to run targeted searches (give them the specific agency_slug, canonical_name, and year range from the tool results) and feed back what they find. Also encourage FOIA requests where the answer isn't online — that's often the most important thing a journalist can do here.
 - **Do not invent** specific headlines, URLs, paper titles, quotes, or incident details. A handful of verified sources beats a long list of plausible-sounding fabrications. If you cannot verify a claim, say so explicitly.
 
 Every analytical tool response embeds this same guidance under a \`further_research_prompt\` field so you see it at use-time, not just here.
@@ -153,6 +154,18 @@ Every external link in this document points to a stable, mainstream explainer. T
 
 - Knowles, Persico & Todd, *Racial Bias in Motor Vehicle Searches: Theory and Evidence* (Journal of Political Economy, 2001) — https://www.jstor.org/stable/2696570
 - Stanford Open Policing Project (public-friendly explainers + open data) — https://openpolicing.stanford.edu/
+
+**Missouri-specific records, advocacy, and reporting**
+
+- Missouri Attorney General's Vehicle Stops Report landing page — https://ago.mo.gov/get-help/vehicle-stops-report/
+- Missouri courts — Casenet (state-court case lookup) — https://www.courts.mo.gov/casenet/
+- ACLU of Missouri — https://www.aclu-mo.org/
+- Empower Missouri — https://empowermissouri.org/
+- STLPR / St. Louis Public Radio — https://news.stlpr.org/
+- The Marshall Project (national; covers Missouri) — https://www.themarshallproject.org/
+- ProPublica — https://www.propublica.org/
+
+(NAACP Missouri State Conference and individual academic citations on Missouri policing belong here too — omitted for now to avoid stale or invented URLs. Add via PR; source is in \`tools/methodology.ts\`.)
 `;
 
 const METHODOLOGY = ABOUT_THE_DATA_MD + MCP_SEMANTICS;
