@@ -13,11 +13,11 @@
 import { createRequire } from "node:module";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
-import os from "node:os";
 import path from "node:path";
 import satori from "satori";
 import { html as htmlToVnode } from "satori-html";
 import { Resvg } from "@resvg/resvg-js";
+import sharp from "sharp";
 
 const require = createRequire(import.meta.url);
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -37,6 +37,8 @@ const argValue = (flag) => {
 };
 const only = argValue("--only");
 const slugFilter = argValue("--slug");
+const limitArg = Number(argValue("--limit"));
+const limit = Number.isFinite(limitArg) && limitArg > 0 ? Math.floor(limitArg) : null;
 
 // ---------- fonts ----------
 
@@ -59,10 +61,23 @@ const fonts = [
   { name: "Inter", data: fontBlack, weight: 900, style: "normal" },
 ];
 
-// ---------- background brand image (data URL) ----------
+// ---------- background brand image ----------
+//
+// Held as a raw PNG buffer (not a data URL). renderToPng composites the
+// satori-rendered card over this with sharp, instead of embedding it in
+// the SVG and letting resvg decode it per card — that decode was a
+// dominant cost in the per-card render path.
+//
+// Resized to the card output size on startup so the composite step
+// produces 1200×630 output without sharp having to resize per call.
+// The original CSS used `background-size: 1200px 630px`, so this
+// matches that behavior.
 
-const brandPng = await readFile(path.join(STATIC_DIR, "social-meta.png"));
-const brandDataUrl = `data:image/png;base64,${brandPng.toString("base64")}`;
+const brandPngSrc = await readFile(path.join(STATIC_DIR, "social-meta.png"));
+const brandPng = await sharp(brandPngSrc)
+  .resize(SIZE.width, SIZE.height, { fit: "fill" })
+  .png()
+  .toBuffer();
 
 // ---------- map svg: parse once, render per-agency on demand ----------
 
@@ -152,18 +167,61 @@ while ((m = circleRe.exec(locatorSvg))) {
   centroidByslug.set(m[1], { cx: Number(m[2]), cy: Number(m[3]) });
 }
 
+// Pre-rasterize the base map (state outline + roads) once per output
+// size as a raw RGBA pixel buffer. Per-agency renders only have to
+// rasterize the tiny highlight (one circle or one polygon) and sharp
+// composites that onto a copy of the cached base. Measured ~1.5×
+// faster than re-rasterizing the full source per call.
+//
+// Why not let resvg do the composite via <image href="..."> on a data
+// URL of the cached base? Tried it — was ~6× slower than no caching
+// at all. resvg's PNG decode + base64 path costs more than parsing the
+// source paths from scratch. The composite has to happen at the pixel
+// level, outside of SVG.
+const BASE_BG = "#ffffff";
+const baseRasterBySize = new Map();
+const getBaseRaster = (pxSize) => {
+  const cached = baseRasterBySize.get(pxSize);
+  if (cached) return cached;
+  const svg = `<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="${VIEWBOX}" preserveAspectRatio="xMidYMid meet">
+  <path d="${STATE_PATH}" fill="#f1f5f9" stroke="#0f172a" stroke-width="0.025" stroke-linejoin="round" />
+  ${ROADS_SVG}
+</svg>`;
+  const img = new Resvg(svg, {
+    fitTo: { mode: "width", value: pxSize },
+    background: BASE_BG,
+  }).render();
+  const entry = {
+    pixels: Buffer.from(img.pixels),
+    width: img.width,
+    height: img.height,
+  };
+  baseRasterBySize.set(pxSize, entry);
+  return entry;
+};
+
+const baseAsPngBufferBySize = new Map();
+const getBaseAsPngBuffer = async (pxSize) => {
+  const cached = baseAsPngBufferBySize.get(pxSize);
+  if (cached) return cached;
+  const base = getBaseRaster(pxSize);
+  const buf = await sharp(base.pixels, {
+    raw: { width: base.width, height: base.height, channels: 4 },
+  })
+    .png()
+    .toBuffer();
+  baseAsPngBufferBySize.set(pxSize, buf);
+  return buf;
+};
+
 // Render a mini-map at the given pixel size. `mode`:
 //   "none"        — state outline + roads, no highlight
 //   "dots"        — state + roads + a list of centroid dots
 //   "jurisdiction"— state + roads + one filled polygon
-//
-// Re-rasterizing the full base (state + ~50 roads) per call is, somewhat
-// surprisingly, much faster than pre-rendering the base once and
-// compositing via an <image> element — resvg's PNG-decode + base64 path
-// cost more than rasterizing the source paths from scratch (measured at
-// ~6× slowdown when we tried the composite approach).
-const renderMapPng = (opts, pxSize = 300) => {
+const renderMapPng = async (opts, pxSize = 300) => {
   const { mode = "none", dots = [], path = null } = opts ?? {};
+
   let highlight = "";
   if (mode === "jurisdiction" && path) {
     highlight = `<path d="${path}" fill="#047857" stroke="#065f46" stroke-width="0.025" stroke-linejoin="round" opacity="0.9" />`;
@@ -178,21 +236,41 @@ const renderMapPng = (opts, pxSize = 300) => {
       )
       .join("");
   }
-  const svg = `<?xml version="1.0" encoding="UTF-8"?>
+  if (!highlight) {
+    const buf = await getBaseAsPngBuffer(pxSize);
+    return `data:image/png;base64,${buf.toString("base64")}`;
+  }
+
+  const base = getBaseRaster(pxSize);
+  // Highlight-only SVG with the same viewBox so the rasterized output
+  // aligns pixel-for-pixel with the base. Transparent background means
+  // only the drawn shape contributes alpha.
+  const overlaySvg = `<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="${VIEWBOX}" preserveAspectRatio="xMidYMid meet">
-  <path d="${STATE_PATH}" fill="#f1f5f9" stroke="#0f172a" stroke-width="0.025" stroke-linejoin="round" />
-  ${ROADS_SVG}
   ${highlight}
 </svg>`;
-  const png = new Resvg(svg, { fitTo: { mode: "width", value: pxSize } })
-    .render()
-    .asPng();
-  return `data:image/png;base64,${png.toString("base64")}`;
+  const overlay = new Resvg(overlaySvg, {
+    fitTo: { mode: "width", value: pxSize },
+  }).render();
+
+  const composedPng = await sharp(base.pixels, {
+    raw: { width: base.width, height: base.height, channels: 4 },
+  })
+    .composite([
+      {
+        input: Buffer.from(overlay.pixels),
+        raw: { width: overlay.width, height: overlay.height, channels: 4 },
+        blend: "over",
+      },
+    ])
+    .png()
+    .toBuffer();
+  return `data:image/png;base64,${composedPng.toString("base64")}`;
 };
 
 // Pre-render the no-highlight base map once — used for the home card and
 // as a fallback when an agency has neither a jurisdiction nor a centroid.
-const baseMapDataUrl = renderMapPng({ mode: "none" });
+const baseMapDataUrl = await renderMapPng({ mode: "none" });
 
 // ---------- helpers ----------
 
@@ -235,8 +313,6 @@ const card = ({
   width: 1200px;
   height: 630px;
   padding: 65px 105px;
-  background-image: url('${brandDataUrl}');
-  background-size: 1200px 630px;
   font-family: 'Inter';
 ">
   <div style="
@@ -341,9 +417,24 @@ const card = ({
 const renderToPng = async (htmlString) => {
   const vnode = htmlToVnode(htmlString);
   const svg = await satori(vnode, { ...SIZE, fonts });
-  return new Resvg(svg, { fitTo: { mode: "width", value: SIZE.width } })
-    .render()
-    .asPng();
+  // Render the card to a raw RGBA buffer with a transparent background
+  // (the outer div has no fill, so only the white panel + box-shadow
+  // contribute pixels). Then sharp composites that over the brand PNG.
+  // This skips embedding the 1.2 MB brand data URL in the satori SVG —
+  // resvg used to re-parse + decode it on every card.
+  const cardImg = new Resvg(svg, {
+    fitTo: { mode: "width", value: SIZE.width },
+  }).render();
+  return sharp(brandPng)
+    .composite([
+      {
+        input: Buffer.from(cardImg.pixels),
+        raw: { width: cardImg.width, height: cardImg.height, channels: 4 },
+        blend: "over",
+      },
+    ])
+    .png()
+    .toBuffer();
 };
 
 const writePng = async (relPath, buffer) => {
@@ -369,7 +460,7 @@ const buildHome = async () => {
     // best effort
   }
   const allCentroids = [...centroidByslug.values()];
-  const homeMapDataUrl = renderMapPng({ mode: "dots", dots: allCentroids }, 300);
+  const homeMapDataUrl = await renderMapPng({ mode: "dots", dots: allCentroids }, 300);
 
   const png = await renderToPng(
     card({
@@ -416,7 +507,7 @@ const build287g = async () => {
     .filter(Boolean);
 
   const mapDataUrl = highlights.length
-    ? renderMapPng({ mode: "dots", dots: highlights }, 260)
+    ? await renderMapPng({ mode: "dots", dots: highlights }, 260)
     : baseMapDataUrl;
 
   const png = await renderToPng(
@@ -465,13 +556,13 @@ const buildAgency = async (agency) => {
     const centroid = centroidByslug.get(agency.agency_slug);
     const jurisdictionVisible = jurisdiction && jurisdiction.maxDim >= MIN_VISIBLE_DIM;
     if (jurisdictionVisible) {
-      mapDataUrl = renderMapPng({ mode: "jurisdiction", path: jurisdiction.d }, 300);
+      mapDataUrl = await renderMapPng({ mode: "jurisdiction", path: jurisdiction.d }, 300);
     } else if (centroid) {
-      mapDataUrl = renderMapPng({ mode: "dots", dots: [centroid] }, 300);
+      mapDataUrl = await renderMapPng({ mode: "dots", dots: [centroid] }, 300);
     } else if (jurisdiction) {
       // Polygon exists but is sub-pixel and there's no centroid — render
       // it anyway rather than dropping the highlight entirely.
-      mapDataUrl = renderMapPng({ mode: "jurisdiction", path: jurisdiction.d }, 300);
+      mapDataUrl = await renderMapPng({ mode: "jurisdiction", path: jurisdiction.d }, 300);
     } else {
       mapDataUrl = baseMapDataUrl;
     }
@@ -504,22 +595,18 @@ const buildAllAgencies = async () => {
       process.exit(1);
     }
   }
+  if (limit !== null) {
+    agencies = agencies.slice(0, limit);
+  }
   console.log(`Baking ${agencies.length} agency cards…`);
   const t0 = Date.now();
   let done = 0;
-  // resvg-js releases the JS thread during native rasterization, so
-  // Promise.all'd renderers actually run on separate cores. Per card
-  // we do one satori call (pure JS, queued on the single event loop)
-  // plus two resvg calls (each grabs a core). Steady state we want
-  // enough in flight that there's always one in satori plus most cores
-  // busy in resvg — cpus + a small slack is the sweet spot. More than
-  // that just buys queueing and memory pressure with no extra throughput.
-  // Override with BAKE_OG_CONCURRENCY for one-off tuning.
-  const envConcurrency = Number(process.env.BAKE_OG_CONCURRENCY);
-  const CONCURRENCY = Number.isFinite(envConcurrency) && envConcurrency > 0
-    ? Math.floor(envConcurrency)
-    : Math.max(4, os.cpus().length + 4);
-  console.log(`  concurrency: ${CONCURRENCY}`);
+  // resvg-js's render() is synchronous and blocks the JS thread —
+  // verified by microbench (Promise.all of N renders ≈ sequential N).
+  // Increasing this past a small number buys nothing and adds memory
+  // pressure; the only thing it interleaves is satori's async layout
+  // step. For real parallelism we'd need worker_threads.
+  const CONCURRENCY = 6;
   const queue = [...agencies];
   await Promise.all(
     Array.from({ length: CONCURRENCY }, async () => {
