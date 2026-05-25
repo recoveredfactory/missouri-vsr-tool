@@ -8,7 +8,14 @@ import {
   registerTool,
   textResult,
 } from "./registry.js";
-import { RANKING_CAVEAT, RESEARCH_PROMPT } from "./caveats.js";
+import {
+  DEFAULT_MIN_TOTAL_STOPS,
+  MIN_TOTAL_STOPS_DESCRIPTION,
+  RANKING_CAVEAT,
+  RESEARCH_PROMPT,
+  buildLowVolumeSummary,
+  flagsFor,
+} from "./caveats.js";
 
 const RACE_LABEL_TO_COLUMN: Record<string, string> = {
   total: "total",
@@ -79,6 +86,21 @@ const QueryMetricInput = z.object({
     .string()
     .optional()
     .describe("Filter to a single agency_type (case-insensitive exact match)."),
+  min_total_stops: z
+    .number()
+    .int()
+    .min(0)
+    .optional()
+    .describe(MIN_TOTAL_STOPS_DESCRIPTION),
+  max_rows: z
+    .number()
+    .int()
+    .min(1)
+    .max(5000)
+    .optional()
+    .describe(
+      "Hard cap on per-year rows returned. Default 500. Raise (up to 5000) when you need the full agency × year matrix; lower it when you just want a sample.",
+    ),
 });
 
 type QueryMetricArgs = z.infer<typeof QueryMetricInput>;
@@ -112,6 +134,9 @@ const handler = async (raw: unknown) => {
     if (yrs.length === 0) return [2020, 2024] as [number, number];
     return [yrs[0], yrs[yrs.length - 1]] as [number, number];
   })();
+
+  const minTotalStops = args.min_total_stops ?? DEFAULT_MIN_TOTAL_STOPS;
+  const maxRows = args.max_rows ?? 500;
 
   const conn = await getDb();
 
@@ -184,7 +209,26 @@ const handler = async (raw: unknown) => {
     bySlug.set(slug, list);
   }
 
+  // Compute total_stops_in_window per agency (sum of stops_total_year across
+  // the per-year rows we got back). Used for both the min_total_stops filter
+  // and the per-row guardrail column.
+  const stopsInWindowBySlug = new Map<string, number>();
+  for (const [slug, rows] of bySlug) {
+    let sum = 0;
+    for (const r of rows) sum += Number(r.stops_total_year ?? 0);
+    stopsInWindowBySlug.set(slug, sum);
+  }
+
+  // Apply the min_total_stops filter (orthogonal to whether the requested
+  // metric had a value). Single-agency mode bypasses it — if the user asked
+  // about a specific agency we always return what they asked for.
   let agencySlugs = [...bySlug.keys()];
+  if (!args.agency_slug) {
+    agencySlugs = agencySlugs.filter(
+      (slug) => (stopsInWindowBySlug.get(slug) ?? 0) >= minTotalStops,
+    );
+  }
+  const nInEligiblePool = agencySlugs.length;
 
   // Ranking mode: pick top_n by latest non-null year value in the window.
   let ranking_basis: string | null = null;
@@ -209,9 +253,34 @@ const handler = async (raw: unknown) => {
     agencySlugs = latestValues.slice(0, args.top_n).map((r) => r.slug);
   }
 
+  // Hard cap on per-year row count. Without an explicit top_n, sort agencies
+  // by total_stops_in_window descending (most journalism-relevant first) and
+  // include agencies in that order until we hit maxRows.
+  let truncatedAgencies = false;
+  if (!args.agency_slug && !args.top_n) {
+    agencySlugs.sort(
+      (a, b) =>
+        (stopsInWindowBySlug.get(b) ?? 0) - (stopsInWindowBySlug.get(a) ?? 0),
+    );
+  }
+  const kept: string[] = [];
+  let rowsKept = 0;
+  for (const slug of agencySlugs) {
+    const need = bySlug.get(slug)!.length;
+    if (rowsKept + need > maxRows && kept.length > 0) {
+      truncatedAgencies = true;
+      break;
+    }
+    kept.push(slug);
+    rowsKept += need;
+  }
+  agencySlugs = kept;
+
   const agencies = agencySlugs.map((slug) => {
     const rows = bySlug.get(slug)!;
     const first = rows[0];
+    const stopsInWindow = stopsInWindowBySlug.get(slug) ?? 0;
+    const { low_volume_warning } = flagsFor(stopsInWindow);
     return {
       agency_slug: slug,
       canonical_name: first.canonical_name,
@@ -219,6 +288,8 @@ const handler = async (raw: unknown) => {
       agency_type: first.agency_type,
       latest_year_in_window: Number(first.year),
       latest_value: first.value,
+      total_stops_in_window: stopsInWindow,
+      low_volume_warning,
       per_year: rows.map((r) => ({
         year: r.year,
         value: r.value,
@@ -232,6 +303,13 @@ const handler = async (raw: unknown) => {
     new Set(allRows.map((r) => Number(r.year))),
   ).sort((a, b) => a - b);
 
+  const lowVolumeSummary = buildLowVolumeSummary(
+    agencies.map((a) => ({
+      canonical_name: a.canonical_name,
+      total_stops_in_window: a.total_stops_in_window,
+    })),
+  );
+
   const payload = {
     canonical_key: args.canonical_key,
     race_column: raceLabel,
@@ -241,10 +319,21 @@ const handler = async (raw: unknown) => {
     metric_coverage_note: `This metric has data for years ${meta.years_present[0]}–${meta.years_present[meta.years_present.length - 1]} (${meta.years_present.length} years). Race columns populated for this metric: ${meta.races_populated.join(", ")}.`,
     ranking_basis,
     n_agencies_returned: agencies.length,
+    n_in_eligible_pool: nInEligiblePool,
+    truncated_by_max_rows: truncatedAgencies,
+    rows_returned: rowsKept,
+    max_rows: maxRows,
+    min_total_stops: minTotalStops,
     filters: {
       agency_slug: args.agency_slug ?? null,
       county: args.county ?? null,
       agency_type: args.agency_type ?? null,
+    },
+    defaulted_filters: {
+      min_total_stops: args.min_total_stops === undefined,
+      max_rows: args.max_rows === undefined,
+      year_range: args.year_range === undefined,
+      race: args.race === undefined,
     },
     interpretation_note:
       meta.type_heuristic === "rate"
@@ -254,10 +343,11 @@ const handler = async (raw: unknown) => {
           : meta.type_heuristic === "population"
             ? "value is a population denominator (ACS / decennial), not a stop count."
             : "value is a raw count for that agency × year. Sum-able across years if the question warrants.",
+    low_volume_warning_summary: lowVolumeSummary,
     ranking_caveat: RANKING_CAVEAT,
     further_research_prompt: RESEARCH_PROMPT,
     sample_size_companion:
-      "Each per_year row includes stops_total_year — that agency's total stops in that year, regardless of the metric you queried. Use it as a volatility guardrail; treat any value drawn from <100 underlying stops with extreme caution.",
+      "Each per_year row includes stops_total_year — that agency's total stops in that year. Each agency carries total_stops_in_window + a low_volume_warning flag (set when below 2500 stops in the window). Treat any flagged agency with EXPLICIT skepticism in your answer.",
     agencies,
   };
 

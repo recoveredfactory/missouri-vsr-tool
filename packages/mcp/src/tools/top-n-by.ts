@@ -2,7 +2,14 @@ import { z } from "zod";
 
 import { getDb } from "../db.js";
 import { normalize } from "../duckutil.js";
-import { RANKING_CAVEAT, RESEARCH_PROMPT } from "./caveats.js";
+import {
+  DEFAULT_MIN_TOTAL_STOPS,
+  MIN_TOTAL_STOPS_DESCRIPTION,
+  RANKING_CAVEAT,
+  RESEARCH_PROMPT,
+  buildLowVolumeSummary,
+  flagsFor,
+} from "./caveats.js";
 import { errorResult, inputSchemaFromZod, registerTool, textResult } from "./registry.js";
 
 type RaceColumn = "white" | "black" | "hispanic" | "asian" | "native_american" | "other";
@@ -198,9 +205,9 @@ WITH agg AS (
     description:
       "Share of stops that were of jurisdiction residents (vs. non-residents), reported as a percentage 0–100: 100 * SUM(resident-stops) / SUM(stops). A LOW share means an agency is stopping mostly non-residents — typical of highway / through-traffic enforcement; flag for revenue-from-outsiders patterns. Only post-2020 reporting forms include the resident/non-resident split.",
     sampleField: "denominator",
-    defaultMinSample: 500,
+    defaultMinSample: 2500,
     method:
-      "Aggregate resident-stops count divided by aggregate stops count across the window, per agency. Multiplied by 100 to match the other share metrics' 0–100 scale.",
+      "Aggregate resident-stops count divided by aggregate stops count across the window, per agency. Multiplied by 100 to match the other share metrics' 0–100 scale. Default minimum is 2500 stops because resident-share is particularly volatile at small volumes.",
     cte: buildStandard("resident-stops", "stops", "total", "total"),
     valueExpr: "100 * numerator / NULLIF(denominator, 0)",
     secondarySample: "numerator",
@@ -246,8 +253,14 @@ const TopNByInput = z.object({
     .min(0)
     .optional()
     .describe(
-      "Override the metric's default minimum sample size. Lowering this below the default is discouraged — small denominators produce unstable rates.",
+      "Override the metric's default minimum sample size (the denominator-specific threshold, e.g. ≥500 stops for search_rate). Lowering this below the default is discouraged — small denominators produce unstable rates.",
     ),
+  min_total_stops: z
+    .number()
+    .int()
+    .min(0)
+    .optional()
+    .describe(MIN_TOTAL_STOPS_DESCRIPTION),
 });
 
 type TopNByArgs = z.infer<typeof TopNByInput>;
@@ -262,40 +275,66 @@ const topNByHandler = async (raw: unknown) => {
   const metricKey = args.metric;
   const spec = METRICS[metricKey];
   const minSample = args.min_sample_size ?? spec.defaultMinSample;
+  const minTotalStops = args.min_total_stops ?? DEFAULT_MIN_TOTAL_STOPS;
   const n = args.n ?? 20;
   const [start, end] = args.year_range ?? [2020, 2024];
   const direction = args.ascending ? "ASC" : "DESC";
 
   const extraFilters: string[] = [];
   const bindings: Array<{ kind: "varchar"; value: string }> = [];
+  // Param layout: $1 = minSample, $2 = n, $3 = minTotalStops, $4+ = string filters.
   if (args.county) {
-    extraFilters.push(`AND LOWER(a.county) = $${bindings.length + 3}`);
+    extraFilters.push(`AND LOWER(a.county) = $${bindings.length + 4}`);
     bindings.push({ kind: "varchar", value: args.county.toLowerCase() });
   }
   if (args.agency_type) {
-    extraFilters.push(`AND LOWER(a.agency_type) = $${bindings.length + 3}`);
+    extraFilters.push(`AND LOWER(a.agency_type) = $${bindings.length + 4}`);
     bindings.push({ kind: "varchar", value: args.agency_type.toLowerCase() });
   }
   const extra = extraFilters.join("\n    ");
 
-  const cte = spec.cte(extra);
+  // Splice a window_stops CTE before the metric-specific agg CTE so we can
+  // join total-stops-in-window for the min_total_stops filter and the
+  // per-row guardrail column.
+  const windowStopsCte = `window_stops AS (
+  SELECT s.agency_slug, SUM(s.total)::BIGINT AS total_stops_in_window
+  FROM stops s
+  WHERE s.metric = 'stops' AND s.year BETWEEN $start AND $end
+  GROUP BY s.agency_slug
+)`;
+  const cte = spec.cte(extra).replace(
+    /^\s*WITH agg AS/,
+    `WITH ${windowStopsCte}, agg AS`,
+  );
 
   const sql = `
     ${cte}
+    , eligible AS (
+      SELECT
+        w.agency_slug,
+        (${spec.valueExpr}) AS value,
+        w.${spec.sampleField} AS sample_size,
+        ${spec.secondarySample ? `w.${spec.secondarySample} AS secondary_sample,` : ""}
+        COALESCE(ws.total_stops_in_window, 0)::BIGINT AS total_stops_in_window
+      FROM agg w
+      LEFT JOIN window_stops ws ON ws.agency_slug = w.agency_slug
+      WHERE w.${spec.sampleField} >= $1
+        AND (${spec.valueExpr}) IS NOT NULL
+        AND COALESCE(ws.total_stops_in_window, 0) >= $3
+    )
     SELECT
-      w.agency_slug,
+      e.agency_slug,
       a.canonical_name,
       a.county,
       a.agency_type,
-      (${spec.valueExpr}) AS value,
-      w.${spec.sampleField} AS sample_size${
-        spec.secondarySample ? `,\n      w.${spec.secondarySample} AS secondary_sample` : ""
-      }
-    FROM agg w
-    INNER JOIN agencies a ON a.agency_slug = w.agency_slug
-    WHERE w.${spec.sampleField} >= $1
-      AND (${spec.valueExpr}) IS NOT NULL
-    ORDER BY value ${direction} NULLS LAST
+      e.value,
+      e.sample_size,
+      ${spec.secondarySample ? `e.secondary_sample,` : ""}
+      e.total_stops_in_window,
+      (SELECT COUNT(*) FROM eligible) AS n_in_eligible_pool
+    FROM eligible e
+    INNER JOIN agencies a ON a.agency_slug = e.agency_slug
+    ORDER BY e.value ${direction} NULLS LAST
     LIMIT $2
   `;
 
@@ -310,14 +349,15 @@ const topNByHandler = async (raw: unknown) => {
   const stmt = await conn.prepare(sqlWithYears);
   stmt.bindInteger(1, minSample);
   stmt.bindInteger(2, n);
+  stmt.bindInteger(3, minTotalStops);
   bindings.forEach((b, i) => {
-    stmt.bindVarchar(i + 3, b.value);
+    stmt.bindVarchar(i + 4, b.value);
   });
 
   const reader = await stmt.runAndReadAll();
   const cols = reader.columnNames();
   const rows = reader.getRows();
-  const data = rows.map((row) => {
+  const rawData = rows.map((row) => {
     const obj: Record<string, unknown> = {};
     cols.forEach((col, i) => {
       obj[col] = normalize(row[i]);
@@ -325,19 +365,48 @@ const topNByHandler = async (raw: unknown) => {
     return obj;
   });
 
+  const nInEligiblePool =
+    rawData.length > 0 ? Number(rawData[0].n_in_eligible_pool ?? 0) : 0;
+
+  const data = rawData.map((row) => {
+    const stopsInWindow = Number(row.total_stops_in_window ?? 0);
+    const { low_volume_warning } = flagsFor(stopsInWindow);
+    const rest: Record<string, unknown> = { ...row };
+    delete rest.n_in_eligible_pool;
+    rest.low_volume_warning = low_volume_warning;
+    return rest;
+  });
+
+  const lowVolumeSummary = buildLowVolumeSummary(
+    data.map((d) => ({
+      canonical_name: d.canonical_name,
+      total_stops_in_window: Number(d.total_stops_in_window ?? 0),
+    })),
+  );
+
   const payload = {
     metric: metricKey,
     direction: args.ascending ? "ascending" : "descending",
     n_requested: n,
     n_returned: data.length,
+    n_in_eligible_pool: nInEligiblePool,
+    ranked_within: `${data.length} of ${nInEligiblePool} agencies that passed both the metric's denominator floor (${minSample}) and the min_total_stops floor (${minTotalStops}) in ${start}–${end}`,
     year_range: [start, end],
     sample_size_field: spec.sampleField,
     min_sample_size: minSample,
+    min_total_stops: minTotalStops,
     method: spec.method,
     filters: {
       county: args.county ?? null,
       agency_type: args.agency_type ?? null,
     },
+    defaulted_filters: {
+      min_sample_size: args.min_sample_size === undefined,
+      min_total_stops: args.min_total_stops === undefined,
+      year_range: args.year_range === undefined,
+      n: args.n === undefined,
+    },
+    low_volume_warning_summary: lowVolumeSummary,
     ranking_caveat: RANKING_CAVEAT,
     further_research_prompt: RESEARCH_PROMPT,
     results: data,

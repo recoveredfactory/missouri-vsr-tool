@@ -53,6 +53,8 @@ curl -X POST https://d1w5qatcgl0dry.cloudfront.net/ \
 | `list_metrics` | Empirically scanned index of every canonical_key in the loaded data — years present, race columns populated, agency-year row count, type heuristic (count / rate / ratio / population). Call this when you're not sure a metric exists. |
 | `query_metric` | Raw per-agency × per-year values for any canonical_key. No cross-year aggregation, no derivations — exactly what the agency filed. Optional ranking by latest-year value. Pair with `list_metrics` to discover keys. |
 | `agency_summary` | Multi-year curated slice (stops / searches / contraband / arrests / citations + rates + disparity index) for one agency, broken down by race. |
+| `agency_demographics` | ACS jurisdiction census data for one agency — race composition (mapped to stops-data labels), age, sex, median household income, per-capita income. Honest null for state-level agencies with no jurisdiction. |
+| `stop_share_vs_population_share` | Paired comparison: agency's stop-share-by-race (summed across a year window) against jurisdiction's ACS population-share-by-race. Composite data tool; Claude charts from the JSON. |
 | `top_n_by` | Ranks agencies by one of ten curated **derived** metrics (search rate, contraband hit rate, citation rate, arrest rate, search-rate-minus-hit-rate, Hispanic/Black stop share, resident stop share, disparity index, total stops). Per-metric sample-size minimums baked in. For raw values of any canonical_key, use `query_metric`. |
 | `trend` | Linear OLS regression of an annual metric against year, per agency, with 95% CI and two-sided p-value. Filters thin years. |
 | `disparity` | Knowles/Persico/Todd (2001) outcome test — search rate by race + hit rate conditional on search + ratios vs. white non-Hispanic. Scopes to a single agency, a county, or statewide. |
@@ -60,6 +62,8 @@ curl -X POST https://d1w5qatcgl0dry.cloudfront.net/ \
 | `make_map` | Renders the project's `mo_locator.svg` with CSS fill rules injected for each passed-in agency slug, rasterized to PNG (most chat clients can't render SVG image content). |
 
 The split between `query_metric` (raw reads) and `top_n_by` (curated derivations) is intentional: derivations need sample-size guards and methodology notes; raw reads just need to surface what the agency filed. Every ranking response includes a `ranking_caveat` field — read it before quoting an order.
+
+**Sample-size guardrails:** `top_n_by`, `query_metric`, and `distribution` all default to `min_total_stops=500` (≈1 stop every 4 days in a 5-year window) — micros are excluded by default. Every per-agency row carries `total_stops_in_window` and a `low_volume_warning` flag (set when below 2,500 stops in window). When any returned agencies are low-volume, the response includes a LOUD `low_volume_warning_summary` field naming them so the LLM can flag them in its answer. The server instructions ask the LLM to *pause and confirm the floor with the user* before running rankings unless the user has already specified one in conversation.
 
 ## Three example transcripts
 

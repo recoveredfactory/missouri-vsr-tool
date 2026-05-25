@@ -2,7 +2,13 @@ import { z } from "zod";
 
 import { getDb } from "../db.js";
 import { normalize } from "../duckutil.js";
-import { RESEARCH_PROMPT } from "./caveats.js";
+import {
+  DEFAULT_MIN_TOTAL_STOPS,
+  MIN_TOTAL_STOPS_DESCRIPTION,
+  RESEARCH_PROMPT,
+  buildLowVolumeSummary,
+  flagsFor,
+} from "./caveats.js";
 import {
   errorResult,
   inputSchemaFromZod,
@@ -59,6 +65,12 @@ const DistributionInput = z.object({
     .describe(
       "Whether to include the per-agency rows alongside the binned histogram. Default true. Set to false to get only summary stats + bins, which is enough to draw a histogram and keeps the response small.",
     ),
+  min_total_stops: z
+    .number()
+    .int()
+    .min(0)
+    .optional()
+    .describe(MIN_TOTAL_STOPS_DESCRIPTION),
 });
 
 type DistributionArgs = z.infer<typeof DistributionInput>;
@@ -70,6 +82,8 @@ interface RowRecord {
   agency_type: string | null;
   value: number;
   sample_size: number;
+  total_stops_in_window: number;
+  low_volume_warning: boolean;
 }
 
 const percentile = (sortedAsc: number[], p: number): number => {
@@ -133,23 +147,35 @@ const distributionHandler = async (raw: unknown) => {
 
   const spec = METRICS[args.metric];
   const minSample = args.min_sample_size ?? spec.defaultMinSample;
+  const minTotalStops = args.min_total_stops ?? DEFAULT_MIN_TOTAL_STOPS;
   const [start, end] = args.year_range ?? [2020, 2024];
   const binCount = args.bins ?? 20;
   const includeValues = args.include_values ?? true;
 
   const extraFilters: string[] = [];
   const bindings: Array<{ kind: "varchar"; value: string }> = [];
+  // Param indices: $1 = minSample, $2 = minTotalStops, $3+ = string filters.
   if (args.county) {
-    extraFilters.push(`AND LOWER(a.county) = $${bindings.length + 2}`);
+    extraFilters.push(`AND LOWER(a.county) = $${bindings.length + 3}`);
     bindings.push({ kind: "varchar", value: args.county.toLowerCase() });
   }
   if (args.agency_type) {
-    extraFilters.push(`AND LOWER(a.agency_type) = $${bindings.length + 2}`);
+    extraFilters.push(`AND LOWER(a.agency_type) = $${bindings.length + 3}`);
     bindings.push({ kind: "varchar", value: args.agency_type.toLowerCase() });
   }
   const extra = extraFilters.join("\n    ");
 
-  const cte = spec.cte(extra);
+  // Splice window_stops CTE before agg (same pattern as top_n_by).
+  const windowStopsCte = `window_stops AS (
+  SELECT s.agency_slug, SUM(s.total)::BIGINT AS total_stops_in_window
+  FROM stops s
+  WHERE s.metric = 'stops' AND s.year BETWEEN $start AND $end
+  GROUP BY s.agency_slug
+)`;
+  const cte = spec.cte(extra).replace(
+    /^\s*WITH agg AS/,
+    `WITH ${windowStopsCte}, agg AS`,
+  );
 
   const sql = `
     ${cte}
@@ -159,11 +185,14 @@ const distributionHandler = async (raw: unknown) => {
       a.county,
       a.agency_type,
       (${spec.valueExpr}) AS value,
-      w.${spec.sampleField} AS sample_size
+      w.${spec.sampleField} AS sample_size,
+      COALESCE(ws.total_stops_in_window, 0)::BIGINT AS total_stops_in_window
     FROM agg w
     INNER JOIN agencies a ON a.agency_slug = w.agency_slug
+    LEFT JOIN window_stops ws ON ws.agency_slug = w.agency_slug
     WHERE w.${spec.sampleField} >= $1
       AND (${spec.valueExpr}) IS NOT NULL
+      AND COALESCE(ws.total_stops_in_window, 0) >= $2
     ORDER BY value ASC NULLS LAST
   `;
 
@@ -174,8 +203,9 @@ const distributionHandler = async (raw: unknown) => {
   const conn = await getDb();
   const stmt = await conn.prepare(sqlWithYears);
   stmt.bindInteger(1, minSample);
+  stmt.bindInteger(2, minTotalStops);
   bindings.forEach((b, i) => {
-    stmt.bindVarchar(i + 2, b.value);
+    stmt.bindVarchar(i + 3, b.value);
   });
 
   const reader = await stmt.runAndReadAll();
@@ -186,6 +216,7 @@ const distributionHandler = async (raw: unknown) => {
     cols.forEach((col, i) => {
       obj[col] = normalize(row[i]);
     });
+    const stopsInWindow = Number(obj.total_stops_in_window ?? 0);
     return {
       agency_slug: String(obj.agency_slug),
       canonical_name: String(obj.canonical_name),
@@ -193,6 +224,8 @@ const distributionHandler = async (raw: unknown) => {
       agency_type: (obj.agency_type as string | null) ?? null,
       value: Number(obj.value),
       sample_size: Number(obj.sample_size),
+      total_stops_in_window: stopsInWindow,
+      low_volume_warning: flagsFor(stopsInWindow).low_volume_warning,
     };
   });
 
@@ -240,19 +273,28 @@ const distributionHandler = async (raw: unknown) => {
 
   const hist = buildHistogram(values, binCount);
 
+  const lowVolumeSummary = buildLowVolumeSummary(rows);
+
   const payload = {
     metric: args.metric,
     year_range: [start, end],
     sample_size_field: spec.sampleField,
     min_sample_size: minSample,
+    min_total_stops: minTotalStops,
     filters: {
       county: args.county ?? null,
       agency_type: args.agency_type ?? null,
+    },
+    defaulted_filters: {
+      min_sample_size: args.min_sample_size === undefined,
+      min_total_stops: args.min_total_stops === undefined,
+      year_range: args.year_range === undefined,
     },
     n_agencies: rows.length,
     method: spec.method,
     summary,
     histogram: hist,
+    low_volume_warning_summary: lowVolumeSummary,
     values: includeValues ? rows : null,
     further_research_prompt: RESEARCH_PROMPT,
   };

@@ -132,7 +132,7 @@ const cases: Array<[string, object]> = [
     },
   ],
   [
-    "tools/call top_n_by resident_stop_share ascending",
+    "tools/call top_n_by resident_stop_share ascending (default floor)",
     {
       jsonrpc: "2.0",
       id: 43,
@@ -144,6 +144,63 @@ const cases: Array<[string, object]> = [
           ascending: true,
           year_range: [2022, 2024],
           n: 5,
+        },
+      },
+    },
+  ],
+  [
+    "tools/call top_n_by resident_stop_share min_total_stops=5000",
+    {
+      jsonrpc: "2.0",
+      id: 44,
+      method: "tools/call",
+      params: {
+        name: "top_n_by",
+        arguments: {
+          metric: "resident_stop_share",
+          ascending: true,
+          year_range: [2022, 2024],
+          n: 5,
+          min_total_stops: 5000,
+        },
+      },
+    },
+  ],
+  [
+    "tools/call agency_demographics st-louis-city-police-dept",
+    {
+      jsonrpc: "2.0",
+      id: 45,
+      method: "tools/call",
+      params: {
+        name: "agency_demographics",
+        arguments: { agency_slug: "st-louis-city-police-dept" },
+      },
+    },
+  ],
+  [
+    "tools/call agency_demographics MSHP (no jurisdiction)",
+    {
+      jsonrpc: "2.0",
+      id: 46,
+      method: "tools/call",
+      params: {
+        name: "agency_demographics",
+        arguments: { agency_slug: "missouri-state-highway-patrol" },
+      },
+    },
+  ],
+  [
+    "tools/call stop_share_vs_population_share st-louis-city",
+    {
+      jsonrpc: "2.0",
+      id: 47,
+      method: "tools/call",
+      params: {
+        name: "stop_share_vs_population_share",
+        arguments: {
+          agency_slug: "st-louis-city-police-dept",
+          year_range: [2020, 2024],
         },
       },
     },
