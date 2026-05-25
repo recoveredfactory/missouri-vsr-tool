@@ -69,54 +69,56 @@ WITH agg AS (
 
 export const METRICS: Record<string, MetricSpec> = {
   search_rate: {
-    description: "Search rate as a percentage 0–100: 100 * SUM(searches) / SUM(stops) across the window.",
+    description:
+      "Searches per 100 stops: 100 * SUM(searches) / SUM(stops). Typically 0–100, but CAN exceed 100 because a single stop can produce multiple search events. NOT a percentage of stops — it's a rate per 100.",
     sampleField: "denominator",
     defaultMinSample: 500,
     method:
-      "Aggregate search count divided by aggregate stop count across the window, per agency, multiplied by 100. Equivalent to a stop-weighted mean of the annual search rate, on the same 0–100 scale as the AG's source rates.",
+      "Aggregate search count divided by aggregate stop count across the window, per agency, multiplied by 100. Equivalent to a stop-weighted mean of the annual search rate. Reported as a rate per 100 stops, not a percentage — values above 100 are legitimate when an agency files multiple searches against one stop.",
     cte: buildStandard("searches", "stops", "total", "total"),
     valueExpr: "100 * numerator / NULLIF(denominator, 0)",
     secondarySample: "numerator",
   },
   contraband_hit_rate: {
-    description: "Contraband hit rate as a percentage 0–100: 100 * SUM(contraband-total) / SUM(searches) across the window.",
+    description:
+      "Contraband finds per 100 searches: 100 * SUM(contraband-total) / SUM(searches). Typically 0–100; can exceed 100 if a single search recovered multiple distinct contraband categories that were each counted. Not a percentage.",
     sampleField: "denominator",
     defaultMinSample: 50,
     method:
-      "Aggregate contraband-recovered count divided by aggregate search count across the window, multiplied by 100. Counts a search as a hit if any contraband category was recovered.",
+      "Aggregate contraband-recovered count divided by aggregate search count across the window, multiplied by 100. Counts a search as a hit if any contraband category was recovered; multiple categories per search push the rate above 100.",
     cte: buildStandard("contraband-total", "searches", "total", "total"),
     valueExpr: "100 * numerator / NULLIF(denominator, 0)",
     secondarySample: "numerator",
   },
   citation_rate: {
     description:
-      "Citation rate as a percentage 0–100: 100 * SUM(citations) / SUM(stops) across the window.",
+      "Citations per 100 stops: 100 * SUM(citations) / SUM(stops). REGULARLY EXCEEDS 100 because a single traffic stop can produce multiple citations (speeding + no seatbelt + expired tags). NOT a percentage of stops — when you chart this, do not cap the axis at 100 and do not call it 'percent.'",
     sampleField: "denominator",
     defaultMinSample: 500,
     method:
-      "Aggregate citation count divided by aggregate stop count across the window, multiplied by 100. Equivalent to a stop-weighted mean of the annual citation rate.",
+      "Aggregate citation count divided by aggregate stop count across the window, multiplied by 100. Values above 100 are common, not errors — they mean the agency averages more than one citation per stop. Equivalent to a stop-weighted mean of the annual citation rate.",
     cte: buildStandard("citations", "stops", "total", "total"),
     valueExpr: "100 * numerator / NULLIF(denominator, 0)",
     secondarySample: "numerator",
   },
   arrest_rate: {
     description:
-      "Arrest rate as a percentage 0–100: 100 * SUM(arrests) / SUM(stops) across the window.",
+      "Arrests per 100 stops: 100 * SUM(arrests) / SUM(stops). Typically 0–100; can exceed 100 if multiple arrests per stop are filed (e.g. driver + passenger). NOT a percentage.",
     sampleField: "denominator",
     defaultMinSample: 500,
     method:
-      "Aggregate arrest count divided by aggregate stop count across the window, multiplied by 100. Equivalent to a stop-weighted mean of the annual arrest rate.",
+      "Aggregate arrest count divided by aggregate stop count across the window, multiplied by 100. Reported as a rate per 100 stops; values above 100 indicate multiple arrests per stop.",
     cte: buildStandard("arrests", "stops", "total", "total"),
     valueExpr: "100 * numerator / NULLIF(denominator, 0)",
     secondarySample: "numerator",
   },
   search_rate_minus_hit_rate: {
     description:
-      "Search rate minus contraband hit rate, both on 0–100 scale (so this is a difference in percentage points). A single-number proxy for the outcome test: higher values mean searches are surfacing contraband less often relative to how often they happen.",
+      "Search rate minus contraband hit rate, both as rate-per-100. Difference is in 'percentage point' units only loosely — the underlying rates can exceed 100. A single-number proxy for the outcome test: higher values mean searches are surfacing contraband less often relative to how often they happen.",
     sampleField: "stops_n",
     defaultMinSample: 500,
     method:
-      "100 * ((SUM(searches) / SUM(stops)) - (SUM(contraband-total) / SUM(searches))) across the window, per agency. Both terms are on the 0–100 percentage scale, so the difference is in percentage points. Requires at least defaultMinSample stops AND at least 50 searches.",
+      "100 * ((SUM(searches) / SUM(stops)) - (SUM(contraband-total) / SUM(searches))) across the window, per agency. Both terms are rates per 100, not pure percentages. Requires at least defaultMinSample stops AND at least 50 searches.",
     cte: (extra) => `
 WITH agg AS (
   SELECT s.agency_slug,
@@ -135,7 +137,8 @@ WITH agg AS (
     secondarySample: "searches_n",
   },
   hispanic_stop_share: {
-    description: "Share of stops where the recorded race was Hispanic, reported as a percentage 0–100: 100 * SUM(stops.Hispanic) / SUM(stops.Total).",
+    description:
+      "Share of stops where the recorded race was Hispanic, as a percentage 0–100 (truly capped at 100 — it's part of a whole, unlike citation_rate / search_rate which are rates-per-100 and can exceed 100). 100 * SUM(stops.Hispanic) / SUM(stops.Total).",
     sampleField: "denominator",
     defaultMinSample: 500,
     method: "Aggregate Hispanic stop count divided by aggregate total stop count across the window, multiplied by 100. Reported on the same 0–100 scale as the pipeline's other rate metrics.",
@@ -145,7 +148,8 @@ WITH agg AS (
     raceColumn: "hispanic",
   },
   black_stop_share: {
-    description: "Share of stops where the recorded race was Black, reported as a percentage 0–100: 100 * SUM(stops.Black) / SUM(stops.Total).",
+    description:
+      "Share of stops where the recorded race was Black, as a percentage 0–100 (truly capped at 100 — part of a whole). 100 * SUM(stops.Black) / SUM(stops.Total).",
     sampleField: "denominator",
     defaultMinSample: 500,
     method: "Aggregate Black stop count divided by aggregate total stop count across the window, multiplied by 100. Reported on the same 0–100 scale as the pipeline's other rate metrics.",
@@ -203,7 +207,7 @@ WITH agg AS (
   },
   resident_stop_share: {
     description:
-      "Share of stops that were of jurisdiction residents (vs. non-residents), reported as a percentage 0–100: 100 * SUM(resident-stops) / SUM(stops). A LOW share means an agency is stopping mostly non-residents — typical of highway / through-traffic enforcement; flag for revenue-from-outsiders patterns. Only post-2020 reporting forms include the resident/non-resident split.",
+      "Share of stops that were of jurisdiction residents (vs. non-residents), as a percentage 0–100 (truly capped at 100 — part of a whole). 100 * SUM(resident-stops) / SUM(stops). A LOW share means an agency is stopping mostly non-residents — typical of highway / through-traffic enforcement; flag for revenue-from-outsiders patterns. Only post-2020 reporting forms include the resident/non-resident split.",
     sampleField: "denominator",
     defaultMinSample: 2500,
     method:

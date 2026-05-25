@@ -27,12 +27,23 @@ Race in this dataset is **officer-perceived**, not driver-self-reported. The cat
 
 ### Key metric definitions (tool-reporting units)
 
+**Rates vs. shares — critical distinction:**
+
+- **Rates** (search rate, contraband hit rate, citation rate, arrest rate): reported as **rate per 100**, not as a percentage. Typically 0–100, but **can legitimately exceed 100** because a single traffic stop can produce multiple events of the same type (one stop → 3 citations for speeding + no seatbelt + expired tags). When charting these, don't cap the y-axis at 100 and don't label them as "percent of stops" — they are per-100 rates. Citation rate routinely exceeds 100 for some agencies; that's the data, not a bug.
+- **Shares** (Hispanic stop share, Black stop share, resident stop share): reported as a **percentage 0–100**, truly capped at 100 because they're parts of a whole (numerator is a subset of denominator). These ARE percentages in the strict sense.
+
+**Specific metrics:**
+
 - **Stop rate**: stops per 1,000 driving-age residents of the matching race in the agency's jurisdiction. Population denominators come from the most recent ACS or decennial census available for the year being reported.
-- **Search rate**: \`searches / stops\` for the agency × year × race, reported as a **percentage (0–100 scale, not a 0–1 decimal)**. Includes consent, probable-cause, and inventory searches. Does not distinguish search type for the top-line search-rate metric; per-type breakdowns are available via the \`probable-cause--\` metric family.
-- **Contraband hit rate**: \`contraband_found / searches\` for the agency × year × race, reported as a **percentage (0–100 scale)**. Counts a search as a "hit" if any contraband (drugs, weapons, currency, stolen property, alcohol, other) was recovered.
+- **Search rate**: \`100 × searches / stops\` for the agency × year × race. Typically 0–100; can exceed 100 if multiple searches per stop are recorded. Includes consent, probable-cause, and inventory searches. Per-type breakdowns are available via the \`probable-cause--\` metric family.
+- **Contraband hit rate**: \`100 × contraband_found / searches\` for the agency × year × race. Typically 0–100; can exceed 100 if a single search recovered multiple distinct contraband categories that were each counted. Counts a search as a "hit" if any contraband (drugs, weapons, currency, stolen property, alcohol, other) was recovered.
+- **Citation rate**: \`100 × citations / stops\`. **Regularly exceeds 100** for agencies that file multiple citations per stop (very common).
+- **Arrest rate**: \`100 × arrests / stops\`. Typically 0–100; can exceed 100 if multiple arrests per stop are filed (e.g. driver + passenger).
 - **Search rate minus hit rate**: a single-number proxy for the outcome test (see below). When two agencies have the same search rate, the one with the lower hit rate is searching more aggressively at the margin.
 - **Disparity index**: \`stop_rate_minority / stop_rate_white_non_hispanic\`. A value of 1.0 means parity with white drivers; values above 1.0 mean the minority race is stopped at a higher rate per resident. The denominator is white non-Hispanic by convention. Multiple variants exist for different population baselines (decennial vs. ACS; all-stops vs. resident-stops); call \`read_schema()\` for the full list. **Warning:** statewide or county-rolled disparity indexes can flip direction once you break them out by agency — see [Simpson's paradox](https://en.wikipedia.org/wiki/Simpson%27s_paradox). Always report disparity at the agency-year level alongside any aggregate.
 - **Resident vs. non-resident stops**: agencies distinguish stops of jurisdiction residents from non-residents. The "resident-stops" disparity variants use only resident stops in the numerator, which controls for through-traffic patterns at the cost of smaller sample sizes.
+
+**When you (the model) describe these to a user — never write "citation rate is 120% of stops" or chart citation_rate on a 0–100 axis. Write "120 citations per 100 stops" or "1.2 citations per stop on average." The framing matters; a journalist who calls it a "percentage" in print will get corrected.**
 
 ### The outcome test (Knowles, Persico & Todd 2001)
 

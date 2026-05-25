@@ -120,7 +120,7 @@ const agencySummaryHandler = async (raw: unknown) => {
       ? [observedYears[observedYears.length - 1], observedYears[0]]
       : null,
     metrics_returned: SUMMARY_METRICS,
-    note: "Counts (stops/searches/contraband-total/arrests/citations) are raw integers. Rates (search-rate/contraband-hit-rate/arrest-rate/citation-rate) are already in percentage points (0–100 scale, NOT 0–1 decimals). disparity-index--all-stops is a ratio against the white non-Hispanic baseline (1.0 = parity). For deeper interpretation see read_methodology.",
+    note: "Counts (stops/searches/contraband-total/arrests/citations) are raw integers. Rates (search-rate/contraband-hit-rate/arrest-rate/citation-rate) are reported as RATES PER 100 — typically 0–100 but **can exceed 100** because a single stop can produce multiple citations / multiple searches / multiple arrests. Do NOT chart these as percentages with a 0–100 axis or call them 'percent of stops' — they're per-100 rates. disparity-index--all-stops is a ratio against the white non-Hispanic baseline (1.0 = parity). For deeper interpretation see read_methodology.",
     further_research_prompt: RESEARCH_PROMPT,
     data,
   };
