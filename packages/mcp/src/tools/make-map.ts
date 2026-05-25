@@ -110,14 +110,24 @@ const makeMapHandler = async (raw: unknown): Promise<ToolResult> => {
     `.road.interstate { stroke: #94a3b8; stroke-width: 0.004; fill: none; opacity: 0.55; }`,
     `.road.us-highway { stroke: #cbd5e1; stroke-width: 0.003; fill: none; opacity: 0.45; }`,
     `.road.state-highway { stroke: #e2e8f0; stroke-width: 0.002; fill: none; opacity: 0.35; }`,
-    `.centroid { fill: #1f2937; r: 0.01; }`,
+    // Unhighlighted centroids: dim and small so highlighted agencies pop.
+    // Many jurisdictions are too small for the boundary polygon to read at
+    // this scale, so the centroid dot is the only signal a viewer can see.
+    `.centroid { fill: #94a3b8; r: 0.008; opacity: 0.55; }`,
   ];
+  const highlightSlugs = new Set<string>();
   for (const [slug, value] of entries) {
     const color = scale.colorFor(value);
     if (!color) continue;
+    const safe = cssEscape(slug);
     cssRules.push(
-      `#agency-${cssEscape(slug)} { fill: ${color}; stroke: #ffffff; stroke-width: 0.003; }`,
+      // Boundary polygon — colored fill + white outline for separation.
+      `#agency-${safe} { fill: ${color}; stroke: #ffffff; stroke-width: 0.003; }`,
+      // Matching centroid dot — same color, larger radius, dark outline so
+      // it's visible whether the boundary is tiny or large.
+      `circle.centroid[data-slug="${slug}"] { fill: ${color}; r: 0.022; stroke: #0f172a; stroke-width: 0.003; opacity: 1; }`,
     );
+    highlightSlugs.add(slug);
   }
 
   const styleBlock = `<style type="text/css"><![CDATA[\n${cssRules.join("\n")}\n]]></style>`;
@@ -126,6 +136,29 @@ const makeMapHandler = async (raw: unknown): Promise<ToolResult> => {
 
   // Inject style block right after the opening <svg ...> tag.
   svg = svg.replace(/(<svg\b[^>]*>)/, `$1\n${styleBlock}\n`);
+
+  // resvg's CSS engine is reliable for class + id selectors but the
+  // attribute selector `[data-slug="..."]` is fragile across versions. As a
+  // belt-and-suspenders fallback, also inject inline style attributes on
+  // each highlighted centroid so it renders even if the CSS rule above
+  // doesn't bind.
+  if (highlightSlugs.size > 0) {
+    svg = svg.replace(
+      /<circle\b([^>]*?)\bdata-slug="([^"]+)"([^>]*)\/>/g,
+      (match, before: string, slug: string, after: string) => {
+        if (!highlightSlugs.has(slug)) return match;
+        const color = scale.colorFor(
+          args.values[slug] as number,
+        );
+        if (!color) return match;
+        // Strip the existing r= attribute since we want to override it.
+        const cleanedBefore = before.replace(/\sr="[^"]*"/g, "");
+        const cleanedAfter = after.replace(/\sr="[^"]*"/g, "");
+        const inline = ` r="0.022" style="fill:${color};stroke:#0f172a;stroke-width:0.003;opacity:1;"`;
+        return `<circle${cleanedBefore}data-slug="${slug}"${cleanedAfter}${inline}/>`;
+      },
+    );
+  }
 
   // Build the title and legend as a foreignObject overlay positioned at the
   // top of the rendered SVG. We use the SVG's viewBox dimensions to size
