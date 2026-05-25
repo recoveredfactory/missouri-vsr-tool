@@ -3,6 +3,7 @@ import { z } from "zod";
 import { getDb, getLatestYearWithData } from "../db.js";
 import { normalize } from "../duckutil.js";
 import { RESEARCH_PROMPT } from "./caveats.js";
+import { findIssuesForAgency } from "./known-issues.js";
 import { errorResult, inputSchemaFromZod, registerTool, textResult } from "./registry.js";
 
 // Same metric vocabulary as top_n_by, expressed as DuckDB aggregate SQL
@@ -166,6 +167,7 @@ const compareHandler = async (raw: unknown) => {
   const rows = args.agency_ids.map((slug) => {
     const m = meta.get(slug);
     const r = lookup.get(slug);
+    const issues = findIssuesForAgency(slug, args.metric);
     return {
       agency_slug: slug,
       canonical_name: m?.canonical_name ?? slug,
@@ -177,6 +179,7 @@ const compareHandler = async (raw: unknown) => {
         r?.value !== null && r?.value !== undefined && median !== null && median !== 0
           ? ((r.value - median) / median) * 100
           : null,
+      ...(issues.length > 0 ? { known_data_issues: issues } : {}),
     };
   });
 

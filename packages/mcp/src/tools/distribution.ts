@@ -9,6 +9,7 @@ import {
   buildLowVolumeSummary,
   flagsFor,
 } from "./caveats.js";
+import { findIssuesFor } from "./known-issues.js";
 import {
   errorResult,
   inputSchemaFromZod,
@@ -213,14 +214,21 @@ const distributionHandler = async (raw: unknown) => {
   const reader = await stmt.runAndReadAll();
   const cols = reader.columnNames();
   const rawRows = reader.getRows();
-  const rows: RowRecord[] = rawRows.map((row) => {
+  const rows: RowRecord[] = rawRows.map((rawRow) => {
     const obj: Record<string, unknown> = {};
     cols.forEach((col, i) => {
-      obj[col] = normalize(row[i]);
+      obj[col] = normalize(rawRow[i]);
     });
     const stopsInWindow = Number(obj.total_stops_in_window ?? 0);
-    return {
-      agency_slug: String(obj.agency_slug),
+    const slug = String(obj.agency_slug);
+    const issues: ReturnType<typeof findIssuesFor> = [];
+    for (let y = start; y <= end; y += 1) {
+      for (const i of findIssuesFor(slug, y, args.metric)) {
+        if (!issues.includes(i)) issues.push(i);
+      }
+    }
+    const out: RowRecord & { known_data_issues?: unknown } = {
+      agency_slug: slug,
       canonical_name: String(obj.canonical_name),
       county: (obj.county as string | null) ?? null,
       agency_type: (obj.agency_type as string | null) ?? null,
@@ -229,6 +237,8 @@ const distributionHandler = async (raw: unknown) => {
       total_stops_in_window: stopsInWindow,
       low_volume_warning: flagsFor(stopsInWindow).low_volume_warning,
     };
+    if (issues.length > 0) out.known_data_issues = issues;
+    return out;
   });
 
   if (rows.length === 0) {

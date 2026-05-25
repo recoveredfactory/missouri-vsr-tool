@@ -45,6 +45,20 @@ Race in this dataset is **officer-perceived**, not driver-self-reported. The cat
 
 **When you (the model) describe these to a user — never write "citation rate is 120% of stops" or chart citation_rate on a 0–100 axis. Write "120 citations per 100 stops" or "1.2 citations per stop on average." The framing matters; a journalist who calls it a "percentage" in print will get corrected.**
 
+### Data quality: implausible values exist and are not always physically possible
+
+Rates can and do exceed 100 in the published data — sometimes for reasons that map cleanly to "multiple events per stop" (citation_rate routinely; arrest_rate occasionally) and sometimes in ways that **are not physically possible** (search_rate of 800 per 100 stops cannot mean "8 searches per stop in any normal sense" — it's almost certainly bad data). The Missouri AG's office ingest pipeline has known artifacts that inflate counts during the state's normalization step; the agency's filed data is often correct while the published data is wrong.
+
+Concrete example, included in the tool surface: **Kirkwood PD 2024 searches** were reported normally by the agency but blew up to thousands in the state's published 2024 VSR. Every analytical tool in this server will auto-attach a \`known_data_issues\` field to Kirkwood 2024 search-related rows; call \`known_data_issues()\` for the full list.
+
+**Heuristics for spotting un-flagged dirty data:**
+
+- A rate that should be capped by physics but isn't (search_rate > ~150, arrest_rate > ~150 — these would mean every stop produces 1.5+ searches/arrests, which is rarely real)
+- A single year's value 5×–100× larger than neighboring years for the same agency
+- An agency whose 2024 numbers diverge wildly from 2020–2023 with no public explanation
+
+When you encounter values like these and they're NOT on the known-issues list, **say so to the user**: "this value looks anomalous (e.g. search_rate of 800 per 100 stops) and isn't on the project's known-issues list — treat with caution and consider FOIA'ing the agency directly for their filed numbers." Don't quote the anomaly without that caveat. The known-issues list is necessarily incomplete; absence is not a guarantee of cleanliness.
+
 ### The outcome test (Knowles, Persico & Todd 2001)
 
 The \`disparity\` tool implements the classic outcome test for racial bias in search decisions, originally proposed in [Knowles, Persico & Todd, *Racial Bias in Motor Vehicle Searches: Theory and Evidence* (2001)](https://www.jstor.org/stable/2696570). The intuition: if officers applied the same threshold of suspicion to all drivers, the contraband hit rate would be equalized across groups at the margin. A pattern where one race is searched at a higher rate **and** contraband is found at a lower rate is consistent with a lower threshold of suspicion being applied to that race.

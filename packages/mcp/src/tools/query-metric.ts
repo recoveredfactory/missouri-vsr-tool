@@ -16,6 +16,9 @@ import {
   buildLowVolumeSummary,
   flagsFor,
 } from "./caveats.js";
+import { findIssuesFor, findIssuesForAgency } from "./known-issues.js";
+
+const findIssuesForAnyYear = findIssuesForAgency;
 
 const RACE_LABEL_TO_COLUMN: Record<string, string> = {
   total: "total",
@@ -287,6 +290,20 @@ const handler = async (raw: unknown) => {
     const first = rows[0];
     const stopsInWindow = stopsInWindowBySlug.get(slug) ?? 0;
     const { low_volume_warning } = flagsFor(stopsInWindow);
+    const per_year = rows.map((r) => {
+      const year = Number(r.year);
+      const issues = findIssuesFor(slug, year, args.canonical_key);
+      return {
+        year,
+        value: r.value,
+        stops_total_year: r.stops_total_year,
+        ...(issues.length > 0 ? { known_data_issues: issues } : {}),
+      };
+    });
+    // Roll up any per-year issues into an agency-level flag so a reader
+    // scanning the agency list sees the warning without having to expand
+    // per_year.
+    const agencyIssues = findIssuesForAnyYear(slug, args.canonical_key);
     return {
       agency_slug: slug,
       canonical_name: first.canonical_name,
@@ -296,11 +313,10 @@ const handler = async (raw: unknown) => {
       latest_value: first.value,
       total_stops_in_window: stopsInWindow,
       low_volume_warning,
-      per_year: rows.map((r) => ({
-        year: r.year,
-        value: r.value,
-        stops_total_year: r.stops_total_year,
-      })),
+      ...(agencyIssues.length > 0
+        ? { known_data_issues: agencyIssues }
+        : {}),
+      per_year,
     };
   });
 

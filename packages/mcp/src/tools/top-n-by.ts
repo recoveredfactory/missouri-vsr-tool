@@ -10,6 +10,7 @@ import {
   buildLowVolumeSummary,
   flagsFor,
 } from "./caveats.js";
+import { findIssuesFor } from "./known-issues.js";
 import { errorResult, inputSchemaFromZod, registerTool, textResult } from "./registry.js";
 
 type RaceColumn = "white" | "black" | "hispanic" | "asian" | "native_american" | "other";
@@ -380,9 +381,19 @@ const topNByHandler = async (raw: unknown) => {
   const data = rawData.map((row) => {
     const stopsInWindow = Number(row.total_stops_in_window ?? 0);
     const { low_volume_warning } = flagsFor(stopsInWindow);
+    const slug = String(row.agency_slug);
+    // Check known-issues for every year in the window — if any year × this
+    // metric is flagged, attach the issues so the LLM sees them inline.
+    const issues: ReturnType<typeof findIssuesFor> = [];
+    for (let y = start; y <= end; y += 1) {
+      for (const i of findIssuesFor(slug, y, metricKey)) {
+        if (!issues.includes(i)) issues.push(i);
+      }
+    }
     const rest: Record<string, unknown> = { ...row };
     delete rest.n_in_eligible_pool;
     rest.low_volume_warning = low_volume_warning;
+    if (issues.length > 0) rest.known_data_issues = issues;
     return rest;
   });
 

@@ -3,6 +3,7 @@ import { z } from "zod";
 import { getDb } from "../db.js";
 import { normalize } from "../duckutil.js";
 import { RESEARCH_PROMPT } from "./caveats.js";
+import { findIssuesForAgency } from "./known-issues.js";
 import { errorResult, inputSchemaFromZod, registerTool, textResult } from "./registry.js";
 
 const SUMMARY_METRICS = [
@@ -113,8 +114,11 @@ const agencySummaryHandler = async (raw: unknown) => {
     (a, b) => b - a,
   );
 
+  const agencyIssues = findIssuesForAgency(args.agency_id);
+
   const summary = {
     agency: agencyMeta,
+    known_data_issues: agencyIssues.length > 0 ? agencyIssues : null,
     year_range_requested: [startYear, endYear],
     year_range_observed: observedYears.length
       ? [observedYears[observedYears.length - 1], observedYears[0]]
