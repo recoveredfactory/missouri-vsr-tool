@@ -118,6 +118,11 @@ export default $config({
       runtime: "nodejs22.x",
       memory: "1024 MB",
       timeout: "30 seconds",
+      // Cold start is ~8–15s (76MB Parquet + JSON + SVG fetch from
+      // CloudFront, DuckDB table builds, metric coverage scan). Keep one
+      // container warm in prod so the first user of each session doesn't
+      // eat that latency. Same pattern as the SvelteKit Web app above.
+      warm: isProdStage ? 1 : 0,
       url: {
         cors: {
           allowMethods: ["GET", "POST"],

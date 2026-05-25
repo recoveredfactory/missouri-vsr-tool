@@ -272,6 +272,21 @@ const init = async (): Promise<DuckDBConnection> => {
      WHERE agency_slug = 'missouri-all-agencies'`,
   );
 
+  // Intermediate materialized view: one row per (agency, year) carrying the
+  // year's total stop count. ~15k rows vs the 3M-row stops table; every
+  // ranking/distribution query needs the per-agency stops total over a
+  // window, and computing it from the full stops table on each call was
+  // the dominant per-request cost. Indexed for both single-agency lookups
+  // and window scans.
+  await conn.run(
+    `CREATE TABLE agency_year_stops AS
+     SELECT agency_slug, year, total::BIGINT AS total_stops
+     FROM stops
+     WHERE metric = 'stops' AND total IS NOT NULL`,
+  );
+  await conn.run("CREATE INDEX ays_slug_year ON agency_year_stops (agency_slug, year)");
+  await conn.run("CREATE INDEX ays_year ON agency_year_stops (year)");
+
   // One-shot empirical scan: which canonical_keys are present, what years
   // each one covers, which race columns are populated. Cached for the
   // Lambda lifetime; consumed by list_metrics and query_metric.

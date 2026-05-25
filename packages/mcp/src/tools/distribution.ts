@@ -167,12 +167,13 @@ const distributionHandler = async (raw: unknown) => {
   }
   const extra = extraFilters.join("\n    ");
 
-  // Splice window_stops CTE before agg (same pattern as top_n_by).
+  // Splice window_stops CTE before agg (same pattern as top_n_by). Reads
+  // from the agency_year_stops materialized view, not the full stops table.
   const windowStopsCte = `window_stops AS (
-  SELECT s.agency_slug, SUM(s.total)::BIGINT AS total_stops_in_window
-  FROM stops s
-  WHERE s.metric = 'stops' AND s.year BETWEEN $start AND $end
-  GROUP BY s.agency_slug
+  SELECT agency_slug, SUM(total_stops)::BIGINT AS total_stops_in_window
+  FROM agency_year_stops
+  WHERE year BETWEEN $start AND $end
+  GROUP BY agency_slug
 )`;
   const cte = spec.cte(extra).replace(
     /^\s*WITH agg AS/,

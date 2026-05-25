@@ -174,13 +174,12 @@ const handler = async (raw: unknown) => {
       a.agency_type,
       s.year,
       s.${raceCol} AS value,
-      stops_tot.total AS stops_total_year
+      stops_tot.total_stops AS stops_total_year
     FROM stops s
     INNER JOIN agencies a ON a.agency_slug = s.agency_slug
-    LEFT JOIN stops stops_tot
+    LEFT JOIN agency_year_stops stops_tot
       ON stops_tot.agency_slug = s.agency_slug
      AND stops_tot.year = s.year
-     AND stops_tot.metric = 'stops'
     WHERE s.metric = $1
       AND s.year BETWEEN $2 AND $3
       AND s.${raceCol} IS NOT NULL
