@@ -32,6 +32,12 @@ const ListAgenciesInput = z.object({
     .max(1000)
     .optional()
     .describe("Maximum rows to return. Defaults to 200."),
+  include_statewide_rollup: z
+    .boolean()
+    .optional()
+    .describe(
+      "Whether to include the 'Missouri (all agencies)' statewide-rollup pseudo-agency (slug: missouri-all-agencies). Default false — the rollup aggregates every filing and is not a real agency. Set true if you specifically want it in the list.",
+    ),
 });
 
 type ListAgenciesArgs = z.infer<typeof ListAgenciesInput>;
@@ -64,6 +70,10 @@ const listAgenciesHandler = async (raw: unknown) => {
   if (minStops > 0) {
     filters.push(`lifetime_stops >= $${params.length + 1}`);
     params.push(minStops);
+  }
+
+  if (!args.include_statewide_rollup) {
+    filters.push(`is_statewide_rollup = FALSE`);
   }
 
   const where = filters.length ? `WHERE ${filters.join(" AND ")}` : "";

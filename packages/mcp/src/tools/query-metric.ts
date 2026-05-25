@@ -181,6 +181,12 @@ const handler = async (raw: unknown) => {
     WHERE s.metric = $1
       AND s.year BETWEEN $2 AND $3
       AND s.${raceCol} IS NOT NULL
+      ${
+        // When the user asks about a single agency by slug, allow the
+        // statewide-rollup through (they may have asked for it explicitly).
+        // Otherwise filter it out from the default ranking/listing surface.
+        args.agency_slug ? "" : "AND a.is_statewide_rollup = FALSE"
+      }
       ${extraFilters.join("\n      ")}
     ORDER BY a.canonical_name, s.year DESC
   `;

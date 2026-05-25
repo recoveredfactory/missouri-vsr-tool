@@ -193,6 +193,7 @@ const distributionHandler = async (raw: unknown) => {
     WHERE w.${spec.sampleField} >= $1
       AND (${spec.valueExpr}) IS NOT NULL
       AND COALESCE(ws.total_stops_in_window, 0) >= $2
+      AND a.is_statewide_rollup = FALSE
     ORDER BY value ASC NULLS LAST
   `;
 

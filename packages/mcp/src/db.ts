@@ -95,16 +95,20 @@ const scanMetricCoverage = async (
 ): Promise<MetricCoverage[]> => {
   // Per-metric aggregates: which races have any non-null value, and total
   // sample size. Cheap — one scan over the stops table (~3M rows).
+  // Excludes the statewide-rollup pseudo-agency so n_agencies reflects
+  // real reporting agencies.
   const aggSql = `
-    SELECT metric,
+    SELECT s.metric,
            COUNT(*)::BIGINT AS n_agency_years,
-           COUNT(DISTINCT agency_slug)::BIGINT AS n_agencies,
+           COUNT(DISTINCT s.agency_slug)::BIGINT AS n_agencies,
            ${RACE_COLUMNS.map(
-             (r) => `SUM(CASE WHEN ${r.col} IS NOT NULL THEN 1 ELSE 0 END)::BIGINT AS ${r.col}_n`,
+             (r) => `SUM(CASE WHEN s.${r.col} IS NOT NULL THEN 1 ELSE 0 END)::BIGINT AS ${r.col}_n`,
            ).join(",\n           ")}
-    FROM stops
-    GROUP BY metric
-    ORDER BY metric
+    FROM stops s
+    INNER JOIN agencies a ON a.agency_slug = s.agency_slug
+    WHERE a.is_statewide_rollup = FALSE
+    GROUP BY s.metric
+    ORDER BY s.metric
   `;
   const aggReader = await (await conn.prepare(aggSql)).runAndReadAll();
   const aggRows = aggReader.getRows();
@@ -115,15 +119,19 @@ const scanMetricCoverage = async (
   const yearsSql = `
     SELECT metric, year
     FROM (
-      SELECT DISTINCT metric, year
-      FROM stops
-      WHERE total IS NOT NULL
-         OR white IS NOT NULL
-         OR black IS NOT NULL
-         OR hispanic IS NOT NULL
-         OR asian IS NOT NULL
-         OR native_american IS NOT NULL
-         OR other IS NOT NULL
+      SELECT DISTINCT s.metric, s.year
+      FROM stops s
+      INNER JOIN agencies a ON a.agency_slug = s.agency_slug
+      WHERE a.is_statewide_rollup = FALSE
+        AND (
+          s.total IS NOT NULL
+          OR s.white IS NOT NULL
+          OR s.black IS NOT NULL
+          OR s.hispanic IS NOT NULL
+          OR s.asian IS NOT NULL
+          OR s.native_american IS NOT NULL
+          OR s.other IS NOT NULL
+        )
     )
     ORDER BY metric, year
   `;
@@ -246,6 +254,20 @@ const init = async (): Promise<DuckDBConnection> => {
        GROUP BY agency_slug
      ) t
      WHERE t.agency_slug = a.agency_slug`,
+  );
+
+  // Tag the statewide-rollup pseudo-agency. The pipeline emits a row in the
+  // agency_index named 'Missouri (all agencies)' with slug 'missouri-all-
+  // agencies' that aggregates every filing — it's a real artifact in the
+  // stops table, not a real agency. We tag it so ranking tools can filter
+  // it out by default; single-agency tools still allow it when explicitly
+  // requested.
+  await conn.run(
+    `ALTER TABLE agencies ADD COLUMN is_statewide_rollup BOOLEAN DEFAULT FALSE`,
+  );
+  await conn.run(
+    `UPDATE agencies SET is_statewide_rollup = TRUE
+     WHERE agency_slug = 'missouri-all-agencies'`,
   );
 
   // One-shot empirical scan: which canonical_keys are present, what years

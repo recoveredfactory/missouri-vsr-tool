@@ -69,54 +69,54 @@ WITH agg AS (
 
 export const METRICS: Record<string, MetricSpec> = {
   search_rate: {
-    description: "Fraction of stops that resulted in a search, summed across the window: SUM(searches) / SUM(stops).",
+    description: "Search rate as a percentage 0–100: 100 * SUM(searches) / SUM(stops) across the window.",
     sampleField: "denominator",
     defaultMinSample: 500,
     method:
-      "Aggregate search count divided by aggregate stop count across the window, per agency. Equivalent to a stop-weighted mean of the annual search rate.",
+      "Aggregate search count divided by aggregate stop count across the window, per agency, multiplied by 100. Equivalent to a stop-weighted mean of the annual search rate, on the same 0–100 scale as the AG's source rates.",
     cte: buildStandard("searches", "stops", "total", "total"),
-    valueExpr: "numerator / NULLIF(denominator, 0)",
+    valueExpr: "100 * numerator / NULLIF(denominator, 0)",
     secondarySample: "numerator",
   },
   contraband_hit_rate: {
-    description: "Fraction of searches that recovered contraband: SUM(contraband-total) / SUM(searches).",
+    description: "Contraband hit rate as a percentage 0–100: 100 * SUM(contraband-total) / SUM(searches) across the window.",
     sampleField: "denominator",
     defaultMinSample: 50,
     method:
-      "Aggregate contraband-recovered count divided by aggregate search count across the window. Counts a search as a hit if any contraband category was recovered.",
+      "Aggregate contraband-recovered count divided by aggregate search count across the window, multiplied by 100. Counts a search as a hit if any contraband category was recovered.",
     cte: buildStandard("contraband-total", "searches", "total", "total"),
-    valueExpr: "numerator / NULLIF(denominator, 0)",
+    valueExpr: "100 * numerator / NULLIF(denominator, 0)",
     secondarySample: "numerator",
   },
   citation_rate: {
     description:
-      "Fraction of stops that resulted in a citation: SUM(citations) / SUM(stops), reported as 0–1. (To match the 0–100 percentages elsewhere, multiply by 100.)",
+      "Citation rate as a percentage 0–100: 100 * SUM(citations) / SUM(stops) across the window.",
     sampleField: "denominator",
     defaultMinSample: 500,
     method:
-      "Aggregate citation count divided by aggregate stop count across the window, per agency. Equivalent to a stop-weighted mean of the annual citation rate.",
+      "Aggregate citation count divided by aggregate stop count across the window, multiplied by 100. Equivalent to a stop-weighted mean of the annual citation rate.",
     cte: buildStandard("citations", "stops", "total", "total"),
-    valueExpr: "numerator / NULLIF(denominator, 0)",
+    valueExpr: "100 * numerator / NULLIF(denominator, 0)",
     secondarySample: "numerator",
   },
   arrest_rate: {
     description:
-      "Fraction of stops that resulted in an arrest: SUM(arrests) / SUM(stops), reported as 0–1. (To match the 0–100 percentages elsewhere, multiply by 100.)",
+      "Arrest rate as a percentage 0–100: 100 * SUM(arrests) / SUM(stops) across the window.",
     sampleField: "denominator",
     defaultMinSample: 500,
     method:
-      "Aggregate arrest count divided by aggregate stop count across the window, per agency. Equivalent to a stop-weighted mean of the annual arrest rate.",
+      "Aggregate arrest count divided by aggregate stop count across the window, multiplied by 100. Equivalent to a stop-weighted mean of the annual arrest rate.",
     cte: buildStandard("arrests", "stops", "total", "total"),
-    valueExpr: "numerator / NULLIF(denominator, 0)",
+    valueExpr: "100 * numerator / NULLIF(denominator, 0)",
     secondarySample: "numerator",
   },
   search_rate_minus_hit_rate: {
     description:
-      "Search rate minus contraband hit rate. A single-number proxy for the outcome test: higher values mean searches are surfacing contraband less often relative to how often they happen.",
+      "Search rate minus contraband hit rate, both on 0–100 scale (so this is a difference in percentage points). A single-number proxy for the outcome test: higher values mean searches are surfacing contraband less often relative to how often they happen.",
     sampleField: "stops_n",
     defaultMinSample: 500,
     method:
-      "(SUM(searches) / SUM(stops)) - (SUM(contraband-total) / SUM(searches)) across the window, per agency. Requires at least defaultMinSample stops AND at least 50 searches.",
+      "100 * ((SUM(searches) / SUM(stops)) - (SUM(contraband-total) / SUM(searches))) across the window, per agency. Both terms are on the 0–100 percentage scale, so the difference is in percentage points. Requires at least defaultMinSample stops AND at least 50 searches.",
     cte: (extra) => `
 WITH agg AS (
   SELECT s.agency_slug,
@@ -131,7 +131,7 @@ WITH agg AS (
   HAVING searches_n >= 50
 )`,
     valueExpr:
-      "(searches_n / NULLIF(stops_n, 0)) - (contraband_n / NULLIF(searches_n, 0))",
+      "100 * ((searches_n / NULLIF(stops_n, 0)) - (contraband_n / NULLIF(searches_n, 0)))",
     secondarySample: "searches_n",
   },
   hispanic_stop_share: {
@@ -317,10 +317,12 @@ const topNByHandler = async (raw: unknown) => {
         ${spec.secondarySample ? `w.${spec.secondarySample} AS secondary_sample,` : ""}
         COALESCE(ws.total_stops_in_window, 0)::BIGINT AS total_stops_in_window
       FROM agg w
+      INNER JOIN agencies a_inner ON a_inner.agency_slug = w.agency_slug
       LEFT JOIN window_stops ws ON ws.agency_slug = w.agency_slug
       WHERE w.${spec.sampleField} >= $1
         AND (${spec.valueExpr}) IS NOT NULL
         AND COALESCE(ws.total_stops_in_window, 0) >= $3
+        AND a_inner.is_statewide_rollup = FALSE
     )
     SELECT
       e.agency_slug,
