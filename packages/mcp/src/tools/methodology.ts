@@ -159,11 +159,23 @@ Every external link in this document points to a stable, mainstream explainer. T
 
 - Missouri Attorney General's Vehicle Stops Report landing page — https://ago.mo.gov/get-help/vehicle-stops-report/
 - Missouri courts — Casenet (state-court case lookup) — https://www.courts.mo.gov/casenet/
+- Missouri State Auditor (municipal audits, financial reports) — https://auditor.mo.gov/
 - ACLU of Missouri — https://www.aclu-mo.org/
 - Empower Missouri — https://empowermissouri.org/
+- ArchCity Defenders (St. Louis-area municipal courts, "muny shuffle" research) — https://www.archcitydefenders.org/
 - STLPR / St. Louis Public Radio — https://news.stlpr.org/
 - The Marshall Project (national; covers Missouri) — https://www.themarshallproject.org/
 - ProPublica — https://www.propublica.org/
+
+**Missouri policing-reform context (the post-Ferguson story arc)**
+
+When you provide reporting context that references these specific events, policies, or organizations, **cite them by linking to one of these stable URLs**. Do not write the context without the link.
+
+- U.S. Department of Justice — *Investigation of the Ferguson Police Department* (March 2015 findings) — https://www.justice.gov/opa/pr/justice-department-announces-findings-two-civil-rights-investigations-ferguson-missouri (DOJ press release + linked report)
+- DOJ Civil Rights Division — Special Litigation Section (pattern-or-practice policing cases) — https://www.justice.gov/crt/special-litigation-section
+- Missouri Senate Bill 5 (2015) — capped municipal court traffic-fine revenue at 20% of general operating budget statewide and 12.5% in St. Louis County. Codified at RSMo 479.359 — https://revisor.mo.gov/main/OneSection.aspx?section=479.359
+- Missouri Sunshine Law (RSMo Chapter 610) — open-records statute used for FOIA-equivalent requests — https://ago.mo.gov/missouri-law/sunshine-law
+- Federal court records — PACER — https://pacer.uscourts.gov/ ; CourtListener (free re-host) — https://www.courtlistener.com/
 
 (NAACP Missouri State Conference and individual academic citations on Missouri policing belong here too — omitted for now to avoid stale or invented URLs. Add via PR; source is in \`tools/methodology.ts\`.)
 `;

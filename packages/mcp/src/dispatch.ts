@@ -23,6 +23,7 @@ import "./tools/methodology.js";
 import "./tools/schema.js";
 import "./tools/agencies.js";
 import "./tools/agency-summary.js";
+import "./tools/agency-demographics.js";
 import "./tools/list-metrics.js";
 import "./tools/query-metric.js";
 import "./tools/top-n-by.js";
@@ -30,6 +31,7 @@ import "./tools/distribution.js";
 import "./tools/trend.js";
 import "./tools/disparity.js";
 import "./tools/compare.js";
+import "./tools/stop-share-vs-population-share.js";
 import "./tools/make-map.js";
 
 const isRpcRequest = (value: unknown): value is RpcRequest =>
