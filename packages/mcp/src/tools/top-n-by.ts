@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { getDb } from "../db.js";
+import { getDb, getLatestYearWithData } from "../db.js";
 import { normalize } from "../duckutil.js";
 import {
   DEFAULT_MIN_TOTAL_STOPS,
@@ -238,7 +238,9 @@ const TopNByInput = z.object({
   year_range: z
     .tuple([z.number().int(), z.number().int()])
     .optional()
-    .describe("Inclusive [start, end] year window. Defaults to the five most recent years on file (2020–2024)."),
+    .describe(
+      "Inclusive [start, end] year window. Defaults to the MOST RECENT YEAR with data ([latest, latest]) — the right answer for current-state questions like 'highest citation rate'. For multi-year stability or trend-flavored questions, expand the range explicitly (e.g. [2020, 2024] for a 5-year window). For a different single year, pass [2023, 2023]. Multi-year windows average / pool across years, hiding recent changes; single-year windows have smaller sample sizes (a small agency with 100 stops in one year may be filtered out by min_total_stops where 500 over 5 years would pass).",
+    ),
   county: z
     .string()
     .optional()
@@ -277,7 +279,8 @@ const topNByHandler = async (raw: unknown) => {
   const minSample = args.min_sample_size ?? spec.defaultMinSample;
   const minTotalStops = args.min_total_stops ?? DEFAULT_MIN_TOTAL_STOPS;
   const n = args.n ?? 20;
-  const [start, end] = args.year_range ?? [2020, 2024];
+  const latestYear = await getLatestYearWithData();
+  const [start, end] = args.year_range ?? [latestYear, latestYear];
   const direction = args.ascending ? "ASC" : "DESC";
 
   const extraFilters: string[] = [];
@@ -394,6 +397,10 @@ const topNByHandler = async (raw: unknown) => {
     n_in_eligible_pool: nInEligiblePool,
     ranked_within: `${data.length} of ${nInEligiblePool} agencies that passed both the metric's denominator floor (${minSample}) and the min_total_stops floor (${minTotalStops}) in ${start}–${end}`,
     year_range: [start, end],
+    year_range_basis:
+      args.year_range === undefined
+        ? `Defaulted to most recent year with data (${latestYear}). Pass year_range to widen — e.g. [${latestYear - 4}, ${latestYear}] for a 5-year pooled view, or [2023, 2023] for a different single year.`
+        : "Caller-specified year_range.",
     sample_size_field: spec.sampleField,
     min_sample_size: minSample,
     min_total_stops: minTotalStops,

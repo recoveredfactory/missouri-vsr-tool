@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { getDb } from "../db.js";
+import { getDb, getLatestYearWithData } from "../db.js";
 import { normalize } from "../duckutil.js";
 import { RESEARCH_PROMPT } from "./caveats.js";
 import { errorResult, inputSchemaFromZod, registerTool, textResult } from "./registry.js";
@@ -85,7 +85,9 @@ const CompareInput = z.object({
   year_range: z
     .tuple([z.number().int(), z.number().int()])
     .optional()
-    .describe("Inclusive [start, end] window. Defaults to 2020–2024."),
+    .describe(
+      "Inclusive [start, end] year window. Defaults to the MOST RECENT YEAR with data ([latest, latest]) — the right answer for a current-state side-by-side. Widen explicitly for a pooled multi-year view.",
+    ),
 });
 
 type CompareArgs = z.infer<typeof CompareInput>;
@@ -97,7 +99,8 @@ const compareHandler = async (raw: unknown) => {
   }
   const args: CompareArgs = parsed.data;
   const spec = METRICS[args.metric];
-  const [start, end] = args.year_range ?? [2020, 2024];
+  const latestYear = await getLatestYearWithData();
+  const [start, end] = args.year_range ?? [latestYear, latestYear];
 
   // Pull per-agency values for every qualifying agency in the dataset (we
   // need the full set to compute the statewide median honestly), then
@@ -182,6 +185,10 @@ const compareHandler = async (raw: unknown) => {
     metric_description: spec.description,
     sample_size_label: spec.sample_label,
     year_range: [start, end],
+    year_range_basis:
+      args.year_range === undefined
+        ? `Defaulted to most recent year with data (${latestYear}). Pass year_range to widen.`
+        : "Caller-specified year_range.",
     statewide_median: {
       value: median,
       based_on_n_agencies: eligible.length,

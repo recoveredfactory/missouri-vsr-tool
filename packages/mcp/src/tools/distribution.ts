@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { getDb } from "../db.js";
+import { getDb, getLatestYearWithData } from "../db.js";
 import { normalize } from "../duckutil.js";
 import {
   DEFAULT_MIN_TOTAL_STOPS,
@@ -32,7 +32,7 @@ const DistributionInput = z.object({
     .tuple([z.number().int(), z.number().int()])
     .optional()
     .describe(
-      "Inclusive [start, end] year window. Defaults to the five most recent years on file (2020–2024).",
+      "Inclusive [start, end] year window. Defaults to the MOST RECENT YEAR with data ([latest, latest]) for current-state distribution. Widen explicitly (e.g. [2020, 2024]) for a pooled multi-year shape; pass [year, year] for any other single year.",
     ),
   county: z
     .string()
@@ -148,7 +148,8 @@ const distributionHandler = async (raw: unknown) => {
   const spec = METRICS[args.metric];
   const minSample = args.min_sample_size ?? spec.defaultMinSample;
   const minTotalStops = args.min_total_stops ?? DEFAULT_MIN_TOTAL_STOPS;
-  const [start, end] = args.year_range ?? [2020, 2024];
+  const latestYear = await getLatestYearWithData();
+  const [start, end] = args.year_range ?? [latestYear, latestYear];
   const binCount = args.bins ?? 20;
   const includeValues = args.include_values ?? true;
 
@@ -279,6 +280,10 @@ const distributionHandler = async (raw: unknown) => {
   const payload = {
     metric: args.metric,
     year_range: [start, end],
+    year_range_basis:
+      args.year_range === undefined
+        ? `Defaulted to most recent year with data (${latestYear}). Pass year_range to widen.`
+        : "Caller-specified year_range.",
     sample_size_field: spec.sampleField,
     min_sample_size: minSample,
     min_total_stops: minTotalStops,

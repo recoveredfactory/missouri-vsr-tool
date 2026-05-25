@@ -63,6 +63,8 @@ let locatorSvgCache: string | null = null;
 
 let metricCoverageCache: MetricCoverage[] | null = null;
 
+let latestYearCache: number | null = null;
+
 export interface MetricCoverage {
   canonical_key: string;
   family: string;
@@ -275,6 +277,27 @@ const init = async (): Promise<DuckDBConnection> => {
   // Lambda lifetime; consumed by list_metrics and query_metric.
   metricCoverageCache = await scanMetricCoverage(conn);
 
+  // Cache the dataset-wide most-recent year of stops data. Excludes the
+  // statewide-rollup pseudo-agency. Consumed by snapshot tools (top_n_by,
+  // distribution, compare) as the default year_range when the caller
+  // hasn't specified one.
+  const latestRows = (
+    await (
+      await conn.prepare(
+        `SELECT MAX(s.year)::INTEGER
+         FROM stops s
+         INNER JOIN agencies a ON a.agency_slug = s.agency_slug
+         WHERE s.metric = 'stops'
+           AND s.total IS NOT NULL
+           AND a.is_statewide_rollup = FALSE`,
+      )
+    ).runAndReadAll()
+  ).getRows();
+  const latest = latestRows[0]?.[0];
+  if (typeof latest === "number" && Number.isFinite(latest)) {
+    latestYearCache = latest;
+  }
+
   return conn;
 };
 
@@ -301,8 +324,17 @@ export const getMetricCoverage = async (): Promise<MetricCoverage[]> => {
   return metricCoverageCache;
 };
 
+export const getLatestYearWithData = async (): Promise<number> => {
+  await getDb();
+  if (latestYearCache === null) {
+    throw new Error("Latest year was not computed at cold start.");
+  }
+  return latestYearCache;
+};
+
 export const resetDbForTesting = () => {
   connPromise = null;
   locatorSvgCache = null;
   metricCoverageCache = null;
+  latestYearCache = null;
 };
