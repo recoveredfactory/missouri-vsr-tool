@@ -494,7 +494,7 @@
   "home_mcp_banner_text": "Query this dataset from your AI assistant — connect the Missouri VSR MCP server.",
   "home_mcp_banner_cta": "Learn how",
   "home_mcp_heading": "Query the data from any MCP client",
-  "home_mcp_intro": "We publish a Model Context Protocol (MCP) server that lets any MCP-compatible AI assistant — Claude Desktop, Cursor, Cline, Zed, custom clients — query this dataset directly. Search rates, contraband hit rates, racial disparity ratios, year-over-year trends, with every numeric answer cited back to the curated tool that produced it. No raw SQL, no model-invented metrics, sample-size guardrails baked in.",
+  "home_mcp_intro": "Connect any MCP-compatible AI assistant — Claude Desktop, Cursor, Cline, Zed — to this dataset. Ask in plain English for trends, rankings, comparisons, and maps; the model can explain what each metric means and what it doesn't, no stats vocabulary required. Every answer cites the curated tool that produced it — no raw SQL, no invented metrics, sample-size guardrails baked in.",
   "home_mcp_who_heading": "Who it's for",
   "home_mcp_who_text": "Journalists, researchers, and policy folks who want methodologically defensible answers without writing SQL. Free, public, no auth — rate-limited at the edge.",
   "home_mcp_connect_heading": "Connect from Claude Desktop",

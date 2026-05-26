@@ -499,7 +499,7 @@
   "home_mcp_banner_text": "Consulta estos datos desde tu asistente de IA — conecta el servidor MCP de VSR Missouri.",
   "home_mcp_banner_cta": "Cómo conectarlo",
   "home_mcp_heading": "Consulta los datos desde cualquier cliente MCP",
-  "home_mcp_intro": "Publicamos un servidor de Model Context Protocol (MCP) que permite a cualquier asistente de IA compatible con MCP —Claude Desktop, Cursor, Cline, Zed, clientes propios— consultar este conjunto de datos directamente: tasas de registro, tasas de hallazgo de contrabando, índices de disparidad racial, tendencias interanuales. Cada cifra incluye la cita de la herramienta que la produjo. Sin SQL crudo, sin métricas inventadas por el modelo, con mínimos muestrales integrados.",
+  "home_mcp_intro": "Conecta cualquier asistente de IA compatible con MCP —Claude Desktop, Cursor, Cline, Zed— a estos datos. Pregunta en lenguaje natural por tendencias, rankings, comparaciones y mapas; el modelo puede explicar qué significa cada métrica y qué no, sin jerga estadística. Cada respuesta cita la herramienta que la produjo — sin SQL crudo, sin métricas inventadas, con mínimos muestrales integrados.",
   "home_mcp_who_heading": "Para quién",
   "home_mcp_who_text": "Periodistas, investigadores y especialistas en políticas que necesitan respuestas metodológicamente defendibles sin escribir SQL. Gratis, público, sin autenticación — con límites de tasa en el borde.",
   "home_mcp_connect_heading": "Conectar desde Claude Desktop",
