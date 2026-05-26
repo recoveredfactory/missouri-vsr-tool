@@ -102,6 +102,13 @@ export default $config({
           ? `https://${env.DATA_CDN_DOMAIN}`
           : env.PUBLIC_DATA_BASE_URL ?? "";
 
+    // Stage-aware MCP URL surfaced to the homepage. Prod and staging point
+    // at their custom domains; dev/local stages fall through to staging so
+    // the banner has somewhere to land before prod ships.
+    const publicMcpUrl = isProdStage
+      ? "https://mcp.vsr.recoveredfactory.net/"
+      : "https://mcp-staging.vsr.recoveredfactory.net/";
+
     new sst.aws.SvelteKit("Web", {
       path: "packages/web",
       domain: webDomain,
@@ -110,6 +117,7 @@ export default $config({
         PUBLIC_DONATE_URL: env.PUBLIC_DONATE_URL ?? "",
         PUBLIC_DATA_BASE_URL: dataBaseUrl,
         PUBLIC_DATA_RELEASE_PATH: env.PUBLIC_DATA_RELEASE_PATH ?? "",
+        PUBLIC_MCP_URL: publicMcpUrl,
       },
     });
 

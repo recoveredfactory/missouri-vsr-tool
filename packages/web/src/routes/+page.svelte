@@ -52,6 +52,25 @@
     home_download_about_note,
     home_about_link,
     home_287g_link,
+    home_mcp_banner_tag,
+    home_mcp_banner_text,
+    home_mcp_banner_cta,
+    home_mcp_heading,
+    home_mcp_intro,
+    home_mcp_who_heading,
+    home_mcp_who_text,
+    home_mcp_connect_heading,
+    home_mcp_connect_intro,
+    home_mcp_connect_path_macos,
+    home_mcp_connect_path_windows,
+    home_mcp_copy_button,
+    home_mcp_copy_button_done,
+    home_mcp_examples_heading,
+    home_mcp_example_1,
+    home_mcp_example_2,
+    home_mcp_example_3,
+    home_mcp_endpoint_label,
+    home_mcp_docs_link,
   } from "$lib/paraglide/messages";
   import { raceColors, raceTextColors, outcomeColors } from "$lib/colors.js";
   import { withDataBase } from "$lib/dataBase";
@@ -142,6 +161,41 @@
   };
   // Base URL without release path — used for v1 (pre-v2) download links
   const dataBaseUrl = import.meta.env.PUBLIC_DATA_BASE_URL ?? "";
+
+  // MCP endpoint — stage-aware (prod / staging custom domains, dev falls
+  // through to staging). Surfaced to the homepage so the banner and the
+  // Claude Desktop config snippet always point at the right host.
+  const mcpUrl =
+    import.meta.env.PUBLIC_MCP_URL ??
+    "https://mcp-staging.vsr.recoveredfactory.net/";
+  const mcpRepoUrl =
+    "https://github.com/recoveredfactory/missouri-vsr-tool/tree/main/packages/mcp";
+  $: mcpConfigSnippet = JSON.stringify(
+    {
+      mcpServers: {
+        "missouri-vsr": {
+          command: "npx",
+          args: ["-y", "mcp-remote", mcpUrl],
+        },
+      },
+    },
+    null,
+    2,
+  );
+  let mcpCopyState = "idle";
+  async function copyMcpConfig() {
+    if (typeof navigator === "undefined" || !navigator.clipboard) return;
+    try {
+      await navigator.clipboard.writeText(mcpConfigSnippet);
+      mcpCopyState = "done";
+      trackEvent("mcp_config_copy", { url: mcpUrl });
+      setTimeout(() => {
+        mcpCopyState = "idle";
+      }, 1800);
+    } catch {
+      mcpCopyState = "idle";
+    }
+  }
 
   // Shared download helpers used for both v2 and v1 manifest-driven rendering
   $: downloadGroupMeta = {
@@ -311,6 +365,23 @@
 <StickyHeader agencies={data.agencies} />
 
 <main id="main-content" class="min-h-screen bg-white overflow-x-hidden">
+  <!-- MCP launch banner — points to #mcp section below -->
+  <a
+    href="#mcp"
+    on:click={() => trackEvent("mcp_banner_click", { target: "section" })}
+    class="block bg-[#1b613c] text-white no-underline transition-colors hover:bg-[#105430] focus:outline-none focus:ring-2 focus:ring-[#1b613c] focus:ring-offset-2"
+  >
+    <div class="mx-auto flex max-w-5xl flex-wrap items-center justify-center gap-2 px-4 py-2.5 text-center text-sm sm:px-6">
+      <span class="inline-flex items-center rounded-full bg-white/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider">
+        {home_mcp_banner_tag()}
+      </span>
+      <span class="font-medium">{home_mcp_banner_text()}</span>
+      <span class="inline-flex items-center font-semibold underline decoration-white/40 underline-offset-4 hover:decoration-white">
+        {home_mcp_banner_cta()} <span aria-hidden="true" class="ml-1">→</span>
+      </span>
+    </div>
+  </a>
+
   <!-- Hero Section -->
   <section class="bg-white px-6 py-12">
     <div class="mx-auto max-w-3xl flex flex-col md:flex-row md:items-center gap-8">
@@ -926,6 +997,85 @@
       >
         {home_footer_contact()}
       </a>
+    </div>
+  </section>
+
+  <!-- MCP server -->
+  <section id="mcp" class="border-t border-slate-200 bg-white py-12">
+    <div class="mx-auto max-w-4xl px-6">
+      <div class="text-center">
+        <span class="inline-flex items-center gap-1.5 rounded-full bg-[#1b613c]/10 px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-[#1b613c]">
+          {home_mcp_banner_tag()} · MCP
+        </span>
+        <h2 class="mt-3 text-3xl font-bold text-slate-900">
+          {home_mcp_heading()}
+        </h2>
+        <p class="mx-auto mt-4 max-w-2xl text-base leading-relaxed text-slate-700">
+          {home_mcp_intro()}
+        </p>
+      </div>
+
+      <div class="mt-8 grid gap-6 md:grid-cols-2">
+        <!-- Who it's for + examples -->
+        <div class="rounded-lg border border-slate-200 bg-slate-50 p-6">
+          <h3 class="text-lg font-bold text-slate-900">{home_mcp_who_heading()}</h3>
+          <p class="mt-2 text-sm leading-relaxed text-slate-700">{home_mcp_who_text()}</p>
+
+          <h3 class="mt-6 text-lg font-bold text-slate-900">{home_mcp_examples_heading()}</h3>
+          <ul class="mt-2 space-y-2 text-sm leading-relaxed text-slate-700">
+            <li class="flex gap-2">
+              <span class="mt-1 inline-block h-1.5 w-1.5 flex-shrink-0 rounded-full bg-[#1b613c]" aria-hidden="true"></span>
+              <span>{home_mcp_example_1()}</span>
+            </li>
+            <li class="flex gap-2">
+              <span class="mt-1 inline-block h-1.5 w-1.5 flex-shrink-0 rounded-full bg-[#1b613c]" aria-hidden="true"></span>
+              <span>{home_mcp_example_2()}</span>
+            </li>
+            <li class="flex gap-2">
+              <span class="mt-1 inline-block h-1.5 w-1.5 flex-shrink-0 rounded-full bg-[#1b613c]" aria-hidden="true"></span>
+              <span>{home_mcp_example_3()}</span>
+            </li>
+          </ul>
+        </div>
+
+        <!-- Connect / config snippet -->
+        <div class="rounded-lg border border-slate-200 bg-slate-50 p-6">
+          <h3 class="text-lg font-bold text-slate-900">{home_mcp_connect_heading()}</h3>
+          <p class="mt-2 text-sm leading-relaxed text-slate-700">{home_mcp_connect_intro()}</p>
+          <ul class="mt-2 space-y-0.5 font-mono text-[11px] leading-snug text-slate-500">
+            <li>{home_mcp_connect_path_macos()}</li>
+            <li>{home_mcp_connect_path_windows()}</li>
+          </ul>
+
+          <div class="relative mt-4">
+            <pre class="overflow-x-auto rounded-md border border-slate-300 bg-slate-900 px-4 py-3 pr-20 text-[11px] leading-relaxed text-slate-100"><code>{mcpConfigSnippet}</code></pre>
+            <button
+              type="button"
+              on:click={copyMcpConfig}
+              class="absolute right-2 top-2 rounded-md bg-white/10 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-white transition-colors hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-white/40"
+            >
+              {mcpCopyState === "done" ? home_mcp_copy_button_done() : home_mcp_copy_button()}
+            </button>
+          </div>
+
+          <p class="mt-3 text-xs text-slate-500">
+            <span class="font-semibold uppercase tracking-wide text-slate-400">{home_mcp_endpoint_label()}:</span>
+            <code class="ml-1 break-all font-mono text-[11px] text-slate-700">{mcpUrl}</code>
+          </p>
+        </div>
+      </div>
+
+      <p class="mt-6 text-center text-sm">
+        <a
+          href={mcpRepoUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          on:click={() => trackEvent("mcp_docs_click", { target: "github" })}
+          class="text-[#1b613c] underline hover:text-[#105430]"
+        >
+          {home_mcp_docs_link()}
+        </a>
+      </p>
     </div>
   </section>
 
