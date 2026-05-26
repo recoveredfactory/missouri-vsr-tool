@@ -385,6 +385,14 @@ const handler = async (raw: unknown) => {
           : meta.type_heuristic === "population"
             ? "value is a population denominator (ACS / decennial), not a stop count."
             : "value is a raw count for that agency × year. Sum-able across years if the question warrants.",
+    method_explainer:
+      meta.type_heuristic === "rate"
+        ? `Plain English (surface BEFORE the numbers): this is the pre-computed rate the Missouri AG published for each agency × year for the metric \`${args.canonical_key}\` — already a number per 100, not a percentage. Can legitimately exceed 100 because a single stop can produce multiple events. NEVER sum these across years; if you want a multi-year value, average them or report the per-year series. Counts in stops_total_year give you the sample size context. See read_methodology for the rate-vs-percentage distinction.`
+        : meta.type_heuristic === "ratio"
+          ? `Plain English (surface BEFORE the numbers): this is a disparity ratio — minority group's per-capita stop rate divided by the white non-Hispanic per-capita stop rate. 1.0 = parity, 2.0 = stopped at twice the per-resident rate, below 1.0 = stopped at a lower rate than white. Strong caveat: stops-over-population framing is politically contested (omits through-traffic and commuter patterns); statewide rolls can flip sign once broken out by agency ([Simpson's paradox](https://en.wikipedia.org/wiki/Simpson%27s_paradox)). Always report at the agency-year level alongside any aggregate. See read_methodology.`
+          : meta.type_heuristic === "population"
+            ? `Plain English (surface BEFORE the numbers): this is a population denominator (ACS 5-year estimate or decennial), NOT a stop count. Use it to anchor per-capita comparisons — but don't mix it with stops data without explaining the difference (ACS race is self-reported, stops race is officer-perceived). https://www.census.gov/programs-surveys/acs is the canonical explainer.`
+            : `Plain English (surface BEFORE the numbers): this is the raw count for \`${args.canonical_key}\` for each agency × year, exactly as the agency filed it. Sum-able across years if the question warrants — but for downstream rates, prefer the curated metrics (top_n_by, agency_summary) which compute denominators the same way the pipeline does. Each row carries stops_total_year as a size-context column.`,
     low_volume_warning_summary: lowVolumeSummary,
     ranking_caveat: RANKING_CAVEAT,
     further_research_prompt: RESEARCH_PROMPT,

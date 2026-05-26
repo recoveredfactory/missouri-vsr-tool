@@ -335,6 +335,8 @@ const distributionHandler = async (raw: unknown) => {
     },
     n_agencies: rows.length,
     method: spec.method,
+    method_explainer:
+      "Plain English (surface this BEFORE the numbers): we computed this metric for every eligible agency in the window, then summarized the SHAPE of those values across agencies. 'Median' is the middle agency (half above, half below). 'P25' is the bottom-quarter cut line, 'P75' the top-quarter line — between them sits the middle half of agencies. 'P90' and 'P95' mark where the high outliers begin. The 'histogram' bins agencies by their value and counts how many fall in each bin — useful for whether values cluster around one number or spread wide. Quick link to share with readers: https://en.wikipedia.org/wiki/Quantile (what p25/median/p75 mean). For rate metrics, remember values are per 100 stops, not percentages — they can legitimately exceed 100. See read_methodology for the metric definition.",
     summary,
     histogram: hist,
     low_volume_warning_summary: lowVolumeSummary,

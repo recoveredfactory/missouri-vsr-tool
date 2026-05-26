@@ -199,6 +199,8 @@ const compareHandler = async (raw: unknown) => {
       based_on_n_agencies: eligible.length,
       note: "Median of all agencies in the dataset that had any data for this metric in the window. Not weighted by stop volume.",
     },
+    method_explainer:
+      "Plain English (surface this BEFORE the numbers): a side-by-side row for each agency you asked about, plus a statewide-median row for context. The median row uses all agencies that had data for this metric — it's the middle of the field, not the average. A value above the median means the agency is in the upper half of Missouri agencies on this measure; below means lower half. That's a position, not a verdict — see read_methodology for how to interpret the metric. Rate metrics are per 100 stops (not percentages, can exceed 100); the disparity index is a ratio vs. the white baseline (1.0 = parity).",
     requested_agencies: rows,
     further_research_prompt: RESEARCH_PROMPT,
   };

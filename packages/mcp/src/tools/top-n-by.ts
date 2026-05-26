@@ -220,6 +220,36 @@ WITH agg AS (
   },
 };
 
+// Plain-English, link-bearing version of the per-metric explanation.
+// Surfaced to the user via the server-info "Explain the method, not just
+// the result" instruction. Keep these short and concrete — the model
+// will paraphrase, but a clear seed produces a clear paraphrase.
+const metricExplainer = (key: keyof typeof METRICS): string => {
+  const SHARED_RANKING_HINT =
+    "Read the values, not just the rank order — the top tier is often noisy and #1 vs. #5 can flip year-to-year. See ranking_caveat.";
+  switch (key) {
+    case "search_rate":
+    case "citation_rate":
+    case "arrest_rate":
+      return `Plain English (surface BEFORE the numbers): this is the number of ${key.replace("_rate", "")}s per 100 stops over the window, per agency, ranked. Reported as **per 100 stops**, NOT a percentage — values can legitimately exceed 100 because a single stop can produce multiple events (one stop → multiple citations / arrests). When you describe these to a reader, say "12 ${key.replace("_rate", "")}s per 100 stops" not "12%". ${SHARED_RANKING_HINT}`;
+    case "contraband_hit_rate":
+      return `Plain English (surface BEFORE the numbers): of stops where officers searched, how often they actually found contraband — per 100 searches, per agency. A LOW hit rate paired with a HIGH search rate is the classic outcome-test pattern (see the disparity tool and read_methodology). Reported per 100, not as a percentage. Can exceed 100 if a single search recovered multiple distinct contraband categories. ${SHARED_RANKING_HINT}`;
+    case "search_rate_minus_hit_rate":
+      return `Plain English (surface BEFORE the numbers): search rate MINUS contraband hit rate, both per 100. A large negative number means an agency searches a lot but finds little — the outcome-test framing: "many searches relative to how often something was actually found." This is one proxy for the [Knowles/Persico/Todd 2001 outcome test](https://www.jstor.org/stable/2696570); selection effects can produce the same pattern without any threshold difference, so do not call this "evidence of bias" without the caveats from read_methodology. ${SHARED_RANKING_HINT}`;
+    case "hispanic_stop_share":
+    case "black_stop_share":
+      return `Plain English (surface BEFORE the numbers): the percentage of this agency's stops where officers recorded the driver as ${key.replace("_stop_share", "").replace(/^./, (c) => c.toUpperCase())}. This IS a percentage (0–100), part of a whole. It tells you the racial composition of the agency's stops — it does NOT tell you whether that's "high" without a population baseline. Pair with stop_share_vs_population_share for the comparison view, or with the disparity_index_all_stops ranking for a per-resident ratio. ${SHARED_RANKING_HINT}`;
+    case "resident_stop_share":
+      return `Plain English (surface BEFORE the numbers): the percentage of this agency's stops that were of jurisdiction residents (vs. non-residents). Low share = an agency stopping mostly through-traffic — a flag worth following up on if you're reporting on revenue-from-outsiders dynamics in small-town courts. Only post-2020 reporting forms include this split, so smaller windows are more reliable. ${SHARED_RANKING_HINT}`;
+    case "disparity_index_all_stops":
+      return `Plain English (surface BEFORE the numbers): a RATIO of the Black per-capita stop rate to the white non-Hispanic per-capita stop rate. 1.0 = parity; 2.0 = Black drivers stopped at twice the per-resident rate; below 1.0 = Black drivers stopped at a lower rate than white. **Strong caveat**: this is a stops-over-population framing — activists cite it as proof of biased policing, police argue the population denominator omits through-traffic, commuter patterns, and other context. Statewide or county-rolled disparity indexes can flip sign once you break them out by agency ([Simpson's paradox](https://en.wikipedia.org/wiki/Simpson%27s_paradox)); always report at the agency-year level. ${SHARED_RANKING_HINT}`;
+    case "total_stops":
+      return `Plain English (surface BEFORE the numbers): just the count of stops the agency filed over the window. MSHP and the largest municipal departments will always lead this — total volume isn't a per-capita or per-officer measure, so don't read "rank #1" as "most aggressive." Useful for sizing context next to a rate-based ranking.`;
+    default:
+      return `Plain English: this ranks agencies by ${key}. See read_methodology() for the definition and caveats.`;
+  }
+};
+
 const TopNByInput = z.object({
   metric: z
     .enum(Object.keys(METRICS) as [keyof typeof METRICS, ...Array<keyof typeof METRICS>])
@@ -445,6 +475,7 @@ const topNByHandler = async (raw: unknown) => {
     min_total_stops: minTotalStops,
     max_total_stops: maxTotalStops ?? null,
     method: spec.method,
+    method_explainer: metricExplainer(metricKey),
     filters: {
       county: args.county ?? null,
       agency_type: args.agency_type ?? null,

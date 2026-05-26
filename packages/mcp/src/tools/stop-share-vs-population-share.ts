@@ -172,6 +172,8 @@ const handler = async (raw: unknown) => {
     population_jurisdiction: demographics.jurisdiction,
     population_total: popTotal,
     pairs,
+    method_explainer:
+      "Plain English (surface this BEFORE the numbers): we counted this agency's stops by the driver's officer-perceived race over the window, then compared each race's SHARE of stops to that race's SHARE of the local population (from the Census American Community Survey). A ratio above 1.0 means the race is over-represented in stops vs. their share of the population; below 1.0 means under-represented. **Important caveat**: this doesn't account for who's actually DRIVING on those roads — through-traffic, commuters, and transit gaps make residency a noisy proxy for the population exposed to being stopped. Stop race is officer-perceived; population race is self-reported on the ACS, and ACS Hispanic identity is a separate ethnicity question (not a race line, the way the stops data treats it). This is related to but mechanically different from the disparity index (which uses per-capita stop RATES rather than shares). See read_methodology and https://www.census.gov/programs-surveys/acs for the ACS background.",
     interpretation_notes: [
       "Stops are summed across the year window. Population is the ACS 5-year estimate from the agency's latest reporting year — it does NOT move with the stop year_range and may slightly mismatch in older windows.",
       "Stop race is OFFICER-PERCEIVED. Population race is ACS SELF-REPORTED. The comparison is informative but the two are not directly equivalent.",
