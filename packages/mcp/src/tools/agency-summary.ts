@@ -2,6 +2,7 @@ import { z } from "zod";
 
 import { getDb } from "../db.js";
 import { normalize } from "../duckutil.js";
+import { PROBLEMATIC_YEAR_FLOOR, yearRangeWarnings } from "../year-range.js";
 import { RESEARCH_PROMPT } from "./caveats.js";
 import { findIssuesForAgency } from "./known-issues.js";
 import { errorResult, inputSchemaFromZod, registerTool, textResult } from "./registry.js";
@@ -30,7 +31,7 @@ const AgencySummaryInput = z.object({
     .tuple([z.number().int(), z.number().int()])
     .optional()
     .describe(
-      "Inclusive [start_year, end_year]. Omit for the most recent five years on file for this agency.",
+      "Inclusive [start_year, end_year]. Omit for the most recent four years on file for this agency (2020 is excluded by default because the AG's published 2020 data has unreconciled anomalies). Pass an explicit range to include 2020; a data_quality_warnings entry will be attached.",
     ),
 });
 
@@ -73,16 +74,21 @@ const agencySummaryHandler = async (raw: unknown) => {
   const [startYear, endYear] = (() => {
     if (args.year_range) return args.year_range;
     if (Number.isFinite(latestYear)) {
-      return [latestYear - 4, latestYear] as [number, number];
+      // Default to four most recent years; floor start at PROBLEMATIC_YEAR_FLOOR (2021).
+      return [
+        Math.max(PROBLEMATIC_YEAR_FLOOR, latestYear - 3),
+        latestYear,
+      ] as [number, number];
     }
     if (yearsWithData.length) {
       const sorted = [...yearsWithData].sort((a, b) => a - b);
-      return [sorted[sorted.length - 5] ?? sorted[0], sorted[sorted.length - 1]] as [
-        number,
-        number,
-      ];
+      const proposedStart = sorted[sorted.length - 4] ?? sorted[0];
+      return [
+        Math.max(PROBLEMATIC_YEAR_FLOOR, proposedStart),
+        sorted[sorted.length - 1],
+      ] as [number, number];
     }
-    return [2020, 2024] as [number, number];
+    return [PROBLEMATIC_YEAR_FLOOR, 2024] as [number, number];
   })();
 
   const sql = `
@@ -120,6 +126,11 @@ const agencySummaryHandler = async (raw: unknown) => {
     agency: agencyMeta,
     known_data_issues: agencyIssues.length > 0 ? agencyIssues : null,
     year_range_requested: [startYear, endYear],
+    year_range_basis:
+      args.year_range === undefined
+        ? `Defaulted to ${startYear}–${endYear} (four most recent years on file; 2020 is excluded by default — see data_quality_warnings or read_methodology).`
+        : "Caller-specified year_range.",
+    data_quality_warnings: yearRangeWarnings(startYear, endYear),
     year_range_observed: observedYears.length
       ? [observedYears[observedYears.length - 1], observedYears[0]]
       : null,
@@ -135,7 +146,7 @@ const agencySummaryHandler = async (raw: unknown) => {
 registerTool({
   name: "agency_summary",
   description:
-    "Returns a curated multi-year summary for a single agency: stop counts, search counts, contraband finds, arrest and citation counts, plus their corresponding rates, plus the disparity index — all broken down by race. Defaults to the most recent five years on file. Use list_agencies first to resolve a natural-language name into an agency_slug.",
+    "Returns a curated multi-year summary for a single agency: stop counts, search counts, contraband finds, arrest and citation counts, plus their corresponding rates, plus the disparity index — all broken down by race. Defaults to the most recent four years on file (2020 excluded by default due to unreconciled data anomalies — pass year_range explicitly to include it). Use list_agencies first to resolve a natural-language name into an agency_slug.",
   inputSchema: inputSchemaFromZod(AgencySummaryInput),
   handler: agencySummaryHandler,
 });

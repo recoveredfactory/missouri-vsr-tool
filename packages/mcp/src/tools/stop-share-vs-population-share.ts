@@ -2,6 +2,7 @@ import { z } from "zod";
 
 import { getDb } from "../db.js";
 import { normalize } from "../duckutil.js";
+import { PROBLEMATIC_YEAR_FLOOR, yearRangeWarnings } from "../year-range.js";
 import { getAgencyDemographics } from "./agency-demographics.js";
 import { RESEARCH_PROMPT } from "./caveats.js";
 import {
@@ -31,7 +32,7 @@ const StopShareVsPopulationShareInput = z.object({
     .tuple([z.number().int(), z.number().int()])
     .optional()
     .describe(
-      "Inclusive [start, end] year window for the stop data. Defaults to the five most recent years on file for this agency. Population data is the ACS 5-year estimate as of the agency's latest reporting year (does not move with the stop year_range).",
+      "Inclusive [start, end] year window for the stop data. Defaults to the four most recent years on file for this agency (2020 is excluded by default because the AG's published 2020 data has unreconciled anomalies — pass year_range explicitly to include it). Population data is the ACS 5-year estimate as of the agency's latest reporting year (does not move with the stop year_range).",
     ),
 });
 
@@ -77,9 +78,13 @@ const handler = async (raw: unknown) => {
   const [startYear, endYear] = (() => {
     if (args.year_range) return args.year_range;
     if (Number.isFinite(latestYear)) {
-      return [latestYear - 4, latestYear] as [number, number];
+      // Four most recent years, floored at PROBLEMATIC_YEAR_FLOOR (2021).
+      return [
+        Math.max(PROBLEMATIC_YEAR_FLOOR, latestYear - 3),
+        latestYear,
+      ] as [number, number];
     }
-    return [2020, 2024] as [number, number];
+    return [PROBLEMATIC_YEAR_FLOOR, 2024] as [number, number];
   })();
 
   // Pull the agency's stops by race, summed across the window.
@@ -160,6 +165,7 @@ const handler = async (raw: unknown) => {
     county: aMeta.county,
     agency_type: aMeta.agency_type,
     stop_year_range: [startYear, endYear],
+    data_quality_warnings: yearRangeWarnings(startYear, endYear),
     stops_total_in_window: stopsTotal,
     low_volume_warning: lowVolumeWarning,
     population_data_source: demographics.data_source,

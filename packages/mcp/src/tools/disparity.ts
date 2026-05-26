@@ -2,6 +2,7 @@ import { z } from "zod";
 
 import { getDb } from "../db.js";
 import { normalize } from "../duckutil.js";
+import { defaultWindow, yearRangeWarnings } from "../year-range.js";
 import { RESEARCH_PROMPT } from "./caveats.js";
 import { errorResult, inputSchemaFromZod, registerTool, textResult } from "./registry.js";
 
@@ -34,7 +35,7 @@ const DisparityInput = z.object({
   year_range: z
     .tuple([z.number().int(), z.number().int()])
     .optional()
-    .describe("Inclusive [start, end] window. Default 2020–2024."),
+    .describe("Inclusive [start, end] window. Default is the four most recent years (2021–2024); 2020 is excluded by default because the AG's published 2020 data has unreconciled anomalies. Pass year_range explicitly to widen, and the response will include a data_quality_warnings entry if 2020 is in range."),
   county: z
     .string()
     .optional()
@@ -51,7 +52,7 @@ const disparityHandler = async (raw: unknown) => {
     return errorResult(`Invalid arguments: ${parsed.error.message}`);
   }
   const args: DisparityArgs = parsed.data;
-  const [start, end] = args.year_range ?? [2020, 2024];
+  const [start, end] = args.year_range ?? defaultWindow(2024, 4);
 
   const conn = await getDb();
 
@@ -175,6 +176,11 @@ const disparityHandler = async (raw: unknown) => {
         ? { county: args.county }
         : { statewide: true },
     year_range: [start, end],
+    year_range_basis:
+      args.year_range === undefined
+        ? `Defaulted to ${start}–${end} (four most recent years; 2020 excluded by default — see data_quality_warnings or read_methodology).`
+        : "Caller-specified year_range.",
+    data_quality_warnings: yearRangeWarnings(start, end),
     baseline: "White (non-Hispanic by reporting convention)",
     method:
       args.comparison_type === "outcome_test"
@@ -193,7 +199,7 @@ const disparityHandler = async (raw: unknown) => {
 registerTool({
   name: "disparity",
   description:
-    "Implements the classic outcome test for racial disparity in traffic-stop searches (Knowles, Persico, Todd 2001). Three views: `search_rate` = search rate by race vs. white-non-Hispanic baseline; `hit_rate` = contraband hit rate by race vs. baseline (≥50 searches required); `outcome_test` = both side by side. Can scope to a single agency_slug, a county, or statewide. Defaults to 2020–2024. Returns ratios but does not editorialize on what they mean.",
+    "Implements the classic outcome test for racial disparity in traffic-stop searches (Knowles, Persico, Todd 2001). Three views: `search_rate` = search rate by race vs. white-non-Hispanic baseline; `hit_rate` = contraband hit rate by race vs. baseline (≥50 searches required); `outcome_test` = both side by side. Can scope to a single agency_slug, a county, or statewide. Defaults to the four most recent years (2021–2024); 2020 is excluded by default due to unreconciled data anomalies. Returns ratios but does not editorialize on what they mean.",
   inputSchema: inputSchemaFromZod(DisparityInput),
   handler: disparityHandler,
 });

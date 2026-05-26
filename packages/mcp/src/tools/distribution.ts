@@ -2,6 +2,7 @@ import { z } from "zod";
 
 import { getDb, getLatestYearWithData } from "../db.js";
 import { normalize } from "../duckutil.js";
+import { yearRangeWarnings } from "../year-range.js";
 import {
   DEFAULT_MIN_TOTAL_STOPS,
   MIN_TOTAL_STOPS_DESCRIPTION,
@@ -313,8 +314,9 @@ const distributionHandler = async (raw: unknown) => {
     year_range: [start, end],
     year_range_basis:
       args.year_range === undefined
-        ? `Defaulted to most recent year with data (${latestYear}). Pass year_range to widen.`
+        ? `Defaulted to most recent year with data (${latestYear}). Pass year_range to widen — 2020 is excluded by default in multi-year windows due to unreconciled data anomalies; including it will attach a warning.`
         : "Caller-specified year_range.",
+    data_quality_warnings: yearRangeWarnings(start, end),
     sample_size_field: spec.sampleField,
     min_sample_size: minSample,
     max_sample_size: maxSample ?? null,

@@ -3,6 +3,7 @@ import { z } from "zod";
 import { getDb } from "../db.js";
 import { normalize } from "../duckutil.js";
 import { linreg } from "../stats.js";
+import { defaultWindow, yearRangeWarnings } from "../year-range.js";
 import { RESEARCH_PROMPT } from "./caveats.js";
 import { errorResult, inputSchemaFromZod, registerTool, textResult } from "./registry.js";
 
@@ -157,15 +158,18 @@ const trendHandler = async (raw: unknown) => {
 
   const spec = METRICS[args.metric];
   const minSample = args.min_sample_size_per_year ?? spec.defaultMinSamplePerYear;
-  const minYears = args.min_years ?? 5;
+  // Default window is 4 years (2021–2024). Default min_years drops in lockstep
+  // so the default response isn't empty after the 2020 floor; callers who
+  // explicitly request a wider year_range can raise min_years to match.
   const limit = args.limit ?? 50;
   const sortBy = args.sort_by ?? "slope";
 
   const [start, end] = (() => {
     if (args.year_range) return args.year_range;
-    const win = args.window_years ?? 5;
-    return [2024 - win + 1, 2024] as [number, number];
+    const win = args.window_years ?? 4;
+    return defaultWindow(2024, win);
   })();
+  const minYears = args.min_years ?? Math.min(4, end - start + 1);
 
   const extraFilters: string[] = [];
   const bindings: Array<{ kind: "varchar"; value: string }> = [];
@@ -292,9 +296,16 @@ const trendHandler = async (raw: unknown) => {
     results.sort((a, b) => a.p_value - b.p_value);
   }
 
+  const dataQualityWarnings = yearRangeWarnings(start, end);
+
   const payload = {
     metric: args.metric,
     year_range: [start, end],
+    year_range_basis:
+      args.year_range === undefined
+        ? `Defaulted to ${start}–${end} (the four most recent years; 2020 is excluded by default — see data_quality_warnings or read_methodology for why). Pass year_range explicitly to widen.`
+        : "Caller-specified year_range.",
+    data_quality_warnings: dataQualityWarnings,
     min_sample_size_per_year: minSample,
     max_sample_size_per_year: maxSample ?? null,
     min_years: minYears,
@@ -313,7 +324,7 @@ const trendHandler = async (raw: unknown) => {
 
 registerTool({
   name: "trend",
-  description: `Fits a linear OLS regression of yearly metric values against year, per agency, over a configurable window. Returns slope (units per year), 95% CI, two-sided p-value, n_years, and mean per-year sample size for each agency. Available metrics: ${Object.keys(METRICS).join(", ")}. Years where the per-year sample falls below the metric's threshold are dropped. Agencies with fewer than min_years qualifying years are dropped. Sort by slope (default), absolute_slope, or p_value. Defaults to the last 5 years (2020–2024).`,
+  description: `Fits a linear OLS regression of yearly metric values against year, per agency, over a configurable window. Returns slope (units per year), 95% CI, two-sided p-value, n_years, and mean per-year sample size for each agency. Available metrics: ${Object.keys(METRICS).join(", ")}. Years where the per-year sample falls below the metric's threshold are dropped. Agencies with fewer than min_years qualifying years are dropped. Sort by slope (default), absolute_slope, or p_value. Defaults to the last 4 years (2021–2024); 2020 is excluded by default because the AG's published 2020 data has unreconciled anomalies — pass year_range=[2020, 2024] explicitly to include it, with a warning.`,
   inputSchema: inputSchemaFromZod(TrendInput),
   handler: trendHandler,
 });

@@ -2,6 +2,7 @@ import { z } from "zod";
 
 import { getDb, getLatestYearWithData } from "../db.js";
 import { normalize } from "../duckutil.js";
+import { yearRangeWarnings } from "../year-range.js";
 import { RESEARCH_PROMPT } from "./caveats.js";
 import { findIssuesForAgency } from "./known-issues.js";
 import { errorResult, inputSchemaFromZod, registerTool, textResult } from "./registry.js";
@@ -190,8 +191,9 @@ const compareHandler = async (raw: unknown) => {
     year_range: [start, end],
     year_range_basis:
       args.year_range === undefined
-        ? `Defaulted to most recent year with data (${latestYear}). Pass year_range to widen.`
+        ? `Defaulted to most recent year with data (${latestYear}). Pass year_range to widen — 2020 is excluded from default multi-year windows due to unreconciled data anomalies; including it will attach a warning.`
         : "Caller-specified year_range.",
+    data_quality_warnings: yearRangeWarnings(start, end),
     statewide_median: {
       value: median,
       based_on_n_agencies: eligible.length,

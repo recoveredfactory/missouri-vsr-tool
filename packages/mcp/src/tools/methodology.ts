@@ -45,6 +45,17 @@ Race in this dataset is **officer-perceived**, not driver-self-reported. The cat
 
 **When you (the model) describe these to a user — never write "citation rate is 120% of stops" or chart citation_rate on a 0–100 axis. Write "120 citations per 100 stops" or "1.2 citations per stop on average." The framing matters; a journalist who calls it a "percentage" in print will get corrected.**
 
+### Year coverage and the 2020 floor
+
+This server's multi-year defaults start in **2021**, not 2020. The Missouri AG's published 2020 vehicle-stops data has anomalies we have not been able to reconcile with the AG's office: race-share inversions that don't appear in adjacent years, mid-year reporting gaps, and category-shift artifacts from the reporting-form revision that crossed 2019→2020. These look like ingest issues rather than agency-filed errors, but we don't have the AG's confirmation.
+
+- **Defaults**: \`trend\`, \`disparity\`, \`agency_summary\`, and \`stop_share_vs_population_share\` default their multi-year windows to **2021–2024** (four years) instead of the more obvious 2020–2024.
+- **Snapshot tools** (\`top_n_by\`, \`distribution\`, \`compare\`) default to the most recent single year and are unaffected unless the caller explicitly widens.
+- **Raw reads** (\`query_metric\`) keep their full-coverage default — the point of a raw read is "show me what was published" — but attach a warning when 2020 is in range.
+- **When 2020 is in the requested range** (whether by default or by explicit caller choice), the response carries a top-level \`data_quality_warnings\` field. Surface this to the user; don't silently quote 2020 single-year values.
+
+If you want to look at 2020 anyway — for a specific story, a historical comparison, or because you've already cross-checked the agency's filed numbers — pass \`year_range\` explicitly and read the warning text.
+
 ### Data quality: implausible values exist and are not always physically possible
 
 Rates can and do exceed 100 in the published data — sometimes for reasons that map cleanly to "multiple events per stop" (citation_rate routinely; arrest_rate occasionally) and sometimes in ways that **are not physically possible** (search_rate of 800 per 100 stops cannot mean "8 searches per stop in any normal sense" — it's almost certainly bad data). The Missouri AG's office ingest pipeline has known artifacts that inflate counts during the state's normalization step; the agency's filed data is often correct while the published data is wrong.

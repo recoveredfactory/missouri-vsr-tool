@@ -2,6 +2,7 @@ import { z } from "zod";
 
 import { getDb, getLatestYearWithData } from "../db.js";
 import { normalize } from "../duckutil.js";
+import { yearRangeWarnings } from "../year-range.js";
 import {
   DEFAULT_MIN_TOTAL_STOPS,
   MIN_TOTAL_STOPS_DESCRIPTION,
@@ -435,8 +436,9 @@ const topNByHandler = async (raw: unknown) => {
     year_range: [start, end],
     year_range_basis:
       args.year_range === undefined
-        ? `Defaulted to most recent year with data (${latestYear}). Pass year_range to widen — e.g. [${latestYear - 4}, ${latestYear}] for a 5-year pooled view, or [2023, 2023] for a different single year.`
+        ? `Defaulted to most recent year with data (${latestYear}). Pass year_range to widen — e.g. [${latestYear - 3}, ${latestYear}] for a 4-year pooled view (2020 excluded by default), or [2023, 2023] for a different single year.`
         : "Caller-specified year_range.",
+    data_quality_warnings: yearRangeWarnings(start, end),
     sample_size_field: spec.sampleField,
     min_sample_size: minSample,
     max_sample_size: maxSample ?? null,
@@ -468,7 +470,7 @@ const metricList = Object.keys(METRICS).join(", ");
 
 registerTool({
   name: "top_n_by",
-  description: `Ranks agencies by a named metric over a year window, with sample-size guards baked in. Available metrics: ${metricList}. Each metric carries its own minimum-sample-size threshold (e.g. search_rate requires ≥500 stops in the window; contraband_hit_rate requires ≥50 searches) and a one-line method note in the response. Defaults to the 2020–2024 window and the top 20. Call read_methodology() first if you're not sure what a metric means in this dataset.`,
+  description: `Ranks agencies by a named metric over a year window, with sample-size guards baked in. Available metrics: ${metricList}. Each metric carries its own minimum-sample-size threshold (e.g. search_rate requires ≥500 stops in the window; contraband_hit_rate requires ≥50 searches) and a one-line method note in the response. Defaults to the most recent single year and the top 20. If the caller asks for a multi-year window that includes 2020, the response includes a data_quality_warnings entry — 2020 is excluded from default windows because of unreconciled anomalies in the AG's published 2020 data. Call read_methodology() first if you're not sure what a metric means in this dataset.`,
   inputSchema: inputSchemaFromZod(TopNByInput),
   handler: topNByHandler,
 });

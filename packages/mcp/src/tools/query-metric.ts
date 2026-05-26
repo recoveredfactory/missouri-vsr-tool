@@ -2,6 +2,7 @@ import { z } from "zod";
 
 import { getDb, getMetricCoverage } from "../db.js";
 import { normalize } from "../duckutil.js";
+import { yearRangeWarnings } from "../year-range.js";
 import {
   errorResult,
   inputSchemaFromZod,
@@ -350,6 +351,10 @@ const handler = async (raw: unknown) => {
     race_column: raceLabel,
     type_heuristic: meta.type_heuristic,
     year_range_requested: filtered_year_range,
+    data_quality_warnings: yearRangeWarnings(
+      filtered_year_range[0],
+      filtered_year_range[1],
+    ),
     years_actually_returned: yearsCoveredHere,
     metric_coverage_note: `This metric has data for years ${meta.years_present[0]}–${meta.years_present[meta.years_present.length - 1]} (${meta.years_present.length} years). Race columns populated for this metric: ${meta.races_populated.join(", ")}.`,
     ranking_basis,
