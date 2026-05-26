@@ -95,6 +95,14 @@ const QueryMetricInput = z.object({
     .min(0)
     .optional()
     .describe(MIN_TOTAL_STOPS_DESCRIPTION),
+  max_total_stops: z
+    .number()
+    .int()
+    .min(0)
+    .optional()
+    .describe(
+      "Cap on total stops in the window. Pair with min_total_stops to focus on mid-sized agencies (e.g. min=2500, max=100000 excludes both micros and MSHP). Ignored in single-agency mode. Defaults to no cap.",
+    ),
   max_rows: z
     .number()
     .int()
@@ -139,6 +147,7 @@ const handler = async (raw: unknown) => {
   })();
 
   const minTotalStops = args.min_total_stops ?? DEFAULT_MIN_TOTAL_STOPS;
+  const maxTotalStops = args.max_total_stops;
   const maxRows = args.max_rows ?? 500;
 
   const conn = await getDb();
@@ -227,14 +236,19 @@ const handler = async (raw: unknown) => {
     stopsInWindowBySlug.set(slug, sum);
   }
 
-  // Apply the min_total_stops filter (orthogonal to whether the requested
-  // metric had a value). Single-agency mode bypasses it — if the user asked
-  // about a specific agency we always return what they asked for.
+  // Apply the min_total_stops / max_total_stops filters (orthogonal to
+  // whether the requested metric had a value). Single-agency mode bypasses
+  // them — if the user asked about a specific agency we always return what
+  // they asked for.
   let agencySlugs = [...bySlug.keys()];
   if (!args.agency_slug) {
-    agencySlugs = agencySlugs.filter(
-      (slug) => (stopsInWindowBySlug.get(slug) ?? 0) >= minTotalStops,
-    );
+    agencySlugs = agencySlugs.filter((slug) => {
+      const totalStops = stopsInWindowBySlug.get(slug) ?? 0;
+      if (totalStops < minTotalStops) return false;
+      if (maxTotalStops !== undefined && totalStops > maxTotalStops)
+        return false;
+      return true;
+    });
   }
   const nInEligiblePool = agencySlugs.length;
 
@@ -345,6 +359,7 @@ const handler = async (raw: unknown) => {
     rows_returned: rowsKept,
     max_rows: maxRows,
     min_total_stops: minTotalStops,
+    max_total_stops: maxTotalStops ?? null,
     filters: {
       agency_slug: args.agency_slug ?? null,
       county: args.county ?? null,
@@ -352,6 +367,7 @@ const handler = async (raw: unknown) => {
     },
     defaulted_filters: {
       min_total_stops: args.min_total_stops === undefined,
+      max_total_stops: args.max_total_stops === undefined,
       max_rows: args.max_rows === undefined,
       year_range: args.year_range === undefined,
       race: args.race === undefined,

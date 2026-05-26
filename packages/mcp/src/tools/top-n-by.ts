@@ -262,12 +262,28 @@ const TopNByInput = z.object({
     .describe(
       "Override the metric's default minimum sample size (the denominator-specific threshold, e.g. ≥500 stops for search_rate). Lowering this below the default is discouraged — small denominators produce unstable rates.",
     ),
+  max_sample_size: z
+    .number()
+    .int()
+    .min(0)
+    .optional()
+    .describe(
+      "Cap on the metric's denominator (e.g. exclude agencies with >100000 stops when looking at search_rate to filter out MSHP-class giants). Defaults to no cap.",
+    ),
   min_total_stops: z
     .number()
     .int()
     .min(0)
     .optional()
     .describe(MIN_TOTAL_STOPS_DESCRIPTION),
+  max_total_stops: z
+    .number()
+    .int()
+    .min(0)
+    .optional()
+    .describe(
+      "Cap on total stops in the window (independent of metric). Pair with min_total_stops to focus on mid-sized agencies (e.g. min=2500, max=100000 keeps small-to-medium municipalities and excludes MSHP). Defaults to no cap.",
+    ),
 });
 
 type TopNByArgs = z.infer<typeof TopNByInput>;
@@ -282,7 +298,9 @@ const topNByHandler = async (raw: unknown) => {
   const metricKey = args.metric;
   const spec = METRICS[metricKey];
   const minSample = args.min_sample_size ?? spec.defaultMinSample;
+  const maxSample = args.max_sample_size; // undefined → no cap
   const minTotalStops = args.min_total_stops ?? DEFAULT_MIN_TOTAL_STOPS;
+  const maxTotalStops = args.max_total_stops; // undefined → no cap
   const n = args.n ?? 20;
   const latestYear = await getLatestYearWithData();
   const [start, end] = args.year_range ?? [latestYear, latestYear];
@@ -332,6 +350,8 @@ const topNByHandler = async (raw: unknown) => {
         AND (${spec.valueExpr}) IS NOT NULL
         AND COALESCE(ws.total_stops_in_window, 0) >= $3
         AND a_inner.is_statewide_rollup = FALSE
+        ${maxSample !== undefined ? `AND w.${spec.sampleField} <= ${maxSample}` : ""}
+        ${maxTotalStops !== undefined ? `AND COALESCE(ws.total_stops_in_window, 0) <= ${maxTotalStops}` : ""}
     )
     SELECT
       e.agency_slug,
@@ -419,7 +439,9 @@ const topNByHandler = async (raw: unknown) => {
         : "Caller-specified year_range.",
     sample_size_field: spec.sampleField,
     min_sample_size: minSample,
+    max_sample_size: maxSample ?? null,
     min_total_stops: minTotalStops,
+    max_total_stops: maxTotalStops ?? null,
     method: spec.method,
     filters: {
       county: args.county ?? null,
@@ -427,7 +449,9 @@ const topNByHandler = async (raw: unknown) => {
     },
     defaulted_filters: {
       min_sample_size: args.min_sample_size === undefined,
+      max_sample_size: args.max_sample_size === undefined,
       min_total_stops: args.min_total_stops === undefined,
+      max_total_stops: args.max_total_stops === undefined,
       year_range: args.year_range === undefined,
       n: args.n === undefined,
     },

@@ -25,6 +25,14 @@ const ListAgenciesInput = z.object({
     .describe(
       "Filter to agencies whose lifetime stop count (summed across every reported year) meets or exceeds this minimum. Defaults to 0 (no filter).",
     ),
+  max_lifetime_stops: z
+    .number()
+    .int()
+    .min(0)
+    .optional()
+    .describe(
+      "Cap on lifetime stop count. Pair with min_lifetime_stops to focus on mid-sized agencies (e.g. min=5000, max=100000 excludes both micros and MSHP-class giants). Defaults to no cap.",
+    ),
   limit: z
     .number()
     .int()
@@ -70,6 +78,11 @@ const listAgenciesHandler = async (raw: unknown) => {
   if (minStops > 0) {
     filters.push(`lifetime_stops >= $${params.length + 1}`);
     params.push(minStops);
+  }
+
+  if (args.max_lifetime_stops !== undefined) {
+    filters.push(`lifetime_stops <= $${params.length + 1}`);
+    params.push(args.max_lifetime_stops);
   }
 
   if (!args.include_statewide_rollup) {
@@ -120,6 +133,7 @@ const listAgenciesHandler = async (raw: unknown) => {
       name_contains: args.name_contains ?? null,
       county: args.county ?? null,
       min_lifetime_stops: minStops,
+      max_lifetime_stops: args.max_lifetime_stops ?? null,
     },
     agencies: out,
   };

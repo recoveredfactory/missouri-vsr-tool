@@ -122,6 +122,14 @@ const TrendInput = z.object({
     .min(0)
     .optional()
     .describe("Override the metric's default minimum per-year sample size."),
+  max_sample_size_per_year: z
+    .number()
+    .int()
+    .min(0)
+    .optional()
+    .describe(
+      "Cap on per-year sample size. Pair with min_sample_size_per_year to focus trend fits on a size band (e.g. exclude MSHP's per-year stop counts from a search-rate-trend comparison of municipalities). Defaults to no cap.",
+    ),
   min_years: z
     .number()
     .int()
@@ -171,10 +179,12 @@ const trendHandler = async (raw: unknown) => {
   }
   const extra = extraFilters.join("\n  ");
 
+  const maxSample = args.max_sample_size_per_year;
   const sql = spec.yearlySql(extra)
     .replace(/\$start/g, String(start))
     .replace(/\$end/g, String(end))
-    + `\n  AND $1 <= n`; // tack on the min-sample-per-year gate as a positional bound
+    + `\n  AND $1 <= n`
+    + (maxSample !== undefined ? `\n  AND n <= ${maxSample}` : "");
 
   const conn = await getDb();
   const stmt = await conn.prepare(sql);
@@ -286,6 +296,7 @@ const trendHandler = async (raw: unknown) => {
     metric: args.metric,
     year_range: [start, end],
     min_sample_size_per_year: minSample,
+    max_sample_size_per_year: maxSample ?? null,
     min_years: minYears,
     method: spec.method,
     note: "OLS regression on annual aggregates. Treat the slope as directional, not predictive. The model assumes linearity; if the true series is non-linear or noisy the slope captures only an average trend over the window. p-values are two-sided Student's t with df = n_years - 2.",
