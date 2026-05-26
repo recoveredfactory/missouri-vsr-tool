@@ -25,6 +25,7 @@ import "./tools/agencies.js";
 import "./tools/agency-summary.js";
 import "./tools/agency-demographics.js";
 import "./tools/known-issues.js";
+import "./tools/list-downloads.js";
 import "./tools/list-metrics.js";
 import "./tools/query-metric.js";
 import "./tools/top-n-by.js";
