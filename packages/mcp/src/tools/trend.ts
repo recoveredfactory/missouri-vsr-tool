@@ -299,6 +299,8 @@ const trendHandler = async (raw: unknown) => {
     max_sample_size_per_year: maxSample ?? null,
     min_years: minYears,
     method: spec.method,
+    method_explainer:
+      "Plain English (surface this to the user, don't assume they know what OLS means): we fit a straight line through the agency's annual values for this metric. The 'slope' is the average change per year, the '95% CI' is how much wiggle room the line has, and the 'p-value' tells you whether the trend is distinguishable from random year-to-year noise (a small p-value, say < 0.05, means it probably isn't noise — though see caveats). The straight-line assumption is the main limitation: a real step change (policy shift) or a single outlier year can pull the slope misleadingly. The slope is directional, not predictive — don't extrapolate forward. Quick links to share with the reader: https://en.wikipedia.org/wiki/Ordinary_least_squares (method), https://en.wikipedia.org/wiki/P-value (what p-values do and don't mean). Call `read_methodology()` for the full statistical caveats.",
     note: "OLS regression on annual aggregates. Treat the slope as directional, not predictive. The model assumes linearity; if the true series is non-linear or noisy the slope captures only an average trend over the window. p-values are two-sided Student's t with df = n_years - 2.",
     sort_by: sortBy,
     n_groups_considered: byAgency.size,

@@ -14,6 +14,10 @@ Before answering any substantive question, **call \`read_methodology()\` and \`r
 
 Every numeric claim in your answer should reference the tool that produced it (e.g. "via \`top_n_by(metric=search_rate)\`"). Treat tool outputs as the source of truth; do not interpolate or re-derive numbers.
 
+## Explain the method, not just the result
+
+When a tool response includes a \`method_explainer\` field, **surface it to the user in 1–2 sentences before quoting the numbers** — don't assume they know what OLS, p-value, hit rate, or disparity index mean. The audience is smart but typically not trained in statistics. Include the linked explainer URLs from \`method_explainer\` inline so the user can read further. Keep it short; the user can call \`read_methodology()\` if they want the full treatment.
+
 ## What this server does not do
 
 There is **no raw SQL access**. Every analytical path goes through a curated tool with a documented methodology. If a question cannot be answered by an existing tool, say so plainly — do not approximate by combining unrelated tool outputs, and do not invent a metric definition the dataset does not support.
