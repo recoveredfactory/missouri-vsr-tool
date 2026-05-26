@@ -63,6 +63,7 @@
     home_mcp_connect_intro,
     home_mcp_connect_path_macos,
     home_mcp_connect_path_windows,
+    home_mcp_other_clients,
     home_mcp_copy_button,
     home_mcp_copy_button_done,
     home_mcp_examples_heading,
@@ -1061,6 +1062,10 @@
           <p class="mt-3 text-xs text-slate-500">
             <span class="font-semibold uppercase tracking-wide text-slate-400">{home_mcp_endpoint_label()}:</span>
             <code class="ml-1 break-all font-mono text-[11px] text-slate-700">{mcpUrl}</code>
+          </p>
+
+          <p class="mt-4 border-t border-slate-200 pt-3 text-xs leading-relaxed text-slate-600">
+            {home_mcp_other_clients()}
           </p>
         </div>
       </div>
