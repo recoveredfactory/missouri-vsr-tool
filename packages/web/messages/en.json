@@ -507,7 +507,7 @@
   "home_mcp_examples_heading": "Try asking…",
   "home_mcp_example_1": "Which Missouri agencies have rising Hispanic stop share over the last five years?",
   "home_mcp_example_2": "Show me agencies with high contraband hit rates and low search rates.",
-  "home_mcp_example_3": "Map the disparity index for traffic stops in 2023, focused on counties around St. Louis.",
+  "home_mcp_example_3": "Map search rates across St. Louis-area agencies in 2023.",
   "home_mcp_endpoint_label": "Endpoint",
   "home_mcp_docs_link": "Full documentation and tool reference on GitHub →"
 }

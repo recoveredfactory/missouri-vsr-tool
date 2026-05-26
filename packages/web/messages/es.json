@@ -512,7 +512,7 @@
   "home_mcp_examples_heading": "Pruébalo con…",
   "home_mcp_example_1": "¿Qué agencias de Misuri muestran una mayor proporción de paradas a personas hispanas en los últimos cinco años?",
   "home_mcp_example_2": "Muéstrame agencias con altas tasas de hallazgo de contrabando y bajas tasas de registro.",
-  "home_mcp_example_3": "Mapea el índice de disparidad en paradas de 2023, centrado en los condados alrededor de St. Louis.",
+  "home_mcp_example_3": "Mapea las tasas de registro entre las agencias del área de St. Louis en 2023.",
   "home_mcp_endpoint_label": "Endpoint",
   "home_mcp_docs_link": "Documentación completa y referencia de herramientas en GitHub →"
 }
