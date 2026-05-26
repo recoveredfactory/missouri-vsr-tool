@@ -182,12 +182,64 @@ export default $config({
 
     const mcpOriginHost = mcp.url.apply((u) => new URL(u).hostname);
 
+    // Stage-specific hostname for the MCP. prod → mcp.vsr.recoveredfactory.net,
+    // staging → mcp-staging.vsr.recoveredfactory.net. Dev stages keep the
+    // auto-generated *.cloudfront.net hostname.
+    const mcpDomain = isProdStage
+      ? "mcp.vsr.recoveredfactory.net"
+      : isStagingStage
+        ? "mcp-staging.vsr.recoveredfactory.net"
+        : undefined;
+
+    // Provision ACM cert + Route 53 records when a domain is configured.
+    // ACM cert must live in us-east-1 to be usable by CloudFront, which is
+    // why we reuse the cloudfrontProvider (already pinned to us-east-1).
+    let mcpCertArn: $util.Output<string> | undefined;
+    let mcpAliases: string[] | undefined;
+    if (mcpDomain) {
+      const hostedZone = aws.route53.getZoneOutput({
+        name: "recoveredfactory.net.",
+      });
+      const cert = new aws.acm.Certificate(
+        "McpCert",
+        {
+          domainName: mcpDomain,
+          validationMethod: "DNS",
+        },
+        { provider: cloudfrontProvider },
+      );
+      // One DNS validation record per validation option. With a single
+      // domain (no SANs) there's exactly one.
+      const certValidationRecord = new aws.route53.Record(
+        "McpCertValidationRecord",
+        {
+          name: cert.domainValidationOptions[0].resourceRecordName,
+          type: cert.domainValidationOptions[0].resourceRecordType,
+          records: [cert.domainValidationOptions[0].resourceRecordValue],
+          zoneId: hostedZone.zoneId,
+          ttl: 60,
+          allowOverwrite: true,
+        },
+      );
+      const certValidation = new aws.acm.CertificateValidation(
+        "McpCertValidation",
+        {
+          certificateArn: cert.arn,
+          validationRecordFqdns: [certValidationRecord.fqdn],
+        },
+        { provider: cloudfrontProvider },
+      );
+      mcpCertArn = certValidation.certificateArn;
+      mcpAliases = [mcpDomain];
+    }
+
     const mcpCdn = new aws.cloudfront.Distribution("McpCdn", {
       enabled: true,
       isIpv6Enabled: true,
       httpVersion: "http2",
       priceClass: "PriceClass_100",
       webAclId: mcpWaf.arn,
+      aliases: mcpAliases,
       origins: [
         {
           originId: "mcp-lambda-url",
@@ -214,14 +266,56 @@ export default $config({
       restrictions: {
         geoRestriction: { restrictionType: "none" },
       },
-      viewerCertificate: { cloudfrontDefaultCertificate: true },
+      viewerCertificate: mcpCertArn
+        ? {
+            acmCertificateArn: mcpCertArn,
+            sslSupportMethod: "sni-only",
+            minimumProtocolVersion: "TLSv1.2_2021",
+          }
+        : { cloudfrontDefaultCertificate: true },
     });
+
+    // Route 53 alias records pointing the custom domain at CloudFront.
+    // CloudFront's hosted-zone ID is the well-known Z2FDTNDATAQYW2 for all
+    // distributions; we read it off the resource for type-safety.
+    if (mcpDomain) {
+      const hostedZone = aws.route53.getZoneOutput({
+        name: "recoveredfactory.net.",
+      });
+      new aws.route53.Record("McpDnsA", {
+        name: mcpDomain,
+        type: "A",
+        zoneId: hostedZone.zoneId,
+        aliases: [
+          {
+            name: mcpCdn.domainName,
+            zoneId: mcpCdn.hostedZoneId,
+            evaluateTargetHealth: false,
+          },
+        ],
+      });
+      new aws.route53.Record("McpDnsAAAA", {
+        name: mcpDomain,
+        type: "AAAA",
+        zoneId: hostedZone.zoneId,
+        aliases: [
+          {
+            name: mcpCdn.domainName,
+            zoneId: mcpCdn.hostedZoneId,
+            evaluateTargetHealth: false,
+          },
+        ],
+      });
+    }
 
     return {
       dataCdnDistributionId: dataRouter?.distributionID,
       dataCdnDomain: dataRouter?.url,
       mcpLambdaUrl: mcp.url,
-      mcpUrl: mcpCdn.domainName.apply((d) => `https://${d}/`),
+      mcpUrl: mcpDomain
+        ? `https://${mcpDomain}/`
+        : mcpCdn.domainName.apply((d) => `https://${d}/`),
+      mcpCloudfrontUrl: mcpCdn.domainName.apply((d) => `https://${d}/`),
     };
   },
 });
