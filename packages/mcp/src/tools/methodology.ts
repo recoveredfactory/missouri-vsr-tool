@@ -157,6 +157,31 @@ Every analytical tool response embeds this same guidance under a \`further_resea
 
 ---
 
+## Privacy: what this server logs
+
+This server records a narrow set of usage signals so the maintainers can see which tools are useful and where errors cluster. **Per tool call we log:**
+
+- The tool name (e.g. \`top_n_by\`, \`read_methodology\`)
+- The duration of the call in milliseconds
+- Whether the call returned an error, and which error class
+- The deployment stage (prod vs. staging)
+
+**We do NOT log:**
+
+- Tool arguments — no agency slugs, no county names, no year ranges, no filter text
+- Tool result contents
+- Your IP address
+- Your MCP session ID or any user identifier
+- The wording of your question, or anything the calling assistant said to you
+
+The collector uses a constant User-Agent, so the analytics backend cannot distinguish 100 different users making one call each from one user making 100 calls. Aggregate counts only. **This is intentional**: a journalist working a pre-publication investigation should not generate a side channel that reveals which agencies they're looking at, even to us.
+
+The analytics data goes to a single backend ([Umami](https://umami.is/)). Tool-call events are **not** also written to AWS CloudWatch, which would create a correlation surface with platform request logs that retain IPs. The cost of this choice: when Umami is unreachable, we lose the event — no dual-write recovery. We accept that trade.
+
+If you'd rather we record nothing at all about your usage, the entire MCP source lives at https://github.com/recoveredfactory/missouri-vsr-tool/tree/main/packages/mcp — you can run it locally against the same public CDN endpoint with no outbound analytics by unsetting \`MCP_UMAMI_WEBSITE_ID\`.
+
+---
+
 ## Further reading (curated link list)
 
 Every external link in this document points to a stable, mainstream explainer. The list is maintained by hand in this server's source; additions go through PR review. If you cite a method this server uses in a published piece, link to the explainer here so your readers can follow the math.
