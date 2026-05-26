@@ -8,6 +8,7 @@
     nav_agencies,
     nav_287g,
     nav_download,
+    nav_mcp,
     nav_about,
     nav_menu_label,
     nav_close_button,
@@ -498,6 +499,10 @@
             {nav_download()}
           </a>
           <span class="hidden text-slate-300 md:inline">•</span>
+          <a href={homeAnchorHref("mcp")} class="text-[#1b613c] no-underline hover:text-[#105430]">
+            {nav_mcp()}
+          </a>
+          <span class="hidden text-slate-300 md:inline">•</span>
           <a href={homeAnchorHref("about")} class="text-[#1b613c] no-underline hover:text-[#105430]">
             {nav_about()}
           </a>
@@ -553,6 +558,13 @@
             on:click={() => closeMenu("nav")}
           >
             {nav_download()}
+          </a>
+          <a
+            href={homeAnchorHref("mcp")}
+            class="block text-3xl font-semibold leading-tight text-slate-900 no-underline"
+            on:click={() => closeMenu("nav")}
+          >
+            {nav_mcp()}
           </a>
           <a
             href={homeAnchorHref("about")}
