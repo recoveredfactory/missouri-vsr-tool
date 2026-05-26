@@ -17,6 +17,7 @@ import {
   success,
 } from "./jsonrpc.js";
 import { getTool, listTools } from "./tools/registry.js";
+import { trackToolCall } from "./analytics.js";
 
 // Importing the tool modules registers them in the registry as a side effect.
 import "./tools/methodology.js";
@@ -93,8 +94,25 @@ const handleSingle = async (
             `Tool not found: ${params.name}`,
           );
         }
-        const result = await tool.handler(params.arguments ?? {});
-        return success(id, result);
+        const toolName = params.name;
+        const startedAt = Date.now();
+        try {
+          const result = await tool.handler(params.arguments ?? {});
+          trackToolCall({
+            tool: toolName,
+            durationMs: Date.now() - startedAt,
+            errorClass: result.isError ? "tool_error" : null,
+          });
+          return success(id, result);
+        } catch (toolErr) {
+          trackToolCall({
+            tool: toolName,
+            durationMs: Date.now() - startedAt,
+            errorClass:
+              toolErr instanceof Error ? toolErr.name : "unknown_error",
+          });
+          throw toolErr;
+        }
       }
 
       default:

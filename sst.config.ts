@@ -141,6 +141,14 @@ export default $config({
       environment: {
         DATA_BASE_URL: dataBaseUrl,
         DATA_RELEASE_PATH: env.PUBLIC_DATA_RELEASE_PATH ?? "",
+        // Umami analytics for MCP tool dispatch. See packages/mcp/src/analytics.ts
+        // for the privacy posture (no args, no IPs, no session linkage,
+        // single source of truth in Umami). Defaults to the web property's
+        // ID if no MCP-specific one is set.
+        MCP_UMAMI_WEBSITE_ID:
+          env.MCP_UMAMI_WEBSITE_ID ?? env.PUBLIC_UMAMI_WEBSITE_ID ?? "",
+        MCP_UMAMI_HOST: env.MCP_UMAMI_HOST ?? "cloud.umami.is",
+        SST_STAGE: $app.stage,
       },
       nodejs: {
         install: ["@duckdb/node-api", "@resvg/resvg-js"],
