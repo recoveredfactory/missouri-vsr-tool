@@ -8,6 +8,12 @@ const MCP_SEMANTICS = `
 
 The narrative above describes the dataset as published. The notes below describe how this MCP server's curated tools compute and report rates, what statistical machinery they apply, and where they refuse to answer.
 
+### Service status: provisional — no warranty, no uptime guarantee
+
+This MCP server is **provisional** and offered **as-is**, with **no warranty and no uptime guarantee**. The maintainers may change the tool surface, response shapes, or methodology at any time, and the server may be unavailable, slow, or return errors without notice. The Missouri Vehicle Stops Report dataset itself is published by the Missouri Attorney General's Office; this server adds curation, statistical machinery, and provenance on top of that source — it does not republish or warrant the underlying state filings.
+
+**Always check your work.** Every numeric claim a model produces from this server should be something a human reader could verify against the published source: the per-agency pages on https://vsr.recoveredfactory.net/, the Missouri AG's annual Vehicle Stops Report releases, and where applicable the agency's own filings. If a tool returns an error, behaves strangely, or contradicts a sanity check, surface that plainly to the user — do not paper over it.
+
 ### Two ways to query: raw reads vs. curated derivations
 
 This server's tool surface splits along one axis. **Know which side you're on before quoting a number.**

@@ -46,6 +46,12 @@ const ListAgenciesInput = z.object({
     .describe(
       "Whether to include the 'Missouri (all agencies)' statewide-rollup pseudo-agency (slug: missouri-all-agencies). Default false — the rollup aggregates every filing and is not a real agency. Set true if you specifically want it in the list.",
     ),
+  program_287g_active: z
+    .boolean()
+    .optional()
+    .describe(
+      "Filter to agencies that are ACTIVE 287(g) participants as of ICE's most-recent published snapshot. true = only participants; false = only non-participants; omit for no filter. The flag is point-in-time — agencies that terminated between snapshots will still read as active here until ICE publishes a new file. Call list_287g_participants for the snapshot_date and full caveats.",
+    ),
 });
 
 type ListAgenciesArgs = z.infer<typeof ListAgenciesInput>;
@@ -89,6 +95,10 @@ const listAgenciesHandler = async (raw: unknown) => {
     filters.push(`is_statewide_rollup = FALSE`);
   }
 
+  if (args.program_287g_active !== undefined) {
+    filters.push(`program_287g_active = ${args.program_287g_active ? "TRUE" : "FALSE"}`);
+  }
+
   const where = filters.length ? `WHERE ${filters.join(" AND ")}` : "";
 
   const sql = `
@@ -100,7 +110,8 @@ const listAgenciesHandler = async (raw: unknown) => {
       lifetime_stops,
       latest_year_stops,
       years_with_data,
-      latest_year_with_data
+      latest_year_with_data,
+      program_287g_active
     FROM agencies
     ${where}
     ORDER BY lifetime_stops DESC NULLS LAST, canonical_name
@@ -134,6 +145,7 @@ const listAgenciesHandler = async (raw: unknown) => {
       county: args.county ?? null,
       min_lifetime_stops: minStops,
       max_lifetime_stops: args.max_lifetime_stops ?? null,
+      program_287g_active: args.program_287g_active ?? null,
     },
     agencies: out,
   };

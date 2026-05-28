@@ -6,6 +6,12 @@ export const SERVER_INSTRUCTIONS = `# Missouri Vehicle Stops Report — methodol
 
 This server exposes the Missouri Vehicle Stops Report dataset (per-agency, per-year traffic stop counts with race breakdowns, search outcomes, and contraband finds) via a curated tool surface.
 
+## Service status: provisional — verify your work
+
+This MCP server is **provisional** and offered **as-is**. There is **no warranty, no uptime guarantee, and no guarantee that tool surfaces or response shapes won't change** without notice. Tools may return errors, be temporarily unavailable, or behave differently across releases.
+
+**Treat every numeric claim as something a human reader should be able to verify against the published source data.** Cite the tool that produced each number, link readers to the per-agency pages on the [Missouri Vehicle Stops Report site](https://vsr.recoveredfactory.net/) and to the Missouri Attorney General's published filings where relevant, and tell readers to double-check before publishing. If a tool returns an error, behaves strangely, or contradicts a sanity check, **say so plainly — do not paper over it**.
+
 ## Before you answer
 
 Before answering any substantive question, **call \`read_methodology()\` and \`read_schema()\` first.** The methodology doc covers what counts as a "stop", how race is recorded, what "disparity index" means here, and — critically — **which cross-tabs the dataset does NOT support** (race × gender, race × age, anything sub-annual, anything below the agency-year). Skipping it leads to invented metrics and false cross-tabs that look plausible but don't exist in the data.

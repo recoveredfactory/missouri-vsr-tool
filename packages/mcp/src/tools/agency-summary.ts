@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { getDb } from "../db.js";
+import { getDb, getProgram287gSnapshot } from "../db.js";
 import { normalize } from "../duckutil.js";
 import { PROBLEMATIC_YEAR_FLOOR, yearRangeWarnings } from "../year-range.js";
 import { RESEARCH_PROMPT } from "./caveats.js";
@@ -122,8 +122,27 @@ const agencySummaryHandler = async (raw: unknown) => {
 
   const agencyIssues = findIssuesForAgency(args.agency_id);
 
+  // 287(g) participation block. Only attached when this agency is on
+  // ICE's most-recent published participating-agencies snapshot — and the
+  // block's `as_of` field makes the point-in-time nature explicit. Call
+  // list_287g_participants for the full snapshot caveats / methodology.
+  const program287gSnap = await getProgram287gSnapshot();
+  const program287gMatch = program287gSnap.participants.find(
+    (p) => p.agency_slug === args.agency_id,
+  );
+  const program287g = program287gMatch
+    ? {
+        active_as_of: program287gSnap.snapshot_date,
+        snapshot_source: `ICE Participating Agencies file (${program287gSnap.snapshot_filename})`,
+        agreements: program287gMatch.agreements,
+        as_of_caveat:
+          "ACTIVE participation as of the snapshot only. If this agency has terminated its 287(g) agreement since then, that won't be reflected here until ICE publishes a new file. Call list_287g_participants for the full caveats.",
+      }
+    : null;
+
   const summary = {
     agency: agencyMeta,
+    program_287g: program287g,
     known_data_issues: agencyIssues.length > 0 ? agencyIssues : null,
     year_range_requested: [startYear, endYear],
     year_range_basis:

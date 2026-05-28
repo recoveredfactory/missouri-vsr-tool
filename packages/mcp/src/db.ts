@@ -65,6 +65,32 @@ let metricCoverageCache: MetricCoverage[] | null = null;
 
 let latestYearCache: number | null = null;
 
+let program287gSnapshotCache: Program287gSnapshot | null = null;
+
+export interface Program287gAgreement {
+  support_type: string;
+  signed_date: string | null;
+  moa_url: string | null;
+}
+
+export interface Program287gParticipant {
+  agency_slug: string;
+  canonical_name: string;
+  county: string | null;
+  agency_type: string | null;
+  agreements: Program287gAgreement[];
+}
+
+export interface Program287gSnapshot {
+  // ICE's published snapshot date. Active-participants list reflects this
+  // moment in time only — any termination between snapshots is invisible.
+  snapshot_date: string;
+  snapshot_filename: string;
+  n_participants: number;
+  support_type_counts: Record<string, number>;
+  participants: Program287gParticipant[];
+}
+
 export interface MetricCoverage {
   canonical_key: string;
   family: string;
@@ -178,6 +204,14 @@ const init = async (): Promise<DuckDBConnection> => {
   ]);
   locatorSvgCache = readFileSync(svgPath, "utf-8");
 
+  // Parse the 287(g) participation snapshot directly from agency_index.json.
+  // The pipeline emits an inline `program_287g` object on each participating
+  // agency carrying ICE's published snapshot date + agreements. We hold the
+  // parsed list in JS rather than DuckDB because every consumer wants the
+  // whole object (snapshot date + agreements) and the list is tiny (~85
+  // agencies). See list-287g-participants.ts.
+  program287gSnapshotCache = loadProgram287gSnapshot(agencyPath);
+
   const instance = await DuckDBInstance.create(":memory:");
   const conn = await instance.connect();
 
@@ -202,7 +236,8 @@ const init = async (): Promise<DuckDBConnection> => {
        census_geoid,
        all_stops_total AS latest_year_stops,
        years_with_data,
-       latest_year_with_data
+       latest_year_with_data,
+       program_287g IS NOT NULL AS program_287g_active
      FROM read_json('${agencyPath}', maximum_object_size = 100000000)`,
   );
 
@@ -347,9 +382,81 @@ export const getLatestYearWithData = async (): Promise<number> => {
   return latestYearCache;
 };
 
+export const getProgram287gSnapshot = async (): Promise<Program287gSnapshot> => {
+  await getDb();
+  if (!program287gSnapshotCache) {
+    throw new Error("287(g) snapshot was not parsed at cold start.");
+  }
+  return program287gSnapshotCache;
+};
+
+// Parses the inline `program_287g` object from each agency in
+// agency_index.json. The file is already on disk at this point because
+// the parallel download in init() landed it there before we touched
+// DuckDB. Doing the parse in JS (rather than via DuckDB's struct
+// inference) keeps the snapshot date + agreement list intact without
+// schema-coercion surprises on agencies that lack the field.
+const loadProgram287gSnapshot = (agencyJsonPath: string): Program287gSnapshot => {
+  const raw = JSON.parse(readFileSync(agencyJsonPath, "utf-8")) as Array<{
+    agency_slug: string;
+    canonical_name: string;
+    county?: string | null;
+    agency_type?: string | null;
+    program_287g?: {
+      snapshot_date?: string;
+      snapshot_filename?: string;
+      agreements?: Array<{
+        support_type?: string;
+        signed_date?: string;
+        moa_url?: string;
+      }>;
+    };
+  }>;
+
+  const participants: Program287gParticipant[] = [];
+  let snapshotDate = "unknown";
+  let snapshotFilename = "unknown";
+  const typeCounts: Record<string, number> = {};
+
+  for (const a of raw) {
+    if (!a.program_287g) continue;
+    const p = a.program_287g;
+    if (p.snapshot_date) snapshotDate = p.snapshot_date;
+    if (p.snapshot_filename) snapshotFilename = p.snapshot_filename;
+    const agreements: Program287gAgreement[] = (p.agreements ?? []).map(
+      (ag) => ({
+        support_type: ag.support_type ?? "unknown",
+        signed_date: ag.signed_date ?? null,
+        moa_url: ag.moa_url ?? null,
+      }),
+    );
+    for (const ag of agreements) {
+      typeCounts[ag.support_type] = (typeCounts[ag.support_type] ?? 0) + 1;
+    }
+    participants.push({
+      agency_slug: a.agency_slug,
+      canonical_name: a.canonical_name,
+      county: a.county ?? null,
+      agency_type: a.agency_type ?? null,
+      agreements,
+    });
+  }
+
+  participants.sort((a, b) => a.canonical_name.localeCompare(b.canonical_name));
+
+  return {
+    snapshot_date: snapshotDate,
+    snapshot_filename: snapshotFilename,
+    n_participants: participants.length,
+    support_type_counts: typeCounts,
+    participants,
+  };
+};
+
 export const resetDbForTesting = () => {
   connPromise = null;
   locatorSvgCache = null;
   metricCoverageCache = null;
   latestYearCache = null;
+  program287gSnapshotCache = null;
 };

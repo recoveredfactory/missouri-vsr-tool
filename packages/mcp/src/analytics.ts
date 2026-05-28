@@ -6,10 +6,17 @@
 //     arguments, no agency identifiers from the result, no client IP,
 //     no MCP session ID — nothing that could fingerprint a user or their
 //     pre-publication research.
+//   - We deliberately do NOT also send a pageview. Custom events are the
+//     only record; the Pages dashboard stays empty by design. Reason:
+//     pageviews would suggest browser-like "session traffic" semantics
+//     that don't apply to a tool-call API, and they'd double the analytics
+//     request volume for no extra signal.
 //   - We send a constant User-Agent so Umami's own visitor-fingerprinting
 //     collapses all MCP events into one synthetic "visitor". The dashboard
 //     gets aggregate counts; it cannot distinguish 100 users × 1 call from
-//     1 user × 100 calls.
+//     1 user × 100 calls. The "Mozilla/5.0" prefix is required to clear
+//     Umami's isbot filter — a bare "missouri-vsr-mcp/1.0" was getting
+//     silently dropped (Umami returns `{"beep":"boop"}` for filtered hits).
 //   - Fire-and-forget: never awaited, never throws into the caller, never
 //     logs the payload on failure. If Umami is down, we lose the event
 //     and move on — we explicitly chose NOT to dual-log to CloudWatch.
@@ -57,7 +64,10 @@ export const trackToolCall = (event: ToolCallEvent): void => {
     headers: {
       "Content-Type": "application/json",
       // Constant UA so Umami treats all MCP traffic as one visitor.
-      "User-Agent": "missouri-vsr-mcp/1.0",
+      // Must start with "Mozilla/5.0" — Umami's isbot filter drops anything
+      // that doesn't look browser-shaped, even though the rest of this UA
+      // is openly self-identifying as an MCP client.
+      "User-Agent": "Mozilla/5.0 (MCP) missouri-vsr-mcp/1.0",
     },
     body,
   }).catch((err: unknown) => {

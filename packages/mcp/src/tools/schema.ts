@@ -16,7 +16,7 @@ One row per reporting law-enforcement agency.
 | \`agency_type\` | TEXT | Category: \`municipal\`, \`county\`, \`state\`, \`college\`, \`other\`. |
 | \`years_present\` | INTEGER[] | Sorted list of years the agency filed at least one stop. |
 | \`latest_year_with_data\` | INTEGER | The most recent year with non-zero stops on file. |
-| \`program_287g\` | BOOLEAN | True if the agency has an active 287(g) agreement with ICE. |
+| \`program_287g_active\` | BOOLEAN | True if the agency was on ICE's most-recent published 287(g) Participating Agencies snapshot. This is point-in-time — the field reflects ACTIVE status on the snapshot_date only; agencies that terminated between snapshots are not visible. Call \`list_287g_participants\` for the snapshot date, agreement details (Task Force Model / Jail Enforcement / Warrant Service Officer, signed_date, MOA URL), and full caveats. \`agency_summary\` attaches the same participation block per-agency when present. |
 
 ## \`stops\`
 

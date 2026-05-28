@@ -34,6 +34,9 @@ export const handler = async (
         name: SERVER_NAME,
         version: SERVER_VERSION,
         transport: "streamable-http",
+        status: "provisional",
+        disclaimer:
+          "This MCP server is provisional and offered as-is. No warranty, no uptime guarantee, tool surfaces may change without notice. Always verify model output against the published Missouri Vehicle Stops Report data before publishing.",
         notes:
           "Send MCP JSON-RPC requests as POST to this URL. Streaming responses are not yet implemented; every response is a single JSON body.",
       }),
