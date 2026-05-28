@@ -494,9 +494,10 @@
   "home_mcp_banner_text": "Query this dataset from your AI assistant — connect the Missouri VSR MCP server.",
   "home_mcp_banner_cta": "Learn how",
   "home_mcp_heading": "Query the data from any MCP client",
-  "home_mcp_intro": "Connect any MCP-compatible AI assistant — Claude Desktop, Cursor, Cline, Zed — to this dataset. Ask in plain English for trends, rankings, comparisons, and maps; the model can explain what each metric means and what it doesn't, with links to resources about the methods used. Every answer cites the curated tool that produced it — no raw SQL, no invented metrics, sample-size guardrails baked in.",
-  "home_mcp_who_heading": "Who it's for",
-  "home_mcp_who_text": "Journalists, researchers, and policy folks who want methodologically defensible answers without writing SQL. Free, public, no auth — rate-limited at the edge.",
+  "home_mcp_intro": "Connect any MCP-compatible AI assistant — Claude Desktop, Cursor, ChatGPT, and more — to this dataset. Ask in plain English for trends, comparisons, and maps; the model explains what each metric means and what it doesn't, explains fundamental data limitations, and shares links to resources about the methods used.",
+  "home_mcp_limits_heading": "Usage limits",
+  "home_mcp_limits_body": "Free and public, with hard rate limits (600 requests per 5 minutes per IP) for the time being.",
+  "home_mcp_limits_tracking": "Usage tracking consists of anonymous counts of tool calls and their arguments, so we can see which queries and agencies are popular. These are stored in the EU using Umami with all identifying information stripped.",
   "home_mcp_connect_heading": "Connect your client",
   "home_mcp_client_label": "Client",
   "home_mcp_client_claude_desktop": "Claude Desktop",
@@ -517,5 +518,7 @@
   "home_mcp_example_2": "Show me agencies with high contraband hit rates and low search rates.",
   "home_mcp_example_3": "Map search rates across St. Louis-area agencies in 2023.",
   "home_mcp_endpoint_label": "Endpoint",
-  "home_mcp_docs_link": "Full documentation and tool reference on GitHub →"
+  "home_mcp_docs_link": "Full documentation and tool reference on GitHub →",
+  "home_mcp_disclaimer_heading": "Provisional service — verify your work",
+  "home_mcp_disclaimer_body": "This MCP server is offered as-is. No warranty, no uptime guarantee, and tool behavior may change without notice. Treat every numeric claim as something to verify against the published source data before publishing."
 }
