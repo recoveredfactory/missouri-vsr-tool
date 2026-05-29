@@ -52,6 +52,37 @@
     home_download_about_note,
     home_about_link,
     home_287g_link,
+    home_mcp_banner_tag,
+    home_mcp_banner_text,
+    home_mcp_banner_cta,
+    home_mcp_heading,
+    home_mcp_intro,
+    home_mcp_limits_heading,
+    home_mcp_limits_body,
+    home_mcp_limits_tracking,
+    home_mcp_connect_heading,
+    home_mcp_client_label,
+    home_mcp_client_claude_desktop,
+    home_mcp_client_cursor,
+    home_mcp_client_other,
+    home_mcp_connect_intro_claude_desktop,
+    home_mcp_connect_intro_cursor,
+    home_mcp_connect_intro_other,
+    home_mcp_connect_path_macos,
+    home_mcp_connect_path_windows,
+    home_mcp_connect_path_cursor_user,
+    home_mcp_connect_path_cursor_project,
+    home_mcp_connect_path_other,
+    home_mcp_copy_button,
+    home_mcp_copy_button_done,
+    home_mcp_examples_heading,
+    home_mcp_example_1,
+    home_mcp_example_2,
+    home_mcp_example_3,
+    home_mcp_endpoint_label,
+    home_mcp_docs_link,
+    home_mcp_disclaimer_heading,
+    home_mcp_disclaimer_body,
   } from "$lib/paraglide/messages";
   import { raceColors, raceTextColors, outcomeColors } from "$lib/colors.js";
   import { withDataBase } from "$lib/dataBase";
@@ -142,6 +173,80 @@
   };
   // Base URL without release path — used for v1 (pre-v2) download links
   const dataBaseUrl = import.meta.env.PUBLIC_DATA_BASE_URL ?? "";
+
+  // MCP endpoint — stage-aware (prod / staging custom domains, dev falls
+  // through to staging). Surfaced to the homepage so the banner and the
+  // Claude Desktop config snippet always point at the right host.
+  const mcpUrl =
+    import.meta.env.PUBLIC_MCP_URL ??
+    "https://mcp-staging.vsr.recoveredfactory.net/";
+  const mcpRepoUrl =
+    "https://github.com/recoveredfactory/missouri-vsr-tool/tree/main/packages/mcp";
+  // Auto-hide the "New" launch banner after mid-June 2026. Section anchor
+  // and content stay; only the hero-top banner disappears.
+  const showMcpBanner = Date.now() < Date.UTC(2026, 5, 16);
+  // Client picker — drives both the snippet body and the path hints below
+  // it. Claude Desktop + most stdio-only clients (Cline, Zed) share the
+  // mcp-remote bridge config; Cursor speaks HTTP MCP natively; "other"
+  // shows a raw curl smoke test for anything else.
+  let mcpClient = "claude-desktop";
+  $: mcpConfigSnippet =
+    mcpClient === "cursor"
+      ? JSON.stringify(
+          { mcpServers: { "missouri-vsr": { url: mcpUrl } } },
+          null,
+          2,
+        )
+      : mcpClient === "other"
+        ? `curl -X POST ${mcpUrl} \\\n  -H "Content-Type: application/json" \\\n  -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}'`
+        : JSON.stringify(
+            {
+              mcpServers: {
+                "missouri-vsr": {
+                  command: "npx",
+                  args: ["-y", "mcp-remote", mcpUrl],
+                },
+              },
+            },
+            null,
+            2,
+          );
+  let mcpCopyState = "idle";
+  let mcpUrlCopyState = "idle";
+  // Snippet changes when the client tab changes — clear the "Copied" badge
+  // so it doesn't lie about what's on the clipboard.
+  $: mcpClient, (mcpCopyState = "idle");
+  async function copyMcpConfig() {
+    if (typeof navigator === "undefined" || !navigator.clipboard) return;
+    try {
+      await navigator.clipboard.writeText(mcpConfigSnippet);
+      mcpCopyState = "done";
+      trackEvent("mcp_config_copy", { url: mcpUrl, client: mcpClient });
+      setTimeout(() => {
+        mcpCopyState = "idle";
+      }, 1800);
+    } catch {
+      mcpCopyState = "idle";
+    }
+  }
+  async function copyMcpUrl() {
+    if (typeof navigator === "undefined" || !navigator.clipboard) return;
+    try {
+      await navigator.clipboard.writeText(mcpUrl);
+      mcpUrlCopyState = "done";
+      trackEvent("mcp_url_copy", { url: mcpUrl });
+      setTimeout(() => {
+        mcpUrlCopyState = "idle";
+      }, 1800);
+    } catch {
+      mcpUrlCopyState = "idle";
+    }
+  }
+  function selectMcpClient(client) {
+    if (mcpClient === client) return;
+    mcpClient = client;
+    trackEvent("mcp_client_switch", { client });
+  }
 
   // Shared download helpers used for both v2 and v1 manifest-driven rendering
   $: downloadGroupMeta = {
@@ -311,6 +416,25 @@
 <StickyHeader agencies={data.agencies} />
 
 <main id="main-content" class="min-h-screen bg-white overflow-x-hidden">
+  <!-- MCP launch banner — points to #mcp section below. Auto-hides after
+       2026-06-16 (see showMcpBanner above). -->
+  {#if showMcpBanner}
+  <a
+    href="#mcp"
+    on:click={() => trackEvent("mcp_banner_click", { target: "section" })}
+    class="block bg-[#1b613c] text-white no-underline transition-colors hover:bg-[#105430] focus:outline-none focus:ring-2 focus:ring-[#1b613c] focus:ring-offset-2"
+  >
+    <div class="mx-auto max-w-5xl px-4 py-2 text-center text-sm leading-snug sm:px-6 sm:py-2.5">
+      <span class="mr-1.5 inline-flex items-center rounded-full bg-white/15 px-2 py-0.5 align-[2px] text-[10px] font-bold uppercase tracking-wider">
+        {home_mcp_banner_tag()}
+      </span><span class="font-medium">{home_mcp_banner_text()}</span>
+      <span class="ml-1.5 inline font-semibold underline decoration-white/40 underline-offset-4 hover:decoration-white">
+        {home_mcp_banner_cta()} <span aria-hidden="true">→</span>
+      </span>
+    </div>
+  </a>
+  {/if}
+
   <!-- Hero Section -->
   <section class="bg-white px-6 py-12">
     <div class="mx-auto max-w-3xl flex flex-col md:flex-row md:items-center gap-8">
@@ -926,6 +1050,153 @@
       >
         {home_footer_contact()}
       </a>
+    </div>
+  </section>
+
+  <!-- MCP server -->
+  <section id="mcp" class="border-t border-slate-200 bg-white py-12">
+    <div class="mx-auto max-w-4xl px-6">
+      <div class="text-center">
+        <span class="inline-flex items-center gap-1.5 rounded-full bg-[#1b613c]/10 px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-[#1b613c]">
+          {home_mcp_banner_tag()} · MCP
+        </span>
+        <h2 class="mt-3 text-3xl font-bold text-slate-900">
+          {home_mcp_heading()}
+        </h2>
+        <p class="mx-auto mt-4 max-w-2xl text-base leading-relaxed text-slate-700">
+          {home_mcp_intro()}
+        </p>
+      </div>
+
+      <!-- Provisional / no-warranty disclaimer. Amber callout, deliberately
+           more prominent than the surrounding cards so it's not skimmed
+           past by a journalist about to copy a number into a story. -->
+      <div role="note" class="mx-auto mt-6 max-w-2xl rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm leading-relaxed text-amber-900">
+        <p class="font-bold">{home_mcp_disclaimer_heading()}</p>
+        <p class="mt-1">{home_mcp_disclaimer_body()}</p>
+      </div>
+
+      <div class="mt-8 grid gap-6 md:grid-cols-2">
+        <!-- Example prompts + usage limits -->
+        <div class="min-w-0 rounded-lg border border-slate-200 bg-slate-50 p-6">
+          <h3 class="text-lg font-bold text-slate-900">{home_mcp_examples_heading()}</h3>
+          <ul class="mt-2 list-disc space-y-2 pl-5 text-sm leading-relaxed text-slate-700 marker:text-[#1b613c]">
+            <li>{home_mcp_example_1()}</li>
+            <li>{home_mcp_example_2()}</li>
+            <li>{home_mcp_example_3()}</li>
+          </ul>
+
+          <h3 class="mt-6 text-lg font-bold text-slate-900">{home_mcp_limits_heading()}</h3>
+          <p class="mt-2 text-sm leading-relaxed text-slate-700">{home_mcp_limits_body()}</p>
+          <p class="mt-2 text-sm leading-relaxed text-slate-700">{home_mcp_limits_tracking()}</p>
+        </div>
+
+        <!-- Connect / config snippet -->
+        <div class="min-w-0 rounded-lg border border-slate-200 bg-slate-50 p-6">
+          <h3 class="text-lg font-bold text-slate-900">{home_mcp_connect_heading()}</h3>
+
+          <!-- Prominent server URL — the universal handshake. Most clients
+               accept this directly; only Claude Desktop needs the wrapper
+               snippet below. -->
+          <div class="mt-3">
+            <label for="mcp-server-url" class="block text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+              {home_mcp_endpoint_label()}
+            </label>
+            <div class="mt-1 flex items-stretch gap-2">
+              <input
+                id="mcp-server-url"
+                type="text"
+                readonly
+                value={mcpUrl}
+                on:focus={(e) => e.currentTarget.select()}
+                on:click={(e) => e.currentTarget.select()}
+                class="min-w-0 flex-1 rounded-md border border-slate-300 bg-white px-3 py-2 font-mono text-sm text-slate-800 shadow-sm focus:border-[#1b613c] focus:outline-none focus:ring-1 focus:ring-[#1b613c]"
+              />
+              <button
+                type="button"
+                on:click={copyMcpUrl}
+                class="flex-shrink-0 rounded-md bg-[#1b613c] px-3 py-2 text-xs font-semibold uppercase tracking-wide text-white transition-colors hover:bg-[#105430] focus:outline-none focus:ring-2 focus:ring-[#1b613c] focus:ring-offset-2"
+              >
+                {mcpUrlCopyState === "done" ? home_mcp_copy_button_done() : home_mcp_copy_button()}
+              </button>
+            </div>
+          </div>
+
+          <div class="mt-5" role="tablist" aria-label={home_mcp_client_label()}>
+            <div class="flex flex-wrap gap-1 rounded-md border border-slate-200 bg-white p-1">
+              {#each [
+                { id: "claude-desktop", label: home_mcp_client_claude_desktop() },
+                { id: "cursor", label: home_mcp_client_cursor() },
+                { id: "other", label: home_mcp_client_other() },
+              ] as tab}
+                {@const active = mcpClient === tab.id}
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={active}
+                  on:click={() => selectMcpClient(tab.id)}
+                  class={`flex-1 rounded px-2.5 py-1.5 text-xs font-semibold transition-colors ${
+                    active
+                      ? "bg-[#1b613c] text-white"
+                      : "text-slate-600 hover:bg-slate-100"
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              {/each}
+            </div>
+          </div>
+
+          <p class="mt-4 text-sm leading-relaxed text-slate-700">
+            {#if mcpClient === "cursor"}
+              {home_mcp_connect_intro_cursor()}
+            {:else if mcpClient === "other"}
+              {home_mcp_connect_intro_other()}
+            {:else}
+              {home_mcp_connect_intro_claude_desktop()}
+            {/if}
+          </p>
+
+          <ul class="mt-2 space-y-0.5 break-all font-mono text-[11px] leading-snug text-slate-500">
+            {#if mcpClient === "cursor"}
+              <li>{home_mcp_connect_path_cursor_user()}</li>
+              <li>{home_mcp_connect_path_cursor_project()}</li>
+            {:else if mcpClient === "claude-desktop"}
+              <li>{home_mcp_connect_path_macos()}</li>
+              <li>{home_mcp_connect_path_windows()}</li>
+            {/if}
+          </ul>
+
+          <div class="relative mt-4">
+            <pre class="overflow-x-auto rounded-md border border-slate-300 bg-slate-900 px-4 py-3 pr-20 text-[11px] leading-relaxed text-slate-100"><code>{mcpConfigSnippet}</code></pre>
+            <button
+              type="button"
+              on:click={copyMcpConfig}
+              class="absolute right-2 top-2 rounded-md bg-white/10 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-white transition-colors hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-white/40"
+            >
+              {mcpCopyState === "done" ? home_mcp_copy_button_done() : home_mcp_copy_button()}
+            </button>
+          </div>
+
+          {#if mcpClient === "other"}
+            <p class="mt-4 border-t border-slate-200 pt-3 text-xs leading-relaxed text-slate-600">
+              {home_mcp_connect_path_other()}
+            </p>
+          {/if}
+        </div>
+      </div>
+
+      <p class="mt-6 text-center text-sm">
+        <a
+          href={mcpRepoUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          on:click={() => trackEvent("mcp_docs_click", { target: "github" })}
+          class="text-[#1b613c] underline hover:text-[#105430]"
+        >
+          {home_mcp_docs_link()}
+        </a>
+      </p>
     </div>
   </section>
 

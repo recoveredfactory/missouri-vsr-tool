@@ -1,0 +1,26 @@
+{
+  "name": "@missouri-vsr-tool/mcp",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "src/index.ts",
+  "scripts": {
+    "sync:about": "node scripts/sync-about-data.mjs",
+    "prebuild": "pnpm sync:about",
+    "build": "tsc",
+    "precheck": "pnpm sync:about",
+    "check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@duckdb/node-api": "1.5.3-r.1",
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "@resvg/resvg-js": "^2.6.2",
+    "zod": "^3.25.28",
+    "zod-to-json-schema": "^3.24.0"
+  },
+  "devDependencies": {
+    "@types/aws-lambda": "^8.10.146",
+    "@types/node": "^22.10.0",
+    "typescript": "^5.6.0"
+  }
+}
