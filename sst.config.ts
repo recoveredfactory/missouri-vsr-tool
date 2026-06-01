@@ -122,6 +122,13 @@ export default $config({
         PUBLIC_DATA_BASE_URL: dataBaseUrl,
         PUBLIC_DATA_RELEASE_PATH: env.PUBLIC_DATA_RELEASE_PATH ?? "",
         PUBLIC_MCP_URL: publicMcpUrl,
+        // Staging password gate. Set ONLY on the staging stage, so prod and
+        // local dev are never gated (the hook keys off the var's presence).
+        // Supply STAGING_PASSWORD in the staging deploy env / .env; if it's
+        // blank the gate stays open. See packages/web/src/lib/server/gate.ts.
+        ...(isStagingStage && env.STAGING_PASSWORD
+          ? { STAGING_PASSWORD: env.STAGING_PASSWORD }
+          : {}),
       },
     });
 
