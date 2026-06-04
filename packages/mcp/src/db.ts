@@ -8,6 +8,13 @@ import { DuckDBConnection, DuckDBInstance } from "@duckdb/node-api";
 const DEFAULT_BASE_URL = "https://data.vsr.recoveredfactory.net";
 const DEFAULT_RELEASE_PATH = "/releases/v2.2";
 
+// The pipeline emits a pre-computed statewide aggregate as a pseudo-agency in
+// agency_index / the stops table. It is NOT a real agency: ranking/pool tools
+// must exclude it, and statewide answers should read THIS row rather than
+// re-summing every agency ("already crunched"). Tagged via is_statewide_rollup
+// on the agencies table; the slug is exported for tools that read the row.
+export const STATEWIDE_ROLLUP_SLUG = "missouri-all-agencies";
+
 const baseUrl = () => process.env.DATA_BASE_URL ?? DEFAULT_BASE_URL;
 const releasePath = () => process.env.DATA_RELEASE_PATH ?? DEFAULT_RELEASE_PATH;
 
@@ -325,7 +332,7 @@ const init = async (): Promise<DuckDBConnection> => {
   );
   await conn.run(
     `UPDATE agencies SET is_statewide_rollup = TRUE
-     WHERE agency_slug = 'missouri-all-agencies'`,
+     WHERE agency_slug = '${STATEWIDE_ROLLUP_SLUG}'`,
   );
 
   // Intermediate materialized view: one row per (agency, year) carrying the

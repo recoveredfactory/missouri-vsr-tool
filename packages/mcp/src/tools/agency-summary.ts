@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { getDb, getProgram287gSnapshot } from "../db.js";
+import { getDb, getProgram287gSnapshot, STATEWIDE_ROLLUP_SLUG } from "../db.js";
 import { normalize } from "../duckutil.js";
 import { PROBLEMATIC_YEAR_FLOOR, yearRangeWarnings } from "../year-range.js";
 import { RESEARCH_PROMPT } from "./caveats.js";
@@ -25,7 +25,7 @@ const AgencySummaryInput = z.object({
     .string()
     .min(1)
     .describe(
-      "The agency_slug from list_agencies (e.g. 'missouri-state-hwy-patrol'). Always resolve loose names through list_agencies first.",
+      "The agency_slug from list_agencies (e.g. 'missouri-state-hwy-patrol'). Always resolve loose names through list_agencies first. For STATEWIDE totals/rates, pass 'missouri-all-agencies' — the pre-computed aggregate across all agencies — instead of summing agencies yourself.",
     ),
   year_range: z
     .tuple([z.number().int(), z.number().int()])
@@ -140,8 +140,13 @@ const agencySummaryHandler = async (raw: unknown) => {
       }
     : null;
 
+  const isStatewideRollup = args.agency_id === STATEWIDE_ROLLUP_SLUG;
+
   const summary = {
     agency: agencyMeta,
+    statewide_rollup: isStatewideRollup
+      ? "This is the STATEWIDE AGGREGATE across every reporting agency (the pre-computed 'Missouri (all agencies)' rollup), not a single department. Use these numbers directly for statewide totals/rates instead of summing individual agencies. Per-capita/population-denominator metrics (e.g. resident stop rate) are not meaningful here and may be omitted."
+      : null,
     program_287g: program287g,
     known_data_issues: agencyIssues.length > 0 ? agencyIssues : null,
     year_range_requested: [startYear, endYear],
@@ -167,7 +172,7 @@ const agencySummaryHandler = async (raw: unknown) => {
 registerTool({
   name: "agency_summary",
   description:
-    "Returns a curated multi-year summary for a single agency: stop counts, search counts, contraband finds, arrest and citation counts, plus their corresponding rates, plus the disparity index — all broken down by race. Defaults to the most recent four years on file (2020 excluded by default due to unreconciled data anomalies — pass year_range explicitly to include it). Use list_agencies first to resolve a natural-language name into an agency_slug.",
+    "Returns a curated multi-year summary for a single agency: stop counts, search counts, contraband finds, arrest and citation counts, plus their corresponding rates, plus the disparity index — all broken down by race. Defaults to the most recent four years on file (2020 excluded by default due to unreconciled data anomalies — pass year_range explicitly to include it). Use list_agencies first to resolve a natural-language name into an agency_slug. For STATEWIDE figures, pass agency_id='missouri-all-agencies' to read the pre-computed aggregate directly rather than summing every agency.",
   inputSchema: inputSchemaFromZod(AgencySummaryInput),
   handler: agencySummaryHandler,
 });

@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { getDb, getLatestYearWithData } from "../db.js";
+import { getDb, getLatestYearWithData, STATEWIDE_ROLLUP_SLUG } from "../db.js";
 import { normalize } from "../duckutil.js";
 import { yearRangeWarnings } from "../year-range.js";
 import { RESEARCH_PROMPT } from "./caveats.js";
@@ -126,8 +126,15 @@ const compareHandler = async (raw: unknown) => {
     };
   });
 
+  // Exclude the statewide rollup from the median pool — it's a pre-computed
+  // aggregate of every agency, so leaving it in would skew "the middle of the
+  // field". It stays in `allAgencies`/`lookup` so a caller can still request it
+  // explicitly in agency_ids for a side-by-side row.
   const eligible = allAgencies.filter(
-    (r) => r.value !== null && r.sample_size > 0,
+    (r) =>
+      r.value !== null &&
+      r.sample_size > 0 &&
+      r.agency_slug !== STATEWIDE_ROLLUP_SLUG,
   );
   const sortedValues = eligible
     .map((r) => r.value as number)
