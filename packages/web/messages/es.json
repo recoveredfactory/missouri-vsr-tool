@@ -79,6 +79,7 @@
   "modal_metric_label": "Métrica",
   "modal_close": "Cerrar",
   "modal_no_data": "No hay datos disponibles para esta métrica.",
+  "modal_no_agency_data": "Esta agencia no tiene datos reportados para esta métrica.",
   "modal_chart_unavailable": "Tipo de gráfico no disponible aún.",
   "modal_statewide_baselines_heading": "Líneas base estatales",
   "modal_statewide_baselines_subheading": "Media / mediana (sin MSHP) por raza",

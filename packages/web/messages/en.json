@@ -87,6 +87,7 @@
   "modal_metric_label": "Metric",
   "modal_close": "Close",
   "modal_no_data": "No data available for this metric.",
+  "modal_no_agency_data": "No data reported for this agency on this metric.",
   "modal_chart_unavailable": "Chart type not available yet.",
   "modal_statewide_baselines_heading": "Statewide baselines",
   "modal_statewide_baselines_subheading": "Mean / median (no MSHP) by race",
