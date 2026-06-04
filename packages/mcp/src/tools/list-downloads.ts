@@ -10,14 +10,17 @@ import {
 
 const baseUrl = () =>
   process.env.DATA_BASE_URL ?? "https://data.vsr.recoveredfactory.net";
-const releasePath = () => process.env.DATA_RELEASE_PATH ?? "/releases/v2.1";
+const releasePath = () => process.env.DATA_RELEASE_PATH ?? "/releases/v2.2";
 
 // The pipeline ships a manifest cataloging every published downloadable
 // file (combined JSON, per-dataset CSV/Parquet, per-year wide CSV/Parquet,
 // statewide subsets). We don't know the manifest's exact filename ahead of
 // time — it follows the prefix-and-year convention the pipeline uses — so
 // we discover it once at first call.
+// Tried in order — newest release naming first. Covers v2.2 (…2000_2025…)
+// and v2.1 (…2000_2024…) so the same code works across release paths.
 const MANIFEST_FILENAME_GUESSES = [
+  "missouri_vsr_2000_2025_downloads_manifest.json",
   "missouri_vsr_2000_2024_downloads_manifest.json",
 ];
 
