@@ -9,6 +9,7 @@
     home_hero_headline,
     home_why_text,
     home_chart_total_stops_heading,
+    home_chart_total_stops_heading_generic,
     home_chart_total_stops_subheading,
     home_chart_total_stops_aria_label,
     home_chart_point_total_stops_label,
@@ -95,6 +96,25 @@
   $: statsData = data.statsData;
   $: historicalData = data.historicalData;
   $: historicalOutcomes = data.historicalOutcomes;
+
+  // Total-stops chart heading, driven by the same statewide "stops" series the
+  // chart plots — so the headline number and year always match the chart and
+  // advance automatically with each data release (no hardcoded year/figure).
+  // Falls back to a generic, number-free heading when the series is absent.
+  $: heroStopsYear = historicalData?.years?.length
+    ? historicalData.years[historicalData.years.length - 1]
+    : null;
+  $: heroStopsRaw = historicalData?.totalStops?.length
+    ? historicalData.totalStops[historicalData.totalStops.length - 1]
+    : null;
+  $: heroStops =
+    heroStopsRaw != null && Number.isFinite(Number(heroStopsRaw))
+      ? new Intl.NumberFormat(getLocale(), {
+          notation: "compact",
+          compactDisplay: "long",
+          maximumFractionDigits: 2,
+        }).format(Number(heroStopsRaw))
+      : null;
 
   // About-the-data section: lazy-fetched from /about-data/{locale} when the
   // section approaches the viewport. Removed from SSR to keep the homepage
@@ -475,7 +495,11 @@
           <div class="rounded-lg border border-slate-200 bg-white p-4 sm:p-6 flex flex-col">
             <div class="mb-3 sm:mb-4 text-center">
               <h3 class="text-lg sm:text-xl font-bold text-slate-900">
-                {home_chart_total_stops_heading()}
+                {#if heroStops != null && heroStopsYear != null}
+                  {home_chart_total_stops_heading({ stops: heroStops, year: heroStopsYear })}
+                {:else}
+                  {home_chart_total_stops_heading_generic()}
+                {/if}
               </h3>
               <p class="mt-1 sm:mt-2 text-xs sm:text-sm leading-relaxed text-slate-600">
                 {home_chart_total_stops_subheading()}
@@ -494,7 +518,7 @@
               <div class="sr-only">
                 Data summary: From {years[0]} to {years[years.length - 1]}, total stops ranged from {formatStops(Math.min(...stops))} to {formatStops(Math.max(...stops))}.
               </div>
-              <div class="flex flex-col" role="img" aria-label={home_chart_total_stops_aria_label()}>
+              <div class="flex flex-col" role="img" aria-label={home_chart_total_stops_aria_label({ startYear: years[0], endYear: years[years.length - 1] })}>
                 <svg viewBox="0 0 {width + padding.left + padding.right} {height + padding.top + padding.bottom}" class="w-full h-[220px] sm:h-[260px] md:h-[280px]">
                   <!-- Grid lines -->
                   {#each [0, 0.25, 0.5, 0.75, 1] as tick}
@@ -566,7 +590,7 @@
               <div class="sr-only">
                 Data summary: Consent searches dropped from {formatStops(consent[0])} in {years[0]} to {formatStops(consent[consent.length - 1])} in {years[years.length - 1]}, a {Math.round((1 - consent[consent.length - 1] / consent[0]) * 100)}% decline.
               </div>
-              <div class="flex flex-col" role="img" aria-label={home_chart_consent_aria_label()}>
+              <div class="flex flex-col" role="img" aria-label={home_chart_consent_aria_label({ startYear: years[0], endYear: years[years.length - 1] })}>
                 <svg viewBox="0 0 {width + padding.left + padding.right} {height + padding.top + padding.bottom}" class="w-full h-[220px] sm:h-[260px] md:h-[280px]">
                   <!-- Grid lines -->
                   {#each [0, 0.25, 0.5, 0.75, 1] as tick}
