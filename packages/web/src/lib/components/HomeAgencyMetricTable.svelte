@@ -357,7 +357,8 @@
           id: `${agencyName}-${year}`,
           agency: {
             value: agencyName,
-            href: buildAgencyHref(locale, agencySlug, metricRowKey),
+            // Link to the agency homepage, not the selected-metric detail view.
+            href: buildAgencyHref(locale, agencySlug),
             program287g: program287gSlugs.has(agencySlug),
           },
           total_stops: toDisplayValue(stopsTotal),

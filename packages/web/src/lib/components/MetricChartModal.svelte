@@ -4,6 +4,7 @@
   import {
     modal_close,
     modal_no_data,
+    modal_no_agency_data,
     race_white,
     race_black,
     race_hispanic,
@@ -276,6 +277,23 @@
 
   $: totalStatewideSeries = buildStatewideSeries("Total", baselines, metricKey);
 
+  // Does the selected agency have any actual value for this metric? The metric
+  // may exist for other agencies (so allRows > 0) while being absent or nulled
+  // for this one — e.g. statewide `stop-rate-residents` is dropped for the
+  // `missouri-all-agencies` aggregate when the state denominator is missing
+  // (the layout redirects when the row is removed entirely; this also covers
+  // the row being kept with null values). We check for a non-null value rather
+  // than row existence, but deliberately do NOT apply the >100 rate filter
+  // here — legitimately high per-agency stop rates must not be treated as
+  // "no data". When false, show a clear message instead of a chart of other
+  // agencies' lines with no highlighted series.
+  const HAS_VALUE_COLS = ["Total", "White", "Black", "Hispanic", "Native American", "Asian", "Other"];
+  $: agencyHasData = allRows.some(
+    (r) =>
+      normalizeAgency(String(r.agency || "")) === normalizedAgencyName &&
+      HAS_VALUE_COLS.some((c) => r[c] != null && Number.isFinite(Number(r[c]))),
+  );
+
   // Most recent metric row for the selected agency — used for panel header values.
   $: agencyMetricRow = (() => {
     const agencyRows = allRows.filter(
@@ -367,6 +385,8 @@
           <p class="text-sm text-rose-600">Could not load data ({loadError})</p>
         {:else if allRows.length === 0}
           <p class="text-sm text-slate-500">{modal_no_data()}</p>
+        {:else if !agencyHasData}
+          <p class="text-sm text-slate-500">{modal_no_agency_data()}</p>
         {:else}
           <!-- Filter / scale controls (count metrics only) -->
           {#if !isRateMetric}

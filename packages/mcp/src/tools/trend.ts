@@ -171,7 +171,9 @@ const trendHandler = async (raw: unknown) => {
   })();
   const minYears = args.min_years ?? Math.min(4, end - start + 1);
 
-  const extraFilters: string[] = [];
+  // Exclude the statewide rollup pseudo-agency from the per-agency trend pool —
+  // it's a pre-computed aggregate, not an agency whose trajectory to rank.
+  const extraFilters: string[] = ["AND a.is_statewide_rollup = FALSE"];
   const bindings: Array<{ kind: "varchar"; value: string }> = [];
   if (args.county) {
     extraFilters.push(`AND LOWER(a.county) = $${bindings.length + 2}`);

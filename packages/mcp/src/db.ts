@@ -6,15 +6,42 @@ import { join } from "node:path";
 import { DuckDBConnection, DuckDBInstance } from "@duckdb/node-api";
 
 const DEFAULT_BASE_URL = "https://data.vsr.recoveredfactory.net";
-const DEFAULT_RELEASE_PATH = "/releases/v2.1";
+const DEFAULT_RELEASE_PATH = "/releases/v2.2";
+
+// The pipeline emits a pre-computed statewide aggregate as a pseudo-agency in
+// agency_index / the stops table. It is NOT a real agency: ranking/pool tools
+// must exclude it, and statewide answers should read THIS row rather than
+// re-summing every agency ("already crunched"). Tagged via is_statewide_rollup
+// on the agencies table; the slug is exported for tools that read the row.
+export const STATEWIDE_ROLLUP_SLUG = "missouri-all-agencies";
 
 const baseUrl = () => process.env.DATA_BASE_URL ?? DEFAULT_BASE_URL;
 const releasePath = () => process.env.DATA_RELEASE_PATH ?? DEFAULT_RELEASE_PATH;
 
 const agencyIndexUrl = () => `${baseUrl()}${releasePath()}/dist/agency_index.json`;
-const longStatsUrl = () =>
-  `${baseUrl()}${releasePath()}/downloads/missouri_vsr_2000_2024_vsr_statistics.parquet`;
+const manifestUrl = () => `${baseUrl()}${releasePath()}/dist/manifest.json`;
+// The stats parquet filename embeds the release's latest year — v2.1 ships
+// missouri_vsr_2000_2024_…, v2.2 ships …2000_2025…. Derive the end year from
+// the release manifest (resolveLatestYear) instead of hardcoding, so the MCP
+// tracks whatever release DATA_RELEASE_PATH points at. Start year is always
+// 2000 (downloads include 2000 even though dist outputs start at 2001).
+const longStatsUrl = (endYear: number) =>
+  `${baseUrl()}${releasePath()}/downloads/missouri_vsr_2000_${endYear}_vsr_statistics.parquet`;
 const locatorSvgUrl = () => `${baseUrl()}${releasePath()}/dist/mo_locator.svg`;
+
+// Fetch the release manifest (fixed path, no year in its name) and return the
+// most recent year it covers, used to build year-stamped download filenames.
+const resolveLatestYear = async (): Promise<number> => {
+  const path = await downloadToTmp(manifestUrl(), "manifest.json");
+  const manifest = JSON.parse(readFileSync(path, "utf-8"));
+  const years = Array.isArray(manifest?.years)
+    ? manifest.years.map(Number).filter((y: number) => Number.isFinite(y))
+    : [];
+  if (!years.length) {
+    throw new Error(`No years in release manifest at ${manifestUrl()}`);
+  }
+  return Math.max(...years);
+};
 
 const downloadToTmp = (url: string, filename: string): Promise<string> => {
   const dir = mkdtempSync(join(tmpdir(), "vsr-mcp-"));
@@ -197,8 +224,9 @@ const init = async (): Promise<DuckDBConnection> => {
   // Pre-fetch Parquet, JSON, and the locator SVG to local disk via HTTP/1.1.
   // The upstream CloudFront drops Snappy-compressed Parquet blocks
   // intermittently over HTTP/2; forcing HTTP/1.1 bypasses that.
+  const latestYear = await resolveLatestYear();
   const [statsPath, agencyPath, svgPath] = await Promise.all([
-    downloadToTmp(longStatsUrl(), "stats.parquet"),
+    downloadToTmp(longStatsUrl(latestYear), "stats.parquet"),
     downloadToTmp(agencyIndexUrl(), "agency_index.json"),
     downloadToTmp(locatorSvgUrl(), "mo_locator.svg"),
   ]);
@@ -304,7 +332,7 @@ const init = async (): Promise<DuckDBConnection> => {
   );
   await conn.run(
     `UPDATE agencies SET is_statewide_rollup = TRUE
-     WHERE agency_slug = 'missouri-all-agencies'`,
+     WHERE agency_slug = '${STATEWIDE_ROLLUP_SLUG}'`,
   );
 
   // Intermediate materialized view: one row per (agency, year) carrying the

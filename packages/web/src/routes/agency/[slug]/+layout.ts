@@ -60,17 +60,25 @@ export async function load({ fetch, params }) {
         .filter((y) => Number.isFinite(y))
         .sort((a, b) => b - a)
     : null;
-  const indexLatestYear = Number.isFinite(
-    Number(agencyIndexEntry?.latest_year_with_data),
-  )
-    ? Number(agencyIndexEntry.latest_year_with_data)
-    : null;
+  // Guard against `latest_year_with_data: null` (e.g. the synthetic
+  // `missouri-all-agencies` aggregate row): Number(null) === 0 passes
+  // Number.isFinite, which would yield latestYear 0 and a 404 on /0.json.
+  // Require a real positive year so we fall through to the manifest's latest.
+  const rawIndexLatestYear = Number(agencyIndexEntry?.latest_year_with_data);
+  const indexLatestYear =
+    Number.isFinite(rawIndexLatestYear) && rawIndexLatestYear > 0
+      ? rawIndexLatestYear
+      : null;
 
   const latestYear = indexLatestYear ?? indexYearsWithData?.[0] ?? allYears[0];
 
   const [latestYearData, baselines] = await Promise.all([
     fetch(withDataBase(`/data/dist/agency_year/${slug}/${latestYear}.json`))
-      .then((r) => (r.ok ? r.json() : null)),
+      .then((r) => (r.ok ? r.json() : null))
+      // A 404 from CloudFront has no CORS header, so SvelteKit's universal
+      // fetch throws a "CORS error" rather than returning !r.ok — catch it so a
+      // missing partition becomes a clean 404 below instead of a 500.
+      .catch(() => null),
     fetchJsonCached<any[]>(
       fetch,
       withDataBase("/data/dist/statewide_slug_baselines.json"),

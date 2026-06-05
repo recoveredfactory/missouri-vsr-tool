@@ -366,9 +366,14 @@ const topNByHandler = async (raw: unknown) => {
   WHERE year BETWEEN $start AND $end
   GROUP BY agency_slug
 )`;
+  // Splice window_stops in as the FIRST CTE, regardless of whether the metric's
+  // own CTE chain opens with `agg` (the standard metrics) or an earlier helper
+  // like `latest` (disparity_index_all_stops). Matching only `WITH agg AS`
+  // silently skipped multi-CTE metrics, leaving the `LEFT JOIN window_stops`
+  // below referencing an undefined table ("window_stops does not exist").
   const cte = spec.cte(extra).replace(
-    /^\s*WITH agg AS/,
-    `WITH ${windowStopsCte}, agg AS`,
+    /^(\s*)WITH /,
+    `$1WITH ${windowStopsCte},\n`,
   );
 
   const sql = `

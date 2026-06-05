@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { getDb } from "../db.js";
+import { getDb, STATEWIDE_ROLLUP_SLUG } from "../db.js";
 import { normalize } from "../duckutil.js";
 import { defaultWindow, yearRangeWarnings } from "../year-range.js";
 import { RESEARCH_PROMPT } from "./caveats.js";
@@ -76,6 +76,12 @@ const disparityHandler = async (raw: unknown) => {
   } else if (args.county) {
     filters.push(`LOWER(a.county) = $${bindings.length + 3}`);
     bindings.push({ kind: "varchar", value: args.county.toLowerCase() });
+  } else {
+    // Statewide: read the pre-computed rollup row rather than re-summing every
+    // agency. Summing all agencies would also double-count, because the rollup
+    // pseudo-agency is itself a row in the stops table.
+    filters.push(`s.agency_slug = $${bindings.length + 3}`);
+    bindings.push({ kind: "varchar", value: STATEWIDE_ROLLUP_SLUG });
   }
 
   const sql = `
