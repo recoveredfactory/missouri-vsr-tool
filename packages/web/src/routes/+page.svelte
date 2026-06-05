@@ -19,11 +19,13 @@
     home_chart_consent_aria_label,
     home_chart_point_consent_label,
     home_chart_race_heading,
+    home_chart_race_heading_generic,
     home_chart_race_subheading,
     home_chart_race_aria_label,
     home_chart_population_label,
     home_chart_traffic_stops_label,
     home_chart_outcomes_heading,
+    home_chart_outcomes_heading_generic,
     home_chart_outcomes_subheading,
     home_chart_outcomes_note,
     home_outcome_warnings,
@@ -115,6 +117,27 @@
           maximumFractionDigits: 2,
         }).format(Number(heroStopsRaw))
       : null;
+
+  // Race chart heading — Black stop share at the latest data year, from the
+  // same statsData the bars plot. The latest manifest year drives both the
+  // homepage_{year}_stats.json fetch and this label, so they stay in lockstep.
+  $: latestDataYear =
+    Array.isArray(data?.manifest?.years) && data.manifest.years.length
+      ? Math.max(...data.manifest.years)
+      : null;
+  $: blackStopShare =
+    statsData?.total_stops && statsData?.by_race?.all_stops?.Black != null
+      ? (statsData.by_race.all_stops.Black / statsData.total_stops) * 100
+      : null;
+
+  // Outcomes chart heading — latest citation rate, from the same
+  // historicalOutcomes series the lines plot.
+  $: citationLatest = historicalOutcomes?.data?.length
+    ? historicalOutcomes.data[historicalOutcomes.data.length - 1].citations
+    : null;
+  $: citationLatestYear = historicalOutcomes?.data?.length
+    ? historicalOutcomes.data[historicalOutcomes.data.length - 1].year
+    : null;
 
   // About-the-data section: lazy-fetched from /about-data/{locale} when the
   // section approaches the viewport. Removed from SSR to keep the homepage
@@ -646,7 +669,11 @@
           <div class="rounded-lg border border-slate-200 bg-white p-4 sm:p-6 flex flex-col">
             <div class="mb-3 sm:mb-4 text-center">
               <h3 class="text-lg sm:text-xl font-bold text-slate-900">
-                {home_chart_race_heading()}
+                {#if blackStopShare != null && latestDataYear != null}
+                  {home_chart_race_heading({ share: Math.round(blackStopShare), year: latestDataYear })}
+                {:else}
+                  {home_chart_race_heading_generic()}
+                {/if}
               </h3>
               <p class="mt-1 sm:mt-2 text-xs sm:text-sm leading-relaxed text-slate-600">
                 {home_chart_race_subheading()}
@@ -778,7 +805,11 @@
           <div class="rounded-lg border border-slate-200 bg-white p-4 sm:p-6 flex flex-col">
             <div class="mb-3 sm:mb-4 text-center">
               <h3 class="text-lg sm:text-xl font-bold text-slate-900">
-                {home_chart_outcomes_heading()}
+                {#if citationLatest != null && citationLatestYear != null}
+                  {home_chart_outcomes_heading({ rate: Math.round(citationLatest), year: citationLatestYear })}
+                {:else}
+                  {home_chart_outcomes_heading_generic()}
+                {/if}
               </h3>
               <p class="mt-1 sm:mt-2 text-xs sm:text-sm leading-relaxed text-slate-600">
                 {home_chart_outcomes_subheading()}
