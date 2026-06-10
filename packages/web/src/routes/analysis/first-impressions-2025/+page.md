@@ -1,0 +1,114 @@
+<script>
+  import StickyHeader from "$lib/components/StickyHeader.svelte";
+  import ArticleShell from "$lib/components/analysis/ArticleShell.svelte";
+  import Figure from "$lib/components/analysis/Figure.svelte";
+  import StopShareVsPopChart from "$lib/components/analysis/StopShareVsPopChart.svelte";
+  import DisparityIndexChart from "$lib/components/analysis/DisparityIndexChart.svelte";
+  import SearchVolumeAreaChart from "$lib/components/analysis/SearchVolumeAreaChart.svelte";
+  import ContrabandScatterChart from "$lib/components/analysis/ContrabandScatterChart.svelte";
+  import AgenciesReportingChart from "$lib/components/analysis/AgenciesReportingChart.svelte";
+  import { getLocale } from "$lib/paraglide/runtime";
+
+  export let data;
+  $: a = data.analysis;
+
+  const sourceBundle = "Source: Missouri Vehicle Stops Report v2.2 analysis bundle (initial-impressions-2025), cross-checked against the Missouri AG's statewide annual report.";
+  // Caveat auto-hides once the bundle carries more than two years — the chart
+  // components already render any number of years as full trend lines.
+  $: slopeNote =
+    (a?.disparity?.years?.length ?? 0) <= 2
+      ? "Official population denominators are published only for 2023 and 2025, so this is a two-year comparison for now — it will fill in as more years are added."
+      : "";
+</script>
+
+<svelte:head>
+  <title>First impressions of the 2025 Missouri Vehicle Stops Report</title>
+  <meta name="description" content="A first look at the 2025 Missouri vehicle stops data: Hispanic stop share, racial disparities, declining searches, the contraband outcome test, and the 2024 reporting dip." />
+  <meta property="og:type" content="article" />
+  <meta property="og:title" content="First impressions of the 2025 Missouri Vehicle Stops Report" />
+</svelte:head>
+
+<StickyHeader />
+
+<ArticleShell>
+
+# First impressions of the 2025 Missouri Vehicle Stops Report
+
+{#if getLocale() === "es"}
+<p class="not-prose rounded-md bg-amber-50 px-4 py-2 text-sm text-amber-800">Este análisis está disponible por ahora solo en inglés.</p>
+{/if}
+
+The Missouri Attorney General released the 2025 vehicle stops report last week and we turned it into a new release. We've had a chance to give it a look and have a few findings to share. We've also got a collaboration with a local newsroom coming that goes deeper, so stay tuned.
+
+The state's report says that "while patterns of driving and policing may still be different from 2019, it is now reasonable to interpret the report as conditions under the new normal." But what does the "new normal" look like? What are the important trends now that the disruption and subsequent changes post-pandemic have settled into more stable, familiar patterns?
+
+We extracted this data from the state's PDFs and now offer it for [download](/#download), as a [web explorer](/), and via [MCP](/#mcp). Please [support our work](https://grupovisual.org).
+
+## Stops of Hispanic drivers are outpacing population growth, with increasingly severe outcomes
+
+The share of Hispanic drivers has steadily risen and is now almost double what it was in 2016. Missouri's Hispanic population grew during this period, but not as quickly as traffic stops. At the same time, Black drivers remain by far the most disproportionately stopped racial group.
+
+We calculated our version of the much-debated "disparity index" statewide by using the adult population as a rough estimate of the driving-age population. We agree that the disparity index is of limited value for understanding and comparing local agencies. For example, the residential population of a small town is unlikely to be reflective of who is driving on its roads, especially if that includes a major highway or tourist attraction. But statewide, it gives us an imperfect but wide-screen picture of racial patterns.
+
+<Figure
+  title="Share of stops vs. share of the driving-age population"
+  caption={slopeNote}
+  source={sourceBundle}
+  summary="For White, Black, and Hispanic drivers, each panel compares the group's share of traffic stops with its share of the 16-and-over population, for 2023 and 2025.">
+  <StopShareVsPopChart metric={a.disparity.byMetric.stops} years={a.disparity.years} />
+</Figure>
+
+Looking at the disparity indexes of the searches, arrests, and share of stops shows that Black drivers are consistently stopped at the most disparate rates. The search disparity for Black drivers generally fell over this period, while the search disparity and arrest disparity for Hispanic drivers went from rough parity with White drivers towards increasing disparity.
+
+<Figure
+  title="Disparity index by outcome"
+  caption={slopeNote}
+  source={sourceBundle}
+  summary="Disparity index for stops, searches, and arrests, by race, where 1.0 marks parity with the group's share of the 16-and-over population.">
+  <DisparityIndexChart byMetric={a.disparity.byMetric} years={a.disparity.years} />
+</Figure>
+
+## Search intensity is down over the decade
+
+Searches dropped from 6.7 per 100 stops in 2019 to 4.7 in 2025. Two forces drove it: a steady decline in discretionary consent searches, and a near-total collapse in searches based on the smell of drugs or alcohol starting in 2023; Missouri legalized recreational cannabis in December, 2022.
+
+<Figure
+  title="Searches by reason, statewide"
+  caption="A single search can list multiple authorities, so reasons can sum above total searches. The 'smell of drugs / alcohol' category is only directly comparable from 2023 on, after a reporting-form change."
+  source={sourceBundle}
+  summary="Stacked area of statewide searches per year, split into consent searches, searches citing the smell of drugs or alcohol, and all other reasons.">
+  <SearchVolumeAreaChart data={a.searchReasons} />
+</Figure>
+
+## Racial disparities widened on the search / contraband-found outcome test
+
+Searches during stops of Black drivers and Hispanic drivers were more frequent than for White drivers, despite yielding a lower rate of contraband hits. This gap has widened somewhat since the pandemic for both groups compared to White drivers.
+
+<Figure
+  title="The outcome test: search rate vs. contraband found, 2025"
+  caption="Each bubble's area is proportional to that group's total stops."
+  source={sourceBundle}
+  summary="Scatter plot of search rate against contraband hit rate by race in 2025; White drivers are searched least but found with contraband most often, while Hispanic drivers are searched most yet found with contraband least often.">
+  <ContrabandScatterChart races={a.raceSummary.races} />
+</Figure>
+
+This analysis is what's known as an outcome test — how does the outcome of an action like a search vary by some dimension like race? In Missouri, White drivers are searched at a lower rate but are found with contraband at the highest rate of all races; Hispanic drivers are searched the most yet least often found with contraband.
+
+## 2024 had a big dip in the number of agencies reporting, then rebounded in 2025
+
+This caught us by surprise. We had noted that 2024 had fewer agencies than the previous year, but we were focused on releasing the data, decided to push off our analysis until the new data came out, and sort of forgot about it.
+
+Then we got the 2025 data. Dozens more agencies reported their 2025 numbers, as they had before 2024, which makes us wary of year-over-year comparisons of total stops and other absolute numbers between 2024 and 2025.
+
+<Figure
+  title="Agencies reporting, by year"
+  source="Source: agency_index.json (v2.2). An agency counts for a year if it reported any stops that year."
+  summary="Bar chart of the number of agencies reporting each year over the last decade, with 2024 highlighted as a sharp dip that rebounded in 2025.">
+  <AgenciesReportingChart data={a.agenciesReporting} />
+</Figure>
+
+## Dig deeper
+
+Our new [MCP server](/#mcp) provides access to this data like never before. Ask it questions about the data, ask it for charts and maps, drill into agencies you're interested in. We're now tracking [287(g)](/287g) status as well, as the program grows throughout the state.
+
+</ArticleShell>

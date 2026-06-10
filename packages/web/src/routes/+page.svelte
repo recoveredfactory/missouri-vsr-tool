@@ -1,6 +1,11 @@
 <script>
   import StickyHeader from "$lib/components/StickyHeader.svelte";
   import HomeAgencyMetricTable from "$lib/components/HomeAgencyMetricTable.svelte";
+  import { latestArticle } from "$lib/analysis/articles";
+  import {
+    analysis_card_kicker,
+    analysis_card_cta,
+  } from "$lib/paraglide/messages";
   import {
     home_highlights_heading,
     home_toc_download,
@@ -204,6 +209,11 @@
     localeBase = `/${locale}`;
   }
   $: canonicalUrl = `${siteUrl}${localeBase}`;
+  // Recompute when locale changes so the localized title/dek refresh.
+  $: latestAnalysis = (() => {
+    locale;
+    return latestArticle();
+  })();
   $: homeHrefEn = `${siteUrl}/en`;
   $: homeHrefEs = `${siteUrl}/es`;
   $: webSiteSchema = {
@@ -908,6 +918,32 @@
   <div class="mx-auto mt-2 max-w-5xl px-4 pb-8 text-sm text-slate-600 sm:px-6">
     <a class="underline" href={`/${locale}/287g`}>{home_287g_link()}</a>
   </div>
+
+  <!-- Latest analysis — featured card. Reads the article registry, so it
+       becomes a list automatically as more analysis posts are published. -->
+  {#if latestAnalysis}
+    <section id="analysis" class="border-t border-slate-200 bg-slate-50 py-12">
+      <div class="mx-auto max-w-5xl px-4 sm:px-6">
+        <a
+          href={`/${locale}/analysis/${latestAnalysis.slug}`}
+          class="group block rounded-xl border border-slate-200 bg-white p-6 no-underline transition hover:border-[#1b613c] hover:shadow-md sm:p-8"
+        >
+          <div class="text-xs font-semibold uppercase tracking-[0.18em] text-[#1b613c]">
+            {analysis_card_kicker()}
+          </div>
+          <h2 class="mt-2 text-2xl font-bold text-slate-900 sm:text-3xl">
+            {latestAnalysis.title}
+          </h2>
+          <p class="mt-3 max-w-2xl text-base leading-relaxed text-slate-600">
+            {latestAnalysis.dek}
+          </p>
+          <span class="mt-4 inline-block font-semibold text-[#1b613c] group-hover:underline">
+            {analysis_card_cta()}
+          </span>
+        </a>
+      </div>
+    </section>
+  {/if}
 
   <!-- Download Section -->
   <section id="download" class="border-t border-slate-200 bg-white py-12">

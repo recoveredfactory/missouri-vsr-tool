@@ -529,5 +529,12 @@
   "home_mcp_endpoint_label": "Endpoint",
   "home_mcp_docs_link": "Documentación completa y referencia de herramientas en GitHub →",
   "home_mcp_disclaimer_heading": "Servicio provisional — verifica tu trabajo",
-  "home_mcp_disclaimer_body": "Este servidor MCP se ofrece tal cual. Sin garantía, sin garantía de disponibilidad, y el comportamiento de las herramientas puede cambiar sin previo aviso. Verifica cada cifra contra los datos publicados antes de publicarla."
+  "home_mcp_disclaimer_body": "Este servidor MCP se ofrece tal cual. Sin garantía, sin garantía de disponibilidad, y el comportamiento de las herramientas puede cambiar sin previo aviso. Verifica cada cifra contra los datos publicados antes de publicarla.",
+  "nav_analysis": "Análisis",
+  "analysis_index_title": "Análisis",
+  "analysis_index_intro": "Artículos vivos que exploran los datos del Informe de Paradas de Vehículos de Missouri, actualizados a medida que se publican nuevas versiones.",
+  "analysis_card_kicker": "Último análisis",
+  "analysis_card_cta": "Leer el análisis →",
+  "analysis_ii2025_title": "Primeras impresiones del Informe de Paradas de Vehículos de Missouri 2025",
+  "analysis_ii2025_dek": "Una primera mirada a los datos de 2025: aumento de la proporción de paradas de conductores hispanos, disparidades raciales persistentes, menos registros y una caída desconcertante en el número de agencias que reportan."
 }

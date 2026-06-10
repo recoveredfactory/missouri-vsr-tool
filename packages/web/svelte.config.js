@@ -6,7 +6,10 @@ import { mdsvex } from "mdsvex";
 const config = {
   // Consult https://svelte.dev/docs/kit/integrations
   // for more information about preprocessors
-  preprocess: [vitePreprocess(), mdsvex()],
+  // mdsvex defaults to only `.svx`; tell it to process `.md` too, otherwise
+  // `.md` routes compile as raw Svelte components and the markdown renders
+  // literally.
+  preprocess: [vitePreprocess(), mdsvex({ extensions: [".md"] })],
 
   extensions: [".svelte", ".md"],
 
