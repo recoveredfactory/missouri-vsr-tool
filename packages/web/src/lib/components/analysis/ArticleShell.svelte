@@ -5,6 +5,12 @@
   //
   // Lives as a *component* (not raw HTML in the .md) so mdsvex parses the
   // markdown placed in its default slot.
+  //
+  // Body/heading typography is set via :global(.article-prose > …) rules below
+  // rather than Tailwind prose-* modifiers: those modifiers land at the same
+  // specificity as the @tailwindcss/typography base styles and lose, so they
+  // silently don't apply. The child combinator (>) targets the article's own
+  // paragraphs/headings while leaving `not-prose` figure internals alone.
   export let title = "";
   export let dek = "";
   export let byline = "";
@@ -28,22 +34,68 @@
     {/if}
   </header>
 
-  <article
-    class="article-prose prose prose-slate max-w-none
-      prose-p:my-0 prose-p:mb-8 prose-p:text-[1.3rem] prose-p:leading-[1.75] prose-p:text-slate-700
-      sm:prose-p:mb-9 sm:prose-p:text-[1.45rem]
-      prose-headings:font-semibold prose-headings:tracking-tight prose-headings:text-slate-900
-      prose-h2:mb-6 prose-h2:mt-16 prose-h2:text-3xl prose-h2:leading-tight sm:prose-h2:text-4xl
-      prose-h3:mb-3 prose-h3:mt-10 prose-h3:text-xl prose-h3:leading-snug sm:prose-h3:text-2xl
-      prose-a:font-medium prose-a:text-[#1b613c] prose-a:no-underline hover:prose-a:underline
-      prose-strong:font-semibold prose-strong:text-slate-900"
-  >
+  <article class="article-prose prose prose-slate max-w-none">
     <slot />
   </article>
 </main>
 
 <style>
-  /* Serif dropcap on the article's opening paragraph (slot content, so :global). */
+  /* Body paragraphs (direct children only — leaves figure captions alone). */
+  :global(.article-prose > p) {
+    margin-top: 0;
+    margin-bottom: 2rem;
+    font-size: 1.3rem;
+    line-height: 1.75;
+    color: #334155; /* slate-700 */
+  }
+
+  /* Section headings — coherent scale: h1 (hero) > h2 > h3 > body. */
+  :global(.article-prose > h2) {
+    margin-top: 4rem;
+    margin-bottom: 1.5rem;
+    font-size: 1.875rem; /* 3xl */
+    line-height: 1.2;
+    font-weight: 600;
+    letter-spacing: -0.015em;
+    color: #0f172a; /* slate-900 */
+  }
+  :global(.article-prose > h3) {
+    margin-top: 2.5rem;
+    margin-bottom: 0.75rem;
+    font-size: 1.25rem; /* xl */
+    line-height: 1.375;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    color: #0f172a;
+  }
+
+  :global(.article-prose > p a) {
+    color: #1b613c;
+    font-weight: 500;
+    text-decoration: none;
+  }
+  :global(.article-prose > p a:hover) {
+    text-decoration: underline;
+  }
+  :global(.article-prose > p strong) {
+    font-weight: 600;
+    color: #0f172a;
+  }
+
+  @media (min-width: 640px) {
+    :global(.article-prose > p) {
+      margin-bottom: 2.25rem;
+      font-size: 1.45rem;
+    }
+    :global(.article-prose > h2) {
+      font-size: 2.25rem; /* 4xl */
+    }
+    :global(.article-prose > h3) {
+      font-size: 1.5rem; /* 2xl */
+    }
+  }
+
+  /* Serif dropcap on the opening paragraph. */
   :global(.article-prose > p:first-of-type)::first-letter {
     float: left;
     margin-right: 0.5rem;
