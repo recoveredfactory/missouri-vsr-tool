@@ -54,7 +54,7 @@ authors:
 
 <svelte:head>
   <title>First impressions of the 2025 Missouri Vehicle Stops Report</title>
-  <meta name="description" content="A first look at the 2025 Missouri vehicle stops data: Hispanic stop share, racial disparities, declining searches, the contraband outcome test, and the 2024 reporting dip." />
+  <meta name="description" content="A first look at the 2025 Missouri vehicle stops data: why ~90 agencies dropped out of the 2024 report and returned in 2025, plus Hispanic stop share, racial disparities, declining searches, and the contraband outcome test." />
   <meta property="og:type" content="article" />
   <meta property="og:title" content="First impressions of the 2025 Missouri Vehicle Stops Report" />
 </svelte:head>
@@ -72,6 +72,23 @@ The Missouri Attorney General released the 2025 vehicle stops report last week a
 The state's report says that "while patterns of driving and policing may still be different from 2019, it is now reasonable to interpret the report as conditions under the new normal." But what does the "new normal" look like? What are the important trends now that the disruption and subsequent changes post-pandemic have settled into more stable, familiar patterns?
 
 We extracted this data from the state's PDFs and now offer it for [download](/#download), as a [web explorer](/), and via [MCP](/#mcp). Please [support our work](https://grupovisual.org).
+
+## A hundred agencies vanished from the 2024 report — and the same ones came back in 2025
+
+Before any trend, a caution that shaped how we read everything else. The number of law-enforcement agencies that appear in the Vehicle Stops Report swings sharply from year to year, and 2024 was a deep dip: about 112 agencies that reported in 2023 are simply absent from the 2024 report. Then the 2025 report landed and the count jumped back up — and it is largely the *same agencies*. **About 90 of them drop out in 2024 and return in 2025**, roughly 80% of the ones that left.
+
+They come back at nearly the same size, too. That cohort reported about 101,000 stops in 2023 and about 99,000 in 2025, and they are not all small departments — Nixa, Florissant, University City, and Arnold each blinked out of the report and back in.
+
+<Figure
+  title="Who filed a report each year"
+  source={sourceBundle}
+  summary="Stacked bar of the agencies filing each year over the last decade, split into agencies that reported the prior year, agencies returning after a gap, first-time reporters, and agencies that filed but reported zero stops. The 2025 rebound is dominated by returning agencies, not new ones.">
+  <AgenciesReportingChart data={a.agenciesReporting} />
+</Figure>
+
+That churn matters for anyone comparing the headline numbers. Statewide stops rise about 12% from 2024 to 2025, but roughly two-thirds of that increase is just these returning agencies; among the agencies that reported in *every* year, stops rose only about 4%. So we treat year-over-year changes in any absolute count — total stops, total searches, total arrests — as unreliable across this window, and lean instead on **shares, rates, and disparities**, which compare groups within a single year and don't move just because the roster changed. (We count an agency as having filed if it appears anywhere in the report, including a short list the state tucks into a "Zero Stops" paragraph for agencies that filed but recorded no stops.)
+
+With that caution in place, here is what the 2025 data shows.
 
 ## Stops of Hispanic drivers are outpacing population growth, with increasingly severe outcomes
 
@@ -122,19 +139,6 @@ Searches during stops of Black drivers and Hispanic drivers were more frequent t
 </Figure>
 
 This analysis is what's known as an outcome test — how does the outcome of an action like a search vary by some dimension like race? In Missouri, White drivers are searched at a lower rate but are found with contraband at the highest rate of all races; Hispanic drivers are searched the most yet least often found with contraband.
-
-## 2024 had a big dip in the number of agencies reporting, then rebounded in 2025
-
-This caught us by surprise. We had noted that 2024 had fewer agencies than the previous year, but we were focused on releasing the data, decided to push off our analysis until the new data came out, and sort of forgot about it.
-
-Then we got the 2025 data. Dozens more agencies reported their 2025 numbers, as they had before 2024, which makes us wary of year-over-year comparisons of total stops and other absolute numbers between 2024 and 2025.
-
-<Figure
-  title="Agencies reporting, by year"
-  source="Source: agency_index.json (v2.2). An agency counts for a year if it reported any stops that year."
-  summary="Bar chart of the number of agencies reporting each year over the last decade, with 2024 highlighted as a sharp dip that rebounded in 2025.">
-  <AgenciesReportingChart data={a.agenciesReporting} />
-</Figure>
 
 ## Dig deeper
 

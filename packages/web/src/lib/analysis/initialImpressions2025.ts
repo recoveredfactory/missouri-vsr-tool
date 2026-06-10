@@ -1,14 +1,13 @@
 // Server-side data loader for the "First impressions of the 2025 report"
-// article. Fetches the three analysis bundle files published alongside the v2.2
+// article. Fetches the analysis bundle files published alongside the v2.2
 // release and reshapes them into the minimal, chart-ready shapes the figure
-// components expect. Agency-reporting counts (graphic 5) are derived from
-// agency_index.json since there is no dedicated analysis file for them yet.
+// components expect.
 //
 // Source: releases/v2.2/dist/analysis/initial-impressions-2025/
-//   ii2025_disparity_index.json   (years 2023, 2025 only — official ACS denom)
+//   ii2025_disparity_index.json
 //   ii2025_search_reasons_by_year.json
 //   ii2025_race_summary_2025.json
-//   + agency_index.json (years_with_data per agency)
+//   ii2025_agencies_reporting.json  (graphic 1: roster composition + 2024 churn)
 
 import { withDataBase } from "$lib/dataBase";
 
@@ -50,13 +49,38 @@ export type RaceSummaryPoint = {
   stop_share_pct: number;
 };
 
-export type AgencyReportingPoint = { year: number; count: number };
+export type AgencyReportingPoint = {
+  year: number;
+  /** Reported (nonzero) this year and the prior year. */
+  consistent: number;
+  /** Reported this year, not last year, but had reported before. */
+  returning: number;
+  /** Never reported before this year. */
+  new: number;
+  /** Filed a report but recorded zero stops (from the report's "Zero Stops" list). */
+  zero_stop_filers: number;
+  /** consistent + returning + new + zero_stop_filers. */
+  total_filed: number;
+  total_stops: number;
+};
+
+/** Headline numbers behind the 2024 drop-out / 2025 return finding. */
+export type ReportingChurn = {
+  dropped_from_2023_to_2024: number;
+  of_which_returned_in_2025: number;
+  comeback_stops_2023: number;
+  comeback_stops_2025: number;
+  raw_pct_change_2024_to_2025: number;
+  comeback_share_of_raw_increase_pct: number;
+  balanced_panel_pct_change_2023_to_2025: number;
+};
 
 export type InitialImpressions2025 = {
   disparity: DisparityData;
   searchReasons: SearchReasonsData;
   raceSummary: { year: number; races: RaceSummaryPoint[]; total: RaceSummaryPoint | null };
   agenciesReporting: AgencyReportingPoint[];
+  reportingChurn: ReportingChurn | null;
 };
 
 type FetchFn = typeof fetch;
@@ -123,36 +147,49 @@ const shapeRaceSummary = (raw: any) => {
   return { year: Number(raw.year), races, total };
 };
 
-const deriveAgenciesReporting = (
-  agencyIndex: any,
-  endYear: number,
-  windowYears = 10,
-): AgencyReportingPoint[] => {
-  const agencies: any[] = Array.isArray(agencyIndex)
-    ? agencyIndex
-    : (agencyIndex?.agencies ?? Object.values(agencyIndex ?? {}));
-  const startYear = endYear - windowYears + 1;
-  const counts = new Map<number, number>();
-  for (let y = startYear; y <= endYear; y++) counts.set(y, 0);
-  for (const a of agencies) {
-    const ywd: number[] = a?.years_with_data ?? [];
-    for (const y of ywd) {
-      if (y >= startYear && y <= endYear) counts.set(y, (counts.get(y) ?? 0) + 1);
-    }
-  }
-  return Array.from(counts.entries())
-    .sort((a, b) => a[0] - b[0])
-    .map(([year, count]) => ({ year, count }));
+const shapeAgenciesReporting = (raw: any): AgencyReportingPoint[] => {
+  const byYear = raw?.by_year ?? {};
+  return Object.keys(byYear)
+    .map(Number)
+    .sort((a, b) => a - b)
+    .map((year) => {
+      const c = byYear[year] ?? {};
+      return {
+        year,
+        consistent: Number(c.consistent ?? 0),
+        returning: Number(c.returning ?? 0),
+        new: Number(c.new ?? 0),
+        zero_stop_filers: Number(c.zero_stop_filers ?? 0),
+        total_filed: Number(c.total_filed ?? 0),
+        total_stops: Number(c.total_stops ?? 0),
+      };
+    });
+};
+
+const shapeReportingChurn = (raw: any): ReportingChurn | null => {
+  const h = raw?.headline_2024;
+  if (!h) return null;
+  return {
+    dropped_from_2023_to_2024: Number(h.dropped_from_2023_to_2024 ?? 0),
+    of_which_returned_in_2025: Number(h.of_which_returned_in_2025 ?? 0),
+    comeback_stops_2023: Number(h.comeback_stops_2023 ?? 0),
+    comeback_stops_2025: Number(h.comeback_stops_2025 ?? 0),
+    raw_pct_change_2024_to_2025: Number(h.raw_pct_change_2024_to_2025 ?? 0),
+    comeback_share_of_raw_increase_pct: Number(h.comeback_share_of_raw_increase_pct ?? 0),
+    balanced_panel_pct_change_2023_to_2025: Number(h.balanced_panel_pct_change_2023_to_2025 ?? 0),
+  };
 };
 
 export const loadInitialImpressions2025 = async (
   fetchFn: FetchFn,
 ): Promise<InitialImpressions2025> => {
-  const [disparityRaw, searchRaw, raceRaw, agencyIndex] = await Promise.all([
+  const [disparityRaw, searchRaw, raceRaw, reportingRaw] = await Promise.all([
     fetchJson(fetchFn, `${II2025_BASE}/ii2025_disparity_index.json`),
     fetchJson(fetchFn, `${II2025_BASE}/ii2025_search_reasons_by_year.json`),
     fetchJson(fetchFn, `${II2025_BASE}/ii2025_race_summary_2025.json`),
-    fetchJson(fetchFn, `/data/dist/agency_index.json`),
+    // Optional: if this file hasn't been published yet, degrade gracefully
+    // rather than 500-ing the whole article (the chart shows an empty state).
+    fetchJson(fetchFn, `${II2025_BASE}/ii2025_agencies_reporting.json`).catch(() => null),
   ]);
 
   const raceSummary = shapeRaceSummary(raceRaw);
@@ -160,6 +197,7 @@ export const loadInitialImpressions2025 = async (
     disparity: shapeDisparity(disparityRaw),
     searchReasons: shapeSearchReasons(searchRaw),
     raceSummary,
-    agenciesReporting: deriveAgenciesReporting(agencyIndex, raceSummary.year || 2025),
+    agenciesReporting: reportingRaw ? shapeAgenciesReporting(reportingRaw) : [],
+    reportingChurn: reportingRaw ? shapeReportingChurn(reportingRaw) : null,
   };
 };
