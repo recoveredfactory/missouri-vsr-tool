@@ -9,7 +9,7 @@
   export let summary = "";
 </script>
 
-<figure class="not-prose my-10 rounded-xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
+<figure class="chart-fig not-prose my-10 rounded-xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
   {#if title}
     <h3 class="text-base font-semibold leading-snug text-slate-900 sm:text-lg">{title}</h3>
   {/if}
@@ -31,3 +31,16 @@
     </figcaption>
   {/if}
 </figure>
+
+<style>
+  /* Break charts out wider than the reading column on desktop, centered on
+     the viewport. Mobile (~60% of readers) keeps the full-column width. The
+     width cap prevents any horizontal overflow. */
+  @media (min-width: 1024px) {
+    figure.chart-fig {
+      width: min(64rem, calc(100vw - 3rem));
+      margin-left: 50%;
+      transform: translateX(-50%);
+    }
+  }
+</style>

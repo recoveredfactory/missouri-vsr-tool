@@ -26,18 +26,42 @@
   $: n = years.length;
   const x = (i) => pad.left + (n <= 1 ? plotW / 2 : (i / (n - 1)) * plotW);
 
-  const panelFor = (race) => {
-    const stops = years.map((y) => metric?.[race]?.[y]?.share_pct ?? null);
-    const pop = years.map((y) => metric?.[race]?.[y]?.pop_pct_16plus ?? null);
-    const all = [...stops, ...pop].filter((v) => v != null);
-    const yMax = Math.ceil(Math.max(...all, 1) / 5) * 5;
-    return { race, stops, pop, yMax };
-  };
+  // Shared y-range across all panels so the panels are apples-to-apples — the
+  // scale is driven by the largest group (White), which softens the visual
+  // slope of the smaller groups but keeps every panel comparable.
+  $: yMax = (() => {
+    let max = 1;
+    for (const race of races)
+      for (const y of years) {
+        const c = metric?.[race]?.[y];
+        if (c?.share_pct != null) max = Math.max(max, c.share_pct);
+        if (c?.pop_pct_16plus != null) max = Math.max(max, c.pop_pct_16plus);
+      }
+    return Math.ceil(max / 5) * 5;
+  })();
+
+  const panelFor = (race) => ({
+    race,
+    stops: years.map((y) => metric?.[race]?.[y]?.share_pct ?? null),
+    pop: years.map((y) => metric?.[race]?.[y]?.pop_pct_16plus ?? null),
+  });
   $: panels = races.map(panelFor);
 
-  const yOf = (v, yMax) => pad.top + (1 - v / yMax) * plotH;
-  const linePts = (vals, yMax) =>
-    vals.map((v, i) => (v == null ? null : `${x(i)},${yOf(v, yMax)}`)).filter(Boolean).join(" ");
+  $: yOf = (v) => pad.top + (1 - v / yMax) * plotH;
+  $: linePts = (vals) =>
+    vals.map((v, i) => (v == null ? null : `${x(i)},${yOf(v)}`)).filter(Boolean).join(" ");
+
+  // With a shared scale the stop/pop endpoint labels can nearly overlap (e.g.
+  // Hispanic 3.8 vs 4.5). Nudge them apart while preserving vertical order.
+  const MIN_GAP = 13;
+  $: endpointLabelYs = (stopV, popV) => {
+    const sy = yOf(stopV) + 4;
+    const py = yOf(popV) + 4;
+    if (Math.abs(sy - py) >= MIN_GAP) return [sy, py];
+    const mid = (sy + py) / 2;
+    const half = MIN_GAP / 2;
+    return sy <= py ? [mid - half, mid + half] : [mid + half, mid - half];
+  };
 </script>
 
 <div class="grid gap-4 sm:grid-cols-3">
@@ -52,25 +76,24 @@
         {/each}
 
         <!-- population line (dashed) -->
-        <polyline fill="none" stroke="#94a3b8" stroke-width="2" stroke-dasharray="4 3" points={linePts(p.pop, p.yMax)} />
+        <polyline fill="none" stroke="#94a3b8" stroke-width="2" stroke-dasharray="4 3" points={linePts(p.pop)} />
         <!-- stop-share line (solid, race color) -->
-        <polyline fill="none" stroke={c} stroke-width="2.5" points={linePts(p.stops, p.yMax)} />
+        <polyline fill="none" stroke={c} stroke-width="2.5" points={linePts(p.stops)} />
 
         {#each years as yr, i}
           {#if p.stops[i] != null}
-            <circle cx={x(i)} cy={yOf(p.stops[i], p.yMax)} r="3.5" fill={c} />
+            <circle cx={x(i)} cy={yOf(p.stops[i])} r="3.5" fill={c} />
           {/if}
           {#if p.pop[i] != null}
-            <circle cx={x(i)} cy={yOf(p.pop[i], p.yMax)} r="3" fill="#94a3b8" />
+            <circle cx={x(i)} cy={yOf(p.pop[i])} r="3" fill="#94a3b8" />
           {/if}
         {/each}
 
-        <!-- right-edge endpoint labels -->
-        {#if p.stops[n - 1] != null}
-          <text x={x(n - 1) + 6} y={yOf(p.stops[n - 1], p.yMax) + 4} font-size="11" font-weight="700" fill={c}>{p.stops[n - 1].toFixed(1)}%</text>
-        {/if}
-        {#if p.pop[n - 1] != null}
-          <text x={x(n - 1) + 6} y={yOf(p.pop[n - 1], p.yMax) + 4} font-size="11" font-weight="600" fill="#64748b">{p.pop[n - 1].toFixed(1)}%</text>
+        <!-- right-edge endpoint labels (nudged apart when they collide) -->
+        {#if p.stops[n - 1] != null && p.pop[n - 1] != null}
+          {@const ys = endpointLabelYs(p.stops[n - 1], p.pop[n - 1])}
+          <text x={x(n - 1) + 6} y={ys[0]} font-size="11" font-weight="700" fill={c}>{p.stops[n - 1].toFixed(1)}%</text>
+          <text x={x(n - 1) + 6} y={ys[1]} font-size="11" font-weight="600" fill="#64748b">{p.pop[n - 1].toFixed(1)}%</text>
         {/if}
       </svg>
     </div>

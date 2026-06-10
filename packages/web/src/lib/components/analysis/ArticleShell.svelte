@@ -29,11 +29,12 @@
 
   <article
     class="article-prose prose prose-slate max-w-none
-      prose-p:text-lg prose-p:leading-relaxed prose-p:text-slate-700
+      prose-p:text-[1.2rem] prose-p:leading-[1.8] prose-p:text-slate-700 prose-p:my-7
+      sm:prose-p:text-[1.3rem] sm:prose-p:my-8
       prose-headings:font-semibold prose-headings:tracking-tight prose-headings:text-slate-900
-      prose-h2:mt-14 prose-h2:text-2xl prose-h2:leading-tight sm:prose-h2:text-3xl
+      prose-h2:mt-16 prose-h2:mb-5 prose-h2:text-[1.7rem] prose-h2:leading-snug sm:prose-h2:text-[2rem]
       prose-a:font-medium prose-a:text-[#1b613c] prose-a:no-underline hover:prose-a:underline
-      prose-strong:text-slate-900"
+      prose-strong:text-slate-900 prose-strong:font-semibold"
   >
     <slot />
   </article>
