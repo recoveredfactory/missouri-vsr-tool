@@ -1,3 +1,9 @@
+---
+authors:
+  - David Eads
+  - Tory Lysik
+---
+
 <script>
   import StickyHeader from "$lib/components/StickyHeader.svelte";
   import ArticleShell from "$lib/components/analysis/ArticleShell.svelte";
@@ -9,9 +15,9 @@
   import AgenciesReportingChart from "$lib/components/analysis/AgenciesReportingChart.svelte";
   import { getLocale } from "$lib/paraglide/runtime";
   import {
-    analysis_card_kicker,
     analysis_ii2025_title,
     analysis_ii2025_dek,
+    analysis_byline_prefix,
   } from "$lib/paraglide/messages";
 
   export let data;
@@ -27,6 +33,15 @@
       day: "numeric",
     });
   })();
+
+  // Byline from frontmatter `authors`; locale-aware "and"/"y" + Oxford comma.
+  const formatByline = (names) => {
+    const list = names ?? [];
+    if (!list.length) return "";
+    const loc = getLocale() === "es" ? "es" : "en";
+    const joined = new Intl.ListFormat(loc, { style: "long", type: "conjunction" }).format(list);
+    return `${analysis_byline_prefix()} ${joined}`;
+  };
 
   const sourceBundle = "Source: Missouri Vehicle Stops Report v2.2 analysis bundle (initial-impressions-2025), cross-checked against the Missouri AG's statewide annual report.";
   // Caveat auto-hides once the bundle carries more than two years — the chart
@@ -46,7 +61,7 @@
 
 <StickyHeader />
 
-<ArticleShell kicker={analysis_card_kicker()} title={analysis_ii2025_title()} dek={analysis_ii2025_dek()} dateLabel={dateLabel}>
+<ArticleShell title={analysis_ii2025_title()} dek={analysis_ii2025_dek()} byline={formatByline(authors)} dateLabel={dateLabel}>
 
 {#if getLocale() === "es"}
 <div class="not-prose mb-6 rounded-md bg-amber-50 px-4 py-2 text-sm text-amber-800">Este análisis está disponible por ahora solo en inglés.</div>
