@@ -8,9 +8,25 @@
   import ContrabandScatterChart from "$lib/components/analysis/ContrabandScatterChart.svelte";
   import AgenciesReportingChart from "$lib/components/analysis/AgenciesReportingChart.svelte";
   import { getLocale } from "$lib/paraglide/runtime";
+  import {
+    analysis_card_kicker,
+    analysis_ii2025_title,
+    analysis_ii2025_dek,
+  } from "$lib/paraglide/messages";
 
   export let data;
   $: a = data.analysis;
+
+  // Hero meta. Date matches the registry entry for this article.
+  const publishedDate = "2026-06-09";
+  $: dateLabel = (() => {
+    const loc = getLocale() === "es" ? "es" : "en-US";
+    return new Date(publishedDate + "T00:00:00").toLocaleDateString(loc, {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
+  })();
 
   const sourceBundle = "Source: Missouri Vehicle Stops Report v2.2 analysis bundle (initial-impressions-2025), cross-checked against the Missouri AG's statewide annual report.";
   // Caveat auto-hides once the bundle carries more than two years — the chart
@@ -30,12 +46,10 @@
 
 <StickyHeader />
 
-<ArticleShell>
-
-# First impressions of the 2025 Missouri Vehicle Stops Report
+<ArticleShell kicker={analysis_card_kicker()} title={analysis_ii2025_title()} dek={analysis_ii2025_dek()} dateLabel={dateLabel}>
 
 {#if getLocale() === "es"}
-<p class="not-prose rounded-md bg-amber-50 px-4 py-2 text-sm text-amber-800">Este análisis está disponible por ahora solo en inglés.</p>
+<div class="not-prose mb-6 rounded-md bg-amber-50 px-4 py-2 text-sm text-amber-800">Este análisis está disponible por ahora solo en inglés.</div>
 {/if}
 
 The Missouri Attorney General released the 2025 vehicle stops report last week and we turned it into a new release. We've had a chance to give it a look and have a few findings to share. We've also got a collaboration with a local newsroom coming that goes deeper, so stay tuned.
