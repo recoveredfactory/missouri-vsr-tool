@@ -44,6 +44,21 @@ authors:
   };
 
   const sourceBundle = "Source: Missouri Vehicle Stops Report v2.2 analysis bundle (initial-impressions-2025), cross-checked against the Missouri AG's statewide annual report.";
+
+  // Churn headline numbers, wired to the bundle's reportingChurn block so the
+  // prose tracks the data. Fallbacks match the v2.2 values, so the paragraph
+  // still reads correctly if the file is missing and reportingChurn is null.
+  const fmtThousands = (n) => Math.round(n / 1000) * 1000;
+  const usNum = (n) => n.toLocaleString("en-US");
+  $: churn = a?.reportingChurn;
+  $: dropped2024 = churn?.dropped_from_2023_to_2024 ?? 112;
+  $: returned2025 = churn?.of_which_returned_in_2025 ?? 90;
+  $: returnedSharePct = Math.round((returned2025 / dropped2024) * 100);
+  $: comebackStops2023 = fmtThousands(churn?.comeback_stops_2023 ?? 101418);
+  $: comebackStops2025 = fmtThousands(churn?.comeback_stops_2025 ?? 98880);
+  $: rawPctChange = Math.round(churn?.raw_pct_change_2024_to_2025 ?? 12.2);
+  $: comebackShareOfIncrease = Math.round(churn?.comeback_share_of_raw_increase_pct ?? 63);
+  $: balancedPanelPct = Math.round(churn?.balanced_panel_pct_change_2023_to_2025 ?? 4.4);
   // Caveat auto-hides once the bundle carries more than two years — the chart
   // components already render any number of years as full trend lines.
   $: slopeNote =
@@ -75,9 +90,9 @@ We extracted this data from the state's PDFs and now offer it for [download](/#d
 
 ## A hundred agencies vanished from the 2024 report — and the same ones came back in 2025
 
-Before any trend, a caution that shaped how we read everything else. The number of law-enforcement agencies that appear in the Vehicle Stops Report swings sharply from year to year, and 2024 was a deep dip: about 112 agencies that reported in 2023 are simply absent from the 2024 report. Then the 2025 report landed and the count jumped back up — and it is largely the *same agencies*. **About 90 of them drop out in 2024 and return in 2025**, roughly 80% of the ones that left.
+Before any trend, a caution that shaped how we read everything else. The number of law-enforcement agencies that appear in the Vehicle Stops Report swings sharply from year to year, and 2024 was a deep dip: about {dropped2024} agencies that reported in 2023 are simply absent from the 2024 report. Then the 2025 report landed and the count jumped back up — and it is largely the *same agencies*. **About {returned2025} of them drop out in 2024 and return in 2025**, roughly {returnedSharePct}% of the ones that left.
 
-They come back at nearly the same size, too. That cohort reported about 101,000 stops in 2023 and about 99,000 in 2025, and they are not all small departments — Nixa, Florissant, University City, and Arnold each blinked out of the report and back in.
+They come back at nearly the same size, too. That cohort reported about {usNum(comebackStops2023)} stops in 2023 and about {usNum(comebackStops2025)} in 2025, and they are not all small departments — Nixa, Florissant, University City, and Arnold each blinked out of the report and back in.
 
 <Figure
   title="Who filed a report each year"
@@ -86,7 +101,7 @@ They come back at nearly the same size, too. That cohort reported about 101,000 
   <AgenciesReportingChart data={a.agenciesReporting} />
 </Figure>
 
-That churn matters for anyone comparing the headline numbers. Statewide stops rise about 12% from 2024 to 2025, but roughly two-thirds of that increase is just these returning agencies; among the agencies that reported in *every* year, stops rose only about 4%. So we treat year-over-year changes in any absolute count — total stops, total searches, total arrests — as unreliable across this window, and lean instead on **shares, rates, and disparities**, which compare groups within a single year and don't move just because the roster changed. (We count an agency as having filed if it appears anywhere in the report, including a short list the state tucks into a "Zero Stops" paragraph for agencies that filed but recorded no stops.)
+That churn matters for anyone comparing the headline numbers. Statewide stops rise about {rawPctChange}% from 2024 to 2025, but roughly {comebackShareOfIncrease}% of that increase is just these returning agencies; among the agencies that reported in *every* year, stops rose only about {balancedPanelPct}%. So we treat year-over-year changes in any absolute count — total stops, total searches, total arrests — as unreliable across this window, and lean instead on **shares, rates, and disparities**, which compare groups within a single year and don't move just because the roster changed. (We count an agency as having filed if it appears anywhere in the report, including a short list the state tucks into a "Zero Stops" paragraph for agencies that filed but recorded no stops.)
 
 With that caution in place, here is what the 2025 data shows.
 
