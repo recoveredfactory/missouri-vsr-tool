@@ -55,8 +55,11 @@
         <line x1={pad.left} y1={yOf(1)} x2={pad.left + plotW} y2={yOf(1)} stroke="#475569" stroke-width="1" stroke-dasharray="4 3" />
         <text x={pad.left} y={yOf(1) - 4} font-size="9.5" fill="#64748b" font-style="italic">{parityLabel} (1.0)</text>
 
+        <!-- year ticks: first + last only (panels are narrow) -->
         {#each years as yr, i}
-          <text x={x(i)} y={pad.top + plotH + 16} text-anchor="middle" font-size="11" fill="#94a3b8">{yr}</text>
+          {#if i === 0 || i === n - 1}
+            <text x={x(i)} y={pad.top + plotH + 16} text-anchor={i === 0 ? "start" : "end"} font-size="11" fill="#94a3b8">{yr}</text>
+          {/if}
         {/each}
 
         {#each races as race}
