@@ -63,21 +63,26 @@
     return `M${top.join("L")}L${bottom.join("L")}Z`;
   };
 
-  // Direct label: drop it into the band's thickest column, vertically centered,
-  // x clamped so the text stays inside the plot. The light "other" band takes
-  // dark text; the saturated consent/smell bands take white.
-  const labelFor = (band) => {
-    let bi = 0;
-    let bt = -Infinity;
+  // Direct labels, all anchored at ONE column so they line up as a tidy
+  // left-aligned stack rather than scattering across the chart. The column is
+  // the one where the THINNEST band is thickest, so every label has room in its
+  // band (this naturally lands left of 2022, before the smell band collapses).
+  $: labelIdx = (() => {
+    let idx = 0;
+    let best = -Infinity;
     for (let i = 0; i < n; i++) {
-      const t = band.upper[i] - band.lower[i];
-      if (t > bt) { bt = t; bi = i; }
+      const minT = Math.min(...bands.map((b) => b.upper[i] - b.lower[i]));
+      if (minT > best) { best = minT; idx = i; }
     }
-    const cx = Math.min(Math.max(x(bi), pad.left + 90), pad.left + plotW - 90);
-    const cy = y((band.upper[bi] + band.lower[bi]) / 2);
-    const fill = band.key === "other" ? "#334155" : "#ffffff";
-    return { cx, cy, fill, text: band.label };
-  };
+    return idx;
+  })();
+  $: labelX = Math.min(Math.max(x(labelIdx), pad.left + 4), pad.left + plotW - 150);
+  // Light "other" band takes dark text; the saturated consent/smell bands white.
+  const labelFor = (band) => ({
+    y: y((band.upper[labelIdx] + band.lower[labelIdx]) / 2),
+    fill: band.key === "other" ? "#334155" : "#ffffff",
+    text: band.label,
+  });
 
   $: cannabisIdx = years.indexOf(2022);
   $: yearTicks = years
@@ -99,10 +104,10 @@
       <path d={areaPath(band)} fill={band.color} opacity="0.92" />
     {/each}
 
-    <!-- direct band labels (replaces the legend) -->
+    <!-- direct band labels (replaces the legend), aligned at one column -->
     {#each bands as band}
       {@const l = labelFor(band)}
-      <text x={l.cx} y={l.cy + 4} text-anchor="middle" font-size="13" font-weight="700" fill={l.fill}>{l.text}</text>
+      <text x={labelX} y={l.y + 4} text-anchor="start" font-size="13" font-weight="700" fill={l.fill}>{l.text}</text>
     {/each}
 
     <!-- cannabis annotation -->

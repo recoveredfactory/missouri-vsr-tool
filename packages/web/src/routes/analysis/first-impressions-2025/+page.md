@@ -132,7 +132,7 @@ The share of Hispanic drivers has risen steadily — up about {hispStopChange}% 
 
 <Figure
   title="Stop share vs. population share, by race"
-  caption="Each panel compares a group's share of traffic stops (solid) with its share of the 16-and-over population (dashed). The readout under each race name is the relative change in each line over the window — e.g. Hispanic stop share grew far faster than Hispanic population share. Each panel uses its own vertical scale to frame its own data, so compare each line against its own population line within a panel — not slopes from one panel to the next."
+  caption="Solid: share of traffic stops. Dashed: share of the 16-and-over population. Each panel has its own vertical scale — compare a line to its own population line, not across panels."
   wide
   flush
   source={sourceBundle}

@@ -15,9 +15,11 @@
     { key: "arrests", label: "Arrests" },
   ];
   export let parityLabel = "parity";
-  // Two-line directional cue, shown once (first panel) just inside the y-axis so
-  // a reader groks that up = more disproportionate. Kept terse for mobile.
+  // Directional cues, shown once (first panel) just inside the y-axis so a
+  // reader groks that up = more, down = less disproportionate than population
+  // alone would predict. Kept terse for mobile.
   export let hintLines = ["↑ more often than", "population predicts"];
+  export let lowHint = "↓ less often";
 
   $: yrs = years.filter((y) => y >= startYear);
 
@@ -74,7 +76,7 @@
 <div class="grid gap-6 sm:grid-cols-3 sm:gap-5">
   {#each metrics as mtr, mi}
     <div class={mi > 0 ? "border-t border-slate-200 pt-6 sm:border-0 sm:pt-0" : ""}>
-      <div class="mb-1 text-center text-sm font-bold text-slate-900">{mtr.label}</div>
+      <div class="mb-1 text-center text-[0.95rem] font-bold text-slate-900">{mtr.label}</div>
       <svg viewBox="0 0 {W} {H}" class="h-auto w-full" role="img">
         <!-- axes: y spine + bottom x line -->
         <line x1={pad.left} y1={pad.top} x2={pad.left} y2={baseY} stroke="#cbd5e1" stroke-width="1" />
@@ -88,11 +90,12 @@
         <line x1={pad.left} y1={yOf(1)} x2={pad.left + plotW} y2={yOf(1)} stroke="#475569" stroke-width="1" stroke-dasharray="4 3" />
         <text x={pad.left + 3} y={yOf(1) - 4} font-size="9.5" fill="#64748b" font-style="italic">{parityLabel}</text>
 
-        <!-- directional cue, first panel only (meaning is shared across panels) -->
+        <!-- directional cues, first panel only (meaning is shared across panels) -->
         {#if mi === 0}
           {#each hintLines as line, li}
             <text x={pad.left + 5} y={pad.top + 9 + li * 11} font-size="9" fill="#94a3b8">{line}</text>
           {/each}
+          <text x={pad.left + 5} y={baseY - 6} font-size="9" fill="#94a3b8">{lowHint}</text>
         {/if}
 
         <!-- year ticks: first + last -->

@@ -7,9 +7,9 @@
   // above the population line, that group is over-represented in stops.
   //
   // Each panel carries a header (race name) and a one-line readout of the
-  // relative change in each line over the window, so a reader can directly
-  // compare how fast stop-share grew against how fast population-share grew —
-  // the whole point of the graphic.
+  // percentage-point change in each line over the window, so a reader can
+  // directly compare how stop-share moved against population-share — the
+  // whole point of the graphic. (The prose carries the relative framing.)
   //
   // Y-AXIS: each panel frames its OWN data (independent y-range), so a line
   // fills its panel instead of hugging one edge. The trade-off — slopes are NOT
@@ -32,8 +32,27 @@
   $: n = yrs.length;
   const x = (i) => pad.left + (n <= 1 ? plotW / 2 : (i / (n - 1)) * plotW);
 
-  // Axis bounds snap to multiples of SNAP so labels stay clean (0%, 5%, …).
-  const SNAP = 5;
+  // Pick a "nice" rounding step that suits each panel's magnitude — coarse for
+  // the big White share (steps of 5 → 70–85%), fine for the small Hispanic
+  // share (steps of 1 → 1–5%) — so every panel hugs its own data instead of
+  // snapping out to a common coarse grid.
+  // Integer steps only: keeps axis labels short (e.g. "74%", not "72.5%") so
+  // they don't overflow the narrow left margin and get clipped.
+  const STEPS = [1, 2, 5, 10, 20, 50];
+  const niceBounds = (lo, hi) => {
+    const rawSpan = Math.max(hi - lo, 0.1);
+    const padAmt = Math.max(rawSpan * 0.15, 0.3);
+    const loP = lo - padAmt;
+    const hiP = hi + padAmt;
+    const span = hiP - loP;
+    let step = STEPS[0];
+    for (const s of STEPS) if (span / s >= 1.8) step = s;
+    let yMin = Math.floor(loP / step) * step;
+    let yMax = Math.ceil(hiP / step) * step;
+    if (yMin < 0) yMin = 0;
+    if (yMax <= yMin) yMax = yMin + step;
+    return { yMin, yMax };
+  };
 
   const rangeFor = (race) => {
     let lo = Infinity;
@@ -50,30 +69,24 @@
     return { lo, hi };
   };
 
-  // Relative change from first to last non-null value in a series (e.g. a stop
-  // share that goes 6% → 12% returns +100). Null when it can't be computed.
-  const pctChange = (vals) => {
+  // Percentage-POINT change from first to last non-null value in a series (e.g.
+  // a stop share that goes 2.2% → 3.8% returns +1.6). Null when uncomputable.
+  const ptsChange = (vals) => {
     const first = vals.find((v) => v != null);
     const last = [...vals].reverse().find((v) => v != null);
-    if (first == null || last == null || first === 0) return null;
-    return ((last - first) / first) * 100;
+    return first == null || last == null ? null : last - first;
   };
-  const fmtChange = (v) =>
-    v == null ? "—" : `${v >= 0 ? "+" : "−"}${Math.round(Math.abs(v))}%`;
+  const fmtPts = (v) =>
+    v == null ? "—" : `${v >= 0 ? "↑ up" : "↓ down"} ${Math.abs(v).toFixed(1)} pts`;
 
   // Each panel frames its own data: pad the group's range and snap to SNAP.
   const buildPanel = (race) => {
     const stops = yrs.map((y) => metric?.[race]?.[y]?.share_pct ?? null);
     const pop = yrs.map((y) => metric?.[race]?.[y]?.pop_pct_16plus ?? null);
     const { lo, hi } = rangeFor(race);
-    const change = { stops: pctChange(stops), pop: pctChange(pop) };
-    if (!isFinite(lo)) return { race, stops, pop, change, yMin: 0, yMax: SNAP };
-    const padAmt = Math.max(SNAP * 0.4, (hi - lo) * 0.12);
-    let yMin = Math.floor((lo - padAmt) / SNAP) * SNAP;
-    let yMax = Math.ceil((hi + padAmt) / SNAP) * SNAP;
-    if (yMin < 0) yMin = 0;
-    if (yMax <= yMin) yMax = yMin + SNAP;
-    return { race, stops, pop, change, yMin, yMax };
+    const change = { stops: ptsChange(stops), pop: ptsChange(pop) };
+    if (!isFinite(lo)) return { race, stops, pop, change, yMin: 0, yMax: 5 };
+    return { race, stops, pop, change, ...niceBounds(lo, hi) };
   };
   $: panels = races.map((race) => buildPanel(race));
 
@@ -97,11 +110,11 @@
   {#each panels as p, pi}
     {@const c = raceColor(p.race)}
     <div class={pi > 0 ? "border-t border-slate-200 pt-6 sm:border-0 sm:pt-0" : ""}>
-      <div class="text-center text-sm font-bold" style="color:{c}">{p.race}</div>
-      <div class="mb-1 text-center text-[0.72rem] leading-tight text-slate-500">
-        <span class="font-semibold" style="color:{c}">stops {fmtChange(p.change.stops)}</span>
-        <span class="px-0.5 text-slate-300">·</span>
-        <span>pop {fmtChange(p.change.pop)}</span>
+      <div class="text-center text-[0.95rem] font-bold" style="color:{c}">{p.race}</div>
+      <div class="mb-1 text-center text-[0.8rem] leading-tight text-slate-500">
+        stops: <span class="font-bold" style="color:{c}">{fmtPts(p.change.stops)}</span>
+        <span class="px-1 text-slate-300">|</span>
+        pop: <span class="font-bold text-slate-600">{fmtPts(p.change.pop)}</span>
       </div>
       <svg viewBox="0 0 {W} {H}" class="h-auto w-full" role="img">
         <!-- axes: y spine + bottom x line, with bound ticks -->
