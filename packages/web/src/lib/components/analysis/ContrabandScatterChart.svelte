@@ -40,12 +40,12 @@
   $: maxStops = Math.max(...races.map((r) => r.total_stops));
   $: r = (stops) => 10 + Math.sqrt(stops / maxStops) * 25;
 
-  // Push each label into the open space around the diagonal so they don't
-  // collide: White to the right of its dot, Black below, Hispanic above.
+  // Labels sit beside their dots along the diagonal: White and Black to the
+  // right of theirs, Hispanic to the left of its — which keeps all three in the
+  // open space around the descending diagonal without colliding.
   const place = (race, cx, cy, rad) => {
-    if (race === "Black") return { anchor: "middle", bx: cx, name: cy + rad + 16 };
-    if (race === "Hispanic") return { anchor: "middle", bx: cx, name: cy - rad - 38 };
-    return { anchor: "start", bx: cx + rad + 8, name: cy - 14 }; // White: right of dot
+    if (race === "Hispanic") return { anchor: "end", bx: cx - rad - 8, name: cy - 14 };
+    return { anchor: "start", bx: cx + rad + 8, name: cy - 14 };
   };
 </script>
 
