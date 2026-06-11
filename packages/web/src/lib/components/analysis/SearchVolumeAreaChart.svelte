@@ -7,6 +7,10 @@
   // annotate inline. Bands stack bottom->top: all other, consent, smell — so
   // the two shrinking stories sit on top where the change reads clearly.
   export let data; // SearchReasonsData: { years, consent, smell, other, reliableFromYear }
+  // Anchor the window with the rest of the article. The odor reason wasn't
+  // reported separately from 2009–2017, so starting at 2018 also gives the
+  // "smell" band an unbroken run.
+  export let startYear = 2018;
   export let labels = {
     consent: "Consent",
     smell: "Smell of drugs / alcohol",
@@ -21,13 +25,15 @@
   const plotW = W - pad.left - pad.right;
   const plotH = H - pad.top - pad.bottom;
 
-  $: years = data.years;
+  // Clip every parallel series to the shared window.
+  $: i0 = Math.max(0, data.years.findIndex((y) => y >= startYear));
+  $: years = data.years.slice(i0);
   $: n = years.length;
   // Stack order bottom -> top.
   $: stack = [
-    { key: "other", values: data.other, color: "#cbd5e1", label: labels.other },
-    { key: "consent", values: data.consent, color: "#0e7490", label: labels.consent },
-    { key: "smell", values: data.smell, color: "#c2410c", label: labels.smell },
+    { key: "other", values: data.other.slice(i0), color: "#cbd5e1", label: labels.other },
+    { key: "consent", values: data.consent.slice(i0), color: "#0e7490", label: labels.consent },
+    { key: "smell", values: data.smell.slice(i0), color: "#c2410c", label: labels.smell },
   ];
   $: totals = years.map((_, i) => stack.reduce((s, b) => s + b.values[i], 0));
   $: yMax = Math.ceil(Math.max(...totals, 1) / 20000) * 20000;

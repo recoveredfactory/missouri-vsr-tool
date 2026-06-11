@@ -1,46 +1,58 @@
 <script>
-  // Wrapper for an analysis figure: a heading, the chart (default slot), an
-  // optional caption, a source line, and a visually-hidden text summary for
-  // screen readers. `not-prose` so it sits cleanly inside the article's prose.
-  export let title = "";
+  // Wrapper for an analysis figure. Editorial, not boxed: the chart sits in the
+  // flow of the prose rather than inside a card, so a finding can run straight
+  // from a paragraph into its graphic. A faint top rule + small label set it
+  // apart without the heavy border/shadow of a card.
+  //
+  // `not-prose` so the article's prose rules don't touch the figure internals.
+  export let title = ""; // optional kicker; omit to let the chart stand alone
   export let caption = "";
   export let source = "";
   /** Visually-hidden one-line summary read to assistive tech. */
   export let summary = "";
+  /** Hug the preceding paragraph (small top margin) — "right into the chart". */
+  export let flush = false;
+  /** Break out wider than the default on large screens. */
+  export let wide = false;
 </script>
 
-<figure class="chart-fig not-prose my-10 rounded-xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
-  {#if title}
-    <h3 class="text-base font-semibold leading-snug text-slate-900 sm:text-lg">{title}</h3>
-  {/if}
-  {#if caption}
-    <p class="mt-1.5 text-sm leading-relaxed text-slate-500">{caption}</p>
+<figure class="chart-fig not-prose {flush ? 'mt-2 mb-12' : 'my-12'}" class:wide>
+  {#if title || caption}
+    <div class="mb-4">
+      {#if title}
+        <div class="text-[0.95rem] font-semibold leading-snug text-slate-900">{title}</div>
+      {/if}
+      {#if caption}
+        <p class="mt-1 text-sm leading-relaxed text-slate-500">{caption}</p>
+      {/if}
+    </div>
   {/if}
 
   {#if summary}
     <div class="sr-only">{summary}</div>
   {/if}
 
-  <div class="mt-5">
-    <slot />
-  </div>
+  <slot />
 
   {#if source}
-    <figcaption class="mt-5 border-t border-slate-100 pt-3 text-xs leading-relaxed text-slate-400">
+    <figcaption class="mt-4 text-xs leading-relaxed text-slate-400">
       {source}
     </figcaption>
   {/if}
 </figure>
 
 <style>
-  /* Break charts out wider than the reading column on desktop, centered on
-     the viewport. Mobile (~60% of readers) keeps the full-column width. The
-     width cap prevents any horizontal overflow. */
+  /* Break charts out past the reading column on desktop, centered on the
+     viewport. Mobile (~60% of readers) keeps the full-column width. The width
+     cap prevents horizontal overflow. */
   @media (min-width: 1024px) {
     figure.chart-fig {
-      width: min(64rem, calc(100vw - 3rem));
+      width: min(60rem, calc(100vw - 3rem));
       margin-left: 50%;
       transform: translateX(-50%);
+    }
+    figure.chart-fig.wide {
+      width: min(74rem, calc(100vw - 3rem));
     }
   }
 </style>

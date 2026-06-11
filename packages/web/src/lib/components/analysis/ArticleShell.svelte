@@ -40,29 +40,31 @@
 </main>
 
 <style>
-  /* Body paragraphs (direct children only — leaves figure captions alone). */
+  /* Body paragraphs (direct children only — leaves figure captions alone).
+     Sized comfortably on the large side without shouting: ~19px mobile,
+     ~20px desktop (the "goldilocks" reading size). */
   :global(.article-prose > p) {
     margin-top: 0;
-    margin-bottom: 2rem;
-    font-size: 1.3rem;
-    line-height: 1.75;
+    margin-bottom: 1.5rem;
+    font-size: 1.1875rem; /* ~19px */
+    line-height: 1.7;
     color: #334155; /* slate-700 */
   }
 
   /* Section headings — coherent scale: h1 (hero) > h2 > h3 > body. */
   :global(.article-prose > h2) {
-    margin-top: 4rem;
-    margin-bottom: 1.5rem;
-    font-size: 1.875rem; /* 3xl */
+    margin-top: 3.5rem;
+    margin-bottom: 1.25rem;
+    font-size: 1.625rem;
     line-height: 1.2;
     font-weight: 600;
     letter-spacing: -0.015em;
     color: #0f172a; /* slate-900 */
   }
   :global(.article-prose > h3) {
-    margin-top: 2.5rem;
+    margin-top: 2.25rem;
     margin-bottom: 0.75rem;
-    font-size: 1.25rem; /* xl */
+    font-size: 1.2rem;
     line-height: 1.375;
     font-weight: 600;
     letter-spacing: -0.01em;
@@ -84,14 +86,14 @@
 
   @media (min-width: 640px) {
     :global(.article-prose > p) {
-      margin-bottom: 2.25rem;
-      font-size: 1.45rem;
+      margin-bottom: 1.75rem;
+      font-size: 1.25rem; /* ~20px */
     }
     :global(.article-prose > h2) {
-      font-size: 2.25rem; /* 4xl */
+      font-size: 1.875rem;
     }
     :global(.article-prose > h3) {
-      font-size: 1.5rem; /* 2xl */
+      font-size: 1.35rem;
     }
   }
 
@@ -99,9 +101,9 @@
   :global(.article-prose > p:first-of-type)::first-letter {
     float: left;
     margin-right: 0.5rem;
-    margin-top: 0.3rem;
+    margin-top: 0.32rem;
     font-family: Georgia, "Times New Roman", serif;
-    font-size: 4.25rem;
+    font-size: 3.5rem;
     font-weight: 400;
     line-height: 0.82;
     color: #1e293b;

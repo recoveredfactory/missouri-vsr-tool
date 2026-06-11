@@ -1,58 +1,36 @@
 <script>
-  // Graphic 5 — agencies reporting per year over the last decade, broken into
-  // who they are: agencies that reported the year before ("consistent"), ones
-  // returning after a gap, brand-new ones, and agencies that filed but recorded
-  // zero stops. The point of the chart is the 2025 "returning" surge: most of
-  // the rebound from 2024 is agencies coming back, not new reporting.
-  export let data; // AgencyReportingPoint[]: { year, consistent, returning, new, zero_stop_filers, total_filed }
-  export let highlightYear = 2024;
-  export let labels = {
-    annotation: "Most 2025 agencies are returnees, not new",
-    yAxis: "Agencies that filed a report",
-  };
+  // Agencies filing a report each year. Just the absolute count per year — the
+  // story is the 2024 dip and the 2025 rebound, so we highlight those two bars
+  // in the site's brand green and let the rest sit back in a neutral tint.
+  // (Earlier versions split each bar into consistent/returning/new segments;
+  // the single count reads cleaner and the prose carries the composition.)
+  export let data; // AgencyReportingPoint[]: { year, total_filed, ... }
+  export let highlightYears = [2024, 2025];
+  export let note = "About 110 agencies dropped out in 2024 — and nearly all came back in 2025";
+  export let yAxisLabel = "Agencies filing a report";
 
-  // Stack order, bottom -> top. "Returning" is the accountability segment, so it
-  // gets the strong color; the consistent base is neutral.
-  const SEGMENTS = [
-    { key: "consistent", label: "Reported the prior year", fill: "#94a3b8" },
-    { key: "returning", label: "Returned after a gap", fill: "#dc2626" },
-    { key: "new", label: "First-time reporter", fill: "#2563eb" },
-    { key: "zero_stop_filers", label: "Filed, but zero stops", fill: "#e2e8f0" },
-  ];
+  const BRAND = "#1f6f43"; // site brand green
+  const BASE = "#dde5e0"; // muted green-grey for the baseline years
+  const BASE_STROKE = "#c4d2c9";
 
-  const W = 720;
-  const H = 360;
-  const pad = { top: 44, right: 20, bottom: 52, left: 20 };
+  const W = 580;
+  const H = 300;
+  const pad = { top: 58, right: 14, bottom: 28, left: 14 };
   const plotW = W - pad.left - pad.right;
   const plotH = H - pad.top - pad.bottom;
 
-  const segVal = (d, k) => Number(d[k] ?? 0);
-  const total = (d) =>
-    d.total_filed ?? SEGMENTS.reduce((s, seg) => s + segVal(d, seg.key), 0);
-
+  const total = (d) => Number(d.total_filed ?? 0);
   $: n = data.length;
   $: yMax = Math.ceil(Math.max(...data.map(total), 1) / 100) * 100;
   $: bandW = plotW / n;
   $: barW = bandW * 0.62;
   const xCenter = (i) => pad.left + bandW * (i + 0.5);
   $: barH = (v) => (v / yMax) * plotH;
+  const baseY = pad.top + plotH;
 
-  // Precompute stacked rects per bar.
-  $: stacks = data.map((d, i) => {
-    let acc = 0;
-    const segs = SEGMENTS.map((seg) => {
-      const v = segVal(d, seg.key);
-      const y0 = acc;
-      acc += v;
-      return { ...seg, v, y0, y1: acc };
-    }).filter((s) => s.v > 0);
-    return { d, i, segs, tot: total(d) };
-  });
-
-  $: highlightIdx = data.findIndex((d) => d.year === highlightYear);
-  // x for the annotation (last bar). Computed here because {@const} can't be a
-  // direct child of <svg> — only of block tags like {#if}/{#each}.
-  $: annotationX = xCenter(n - 1);
+  const isHi = (yr) => highlightYears.includes(yr);
+  // Index of the dip (first highlighted year) — the note points here.
+  $: dipIdx = data.findIndex((d) => d.year === highlightYears[0]);
 </script>
 
 {#if !data.length}
@@ -60,38 +38,35 @@
     Chart data not yet published.
   </div>
 {:else}
+<div class="mx-auto max-w-2xl">
 <svg viewBox="0 0 {W} {H}" class="h-auto w-full" role="img">
-  <text x={pad.left} y="16" font-size="10" fill="#64748b" font-weight="600">{labels.yAxis}</text>
+  <text x={pad.left} y="14" font-size="11" fill="#64748b" font-weight="600">{yAxisLabel}</text>
 
-  <!-- annotation pointed at the 2025 returning surge -->
-  <text x={Math.min(annotationX + 4, W - pad.right)} y="30" text-anchor="end" font-size="12" font-weight="700" fill="#b91c1c">
-    {labels.annotation}
-  </text>
+  <!-- note, tied to the dip with a short connector -->
+  {#if note}
+    <text x={W - pad.right} y="34" text-anchor="end" font-size="12.5" font-weight="700" fill={BRAND}>{note}</text>
+    {#if dipIdx >= 0}
+      {@const dipTop = baseY - barH(total(data[dipIdx]))}
+      <line x1={xCenter(dipIdx)} y1={42} x2={xCenter(dipIdx)} y2={dipTop - 18} stroke={BRAND} stroke-width="1" stroke-dasharray="3 2" />
+    {/if}
+  {/if}
 
-  {#each stacks as { d, i, segs, tot }}
-    {@const isHi = d.year === highlightYear}
-    {@const bx = xCenter(i) - barW / 2}
-    {#each segs as s}
-      {@const h = barH(s.v)}
-      {@const y = pad.top + plotH - barH(s.y1)}
-      <rect x={bx} y={y} width={barW} height={h} fill={s.fill}
-            stroke={s.key === "zero_stop_filers" ? "#cbd5e1" : "none"} stroke-width="0.75" />
-    {/each}
-    <!-- total filed, above the bar -->
-    <text x={xCenter(i)} y={pad.top + plotH - barH(tot) - 6} text-anchor="middle" font-size="11" font-weight="600" fill="#475569">{tot}</text>
+  {#each data as d, i}
+    {@const hi = isHi(d.year)}
+    {@const h = barH(total(d))}
+    {@const y = baseY - h}
+    <rect x={xCenter(i) - barW / 2} y={y} width={barW} height={h} rx="1.5"
+          fill={hi ? BRAND : BASE} stroke={hi ? "none" : BASE_STROKE} stroke-width="1" />
+    <!-- count above the bar -->
+    <text x={xCenter(i)} y={y - 6} text-anchor="middle" font-size="10.5"
+          font-weight={hi ? "700" : "500"} fill={hi ? BRAND : "#64748b"}>{total(d)}</text>
     <!-- year label -->
-    <text x={xCenter(i)} y={pad.top + plotH + 18} text-anchor="middle" font-size="11" font-weight={isHi ? "700" : "400"} fill={isHi ? "#b91c1c" : "#64748b"}>{d.year}</text>
+    <text x={xCenter(i)} y={baseY + 16} text-anchor="middle" font-size="10.5"
+          font-weight={hi ? "700" : "400"} fill={hi ? BRAND : "#94a3b8"}>{d.year}</text>
   {/each}
 
-  <line x1={pad.left} y1={pad.top + plotH} x2={pad.left + plotW} y2={pad.top + plotH} stroke="#cbd5e1" stroke-width="1" />
-
-  <!-- legend -->
-  {#each SEGMENTS as seg, li}
-    {@const lx = pad.left + li * (plotW / SEGMENTS.length)}
-    {@const ly = H - 14}
-    <rect x={lx} y={ly - 9} width="11" height="11" rx="2" fill={seg.fill}
-          stroke={seg.key === "zero_stop_filers" ? "#cbd5e1" : "none"} stroke-width="0.75" />
-    <text x={lx + 16} y={ly} font-size="10.5" fill="#475569">{seg.label}</text>
-  {/each}
+  <!-- baseline -->
+  <line x1={pad.left} y1={baseY} x2={pad.left + plotW} y2={baseY} stroke="#cbd5e1" stroke-width="1" />
 </svg>
+</div>
 {/if}

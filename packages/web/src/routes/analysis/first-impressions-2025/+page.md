@@ -59,12 +59,10 @@ authors:
   $: rawPctChange = Math.round(churn?.raw_pct_change_2024_to_2025 ?? 12.2);
   $: comebackShareOfIncrease = Math.round(churn?.comeback_share_of_raw_increase_pct ?? 63);
   $: balancedPanelPct = Math.round(churn?.balanced_panel_pct_change_2023_to_2025 ?? 4.4);
-  // Caveat auto-hides once the bundle carries more than two years — the chart
-  // components already render any number of years as full trend lines.
-  $: slopeNote =
-    (a?.disparity?.years?.length ?? 0) <= 2
-      ? "Official population denominators are published only for 2023 and 2025, so this is a two-year comparison for now — it will fill in as more years are added."
-      : "";
+
+  // The trend charts share one window: 2018 onward, matching the search chart
+  // (the odor search reason isn't reported separately before 2018).
+  const startYear = 2018;
 </script>
 
 <svelte:head>
@@ -82,51 +80,62 @@ authors:
 <div class="not-prose mb-6 rounded-md bg-amber-50 px-4 py-2 text-sm text-amber-800">Este análisis está disponible por ahora solo en inglés.</div>
 {/if}
 
-The Missouri Attorney General released the 2025 vehicle stops report last week and we turned it into a new release. We've had a chance to give it a look and have a few findings to share. We've also got a collaboration with a local newsroom coming that goes deeper, so stay tuned.
+The Missouri Attorney General released the 2025 vehicle stops report at the beginning of June and we turned it into a new release. We've had a chance to give it a look and have a few findings to share. We've also got a collaboration with a local newsroom coming that goes deeper, so stay tuned.
 
 The state's report says that "while patterns of driving and policing may still be different from 2019, it is now reasonable to interpret the report as conditions under the new normal." But what does the "new normal" look like? What are the important trends now that the disruption and subsequent changes post-pandemic have settled into more stable, familiar patterns?
 
 We extracted this data from the state's PDFs and now offer it for [download](/#download), as a [web explorer](/), and via [MCP](/#mcp). Please [support our work](https://grupovisual.org).
 
-## A hundred agencies vanished from the 2024 report — and the same ones came back in 2025
+## A hundred agencies vanished from the 2024 report — and came back in 2025
 
-Before any trend, a caution that shaped how we read everything else. The number of law-enforcement agencies that appear in the Vehicle Stops Report swings sharply from year to year, and 2024 was a deep dip: about {dropped2024} agencies that reported in 2023 are simply absent from the 2024 report. Then the 2025 report landed and the count jumped back up — and it is largely the *same agencies*. **About {returned2025} of them drop out in 2024 and return in 2025**, roughly {returnedSharePct}% of the ones that left.
+Before any trend, we found a data quirk that changed how we read everything. This one caught us by surprise. We had noted that there seemed to be a dip in the number of agencies reporting in 2024, but didn't get very far in finding out why and it disappeared into our reporting notes. Then we got the 2025 data and surprise! 
+
+<Figure
+  flush
+  source={sourceBundle}
+  summary="Bar chart of the number of agencies filing a vehicle-stops report each year over the last decade. The count sits near 500–540 most years but drops sharply in 2024 before rebounding in 2025.">
+  <AgenciesReportingChart
+    data={a.agenciesReporting}
+    note={`About ${dropped2024} agencies dropped out in 2024 — ${returnedSharePct}% came back in 2025`} />
+</Figure>
+
+About one hundred agenices reappeared that were present in 2023 and in 2025, but not 2024. 
+
+When we crunched the numbers, we found about {dropped2024} agencies that reported in 2023 are simply absent from the 2024 report. Then the 2025 report landed and the count jumped back up — and it is largely the *same agencies*. **About {returned2025} of them drop out in 2024 and return in 2025**, roughly {returnedSharePct}% of the ones that left.
 
 They come back at nearly the same size, too. That cohort reported about {usNum(comebackStops2023)} stops in 2023 and about {usNum(comebackStops2025)} in 2025, and they are not all small departments — Nixa, Florissant, University City, and Arnold each blinked out of the report and back in.
 
-<Figure
-  title="Who filed a report each year"
-  source={sourceBundle}
-  summary="Stacked bar of the agencies filing each year over the last decade, split into agencies that reported the prior year, agencies returning after a gap, first-time reporters, and agencies that filed but reported zero stops. The 2025 rebound is dominated by returning agencies, not new ones.">
-  <AgenciesReportingChart data={a.agenciesReporting} />
-</Figure>
+The disappearing act matters for anyone looking at year over year numbers. Statewide stops rise about {rawPctChange}% from 2024 to 2025, but roughly {comebackShareOfIncrease}% of that increase is just these returning agencies; among the agencies that reported in *every* year, stops rose only about {balancedPanelPct}%.  
 
-That churn matters for anyone comparing the headline numbers. Statewide stops rise about {rawPctChange}% from 2024 to 2025, but roughly {comebackShareOfIncrease}% of that increase is just these returning agencies; among the agencies that reported in *every* year, stops rose only about {balancedPanelPct}%. So we treat year-over-year changes in any absolute count — total stops, total searches, total arrests — as unreliable across this window, and lean instead on **shares, rates, and disparities**, which compare groups within a single year and don't move just because the roster changed. (We count an agency as having filed if it appears anywhere in the report, including a short list the state tucks into a "Zero Stops" paragraph for agencies that filed but recorded no stops.)
+For this reason, we treat year-over-year changes in any absolute count — total stops, total searches, total arrests — as unreliable across this window, and lean instead on **long-term trends** as well as **shares, rates, and disparities**, which mute the effects of the apparent underreporting in the 2024 report. (We count an agency as having filed if it appears anywhere in the report, including a short list the state tucks into a "Zero Stops" paragraph for agencies that filed but recorded no stops.)
 
-With that caution in place, here is what the 2025 data shows.
+With that caveat in mind, here is some of what the 2025 data shows.
 
-## Stops of Hispanic drivers are outpacing population growth, with increasingly severe outcomes
+## Stops of Hispanic drivers are outpacing population growth, with increasingly disparate outcomes
 
-The share of Hispanic drivers has steadily risen and is now almost double what it was in 2016. Missouri's Hispanic population grew during this period, but not as quickly as traffic stops. At the same time, Black drivers remain by far the most disproportionately stopped racial group.
+The share of Hispanic drivers has risen steadily — up by roughly two-thirds since 2018. Missouri's Hispanic population grew over the same span, but not nearly as quickly as their share of traffic stops. At the same time, Black drivers remain by far the most disproportionately stopped racial group.
 
-We calculated our version of the much-debated "disparity index" statewide by using the adult population as a rough estimate of the driving-age population. We agree that the disparity index is of limited value for understanding and comparing local agencies. For example, the residential population of a small town is unlikely to be reflective of who is driving on its roads, especially if that includes a major highway or tourist attraction. But statewide, it gives us an imperfect but wide-screen picture of racial patterns.
+We calculated our version of the much-debated "disparity index" statewide by using the adult population as a rough estimate of the driving-age population. We agree with the critics of the disparity index that it is of limited value for understanding and comparing local agencies. For example, the residential population of a small town is unlikely to be reflective of who is driving on its roads, especially if that includes a major highway, tourist attraction, or infrastructure like an airport. But statewide, it gives us an imperfect but wide-screen picture of racial patterns.
+ 
 
 <Figure
-  title="Share of stops vs. share of the driving-age population"
-  caption={slopeNote}
+  flush
+  wide
   source={sourceBundle}
-  summary="For White, Black, and Hispanic drivers, each panel compares the group's share of traffic stops with its share of the 16-and-over population, for 2023 and 2025.">
-  <StopShareVsPopChart metric={a.disparity.byMetric.stops} years={a.disparity.years} />
+  summary="For White, Black, and Hispanic drivers, each panel compares the group's share of traffic stops (solid) with its share of the 16-and-over population (dashed), from 2018 to 2025.">
+  <StopShareVsPopChart metric={a.disparity.byMetric.stops} years={a.disparity.years} {startYear} />
 </Figure>
 
 Looking at the disparity indexes of the searches, arrests, and share of stops shows that Black drivers are consistently stopped at the most disparate rates. The search disparity for Black drivers generally fell over this period, while the search disparity and arrest disparity for Hispanic drivers went from rough parity with White drivers towards increasing disparity.
 
 <Figure
   title="Disparity index by outcome"
-  caption={slopeNote}
+  caption="A group's share of an outcome divided by its share of the 16-and-over population. 1.0× is parity; 1.9× means stopped, searched, or arrested 1.9 times as often as population alone would predict."
+  wide
+  flush
   source={sourceBundle}
-  summary="Disparity index for stops, searches, and arrests, by race, where 1.0 marks parity with the group's share of the 16-and-over population.">
-  <DisparityIndexChart byMetric={a.disparity.byMetric} years={a.disparity.years} />
+  summary="Disparity index for stops, searches, and arrests, by race, from 2018 to 2025, where 1.0× marks parity with the group's share of the 16-and-over population.">
+  <DisparityIndexChart byMetric={a.disparity.byMetric} years={a.disparity.years} {startYear} />
 </Figure>
 
 ## Search intensity is down over the decade
@@ -135,25 +144,31 @@ Searches dropped from 6.7 per 100 stops in 2019 to 4.7 in 2025. Two forces drove
 
 <Figure
   title="Searches by reason, statewide"
-  caption="A single search can list multiple authorities, so reasons can sum above total searches. The 'smell of drugs / alcohol' category is only directly comparable from 2023 on, after a reporting-form change."
+  caption="A single search can cite more than one authority, so the reasons can sum above total searches. Statewide reporting didn't break out the smell of drugs or alcohol separately from 2009 to 2017, so this view starts in 2018."
+  wide
+  flush
   source={sourceBundle}
-  summary="Stacked area of statewide searches per year, split into consent searches, searches citing the smell of drugs or alcohol, and all other reasons.">
-  <SearchVolumeAreaChart data={a.searchReasons} />
+  summary="Stacked area of statewide searches per year from 2018 to 2025, split into consent searches, searches citing the smell of drugs or alcohol, and all other reasons.">
+  <SearchVolumeAreaChart data={a.searchReasons} {startYear} />
 </Figure>
 
 ## Racial disparities widened on the search / contraband-found outcome test
 
 Searches during stops of Black drivers and Hispanic drivers were more frequent than for White drivers, despite yielding a lower rate of contraband hits. This gap has widened somewhat since the pandemic for both groups compared to White drivers.
 
+As of 2025, White drivers are searched at a lower rate but are found with contraband at the highest rate of all races; Hispanic drivers are searched the most yet least often found with contraband.
+
 <Figure
-  title="The outcome test: search rate vs. contraband found, 2025"
-  caption="Each bubble's area is proportional to that group's total stops."
+  title="The outcome test, 2025"
+  caption="Each group placed by how often its drivers are searched (left to right) against how often those searches find contraband (bottom to top). Bubble size reflects total stops."
+  flush
   source={sourceBundle}
   summary="Scatter plot of search rate against contraband hit rate by race in 2025; White drivers are searched least but found with contraband most often, while Hispanic drivers are searched most yet found with contraband least often.">
   <ContrabandScatterChart races={a.raceSummary.races} />
 </Figure>
 
-This analysis is what's known as an outcome test — how does the outcome of an action like a search vary by some dimension like race? In Missouri, White drivers are searched at a lower rate but are found with contraband at the highest rate of all races; Hispanic drivers are searched the most yet least often found with contraband.
+An [influential 2001 paper](https://www.jstor.org/stable/10.1086/318603) by John Knowles, Nicola Persico, and Petra Todd, present this outcome test as a key tool for understanding bias in traffic stops. 
+
 
 ## Dig deeper
 

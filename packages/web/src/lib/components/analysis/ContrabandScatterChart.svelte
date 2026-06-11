@@ -1,72 +1,80 @@
 <script>
   import { raceColor } from "./colors";
 
-  // Graphic 4 — outcome test. x = search rate (searches per 100 stops),
-  // y = contraband hit rate (% of searches finding contraband). One bubble per
-  // race, area sqrt-scaled to total stops. Each bubble is labeled directly.
-  //
-  // The story: White drivers are searched least but found with contraband most
-  // often; Hispanic drivers are searched most yet found with contraband least.
-  export let races; // RaceSummaryPoint[] (White/Black/Hispanic)
+  // Graphic 4 — the outcome test, drawn abstractly. The axes are directional,
+  // not numeric: rightward = more searches, upward = more contraband found.
+  // Each race is one bubble (area ∝ total stops); the story is the descending
+  // diagonal — the more a group is searched, the *less* often those searches
+  // turn up contraband. Exact magnitudes ride in each bubble's own label.
+  export let races; // RaceSummaryPoint[] (White / Black / Hispanic)
   export let labels = {
-    x: "Searches per 100 stops",
-    y: "Contraband found (% of searches)",
-    bubbleNote: "Bubble area ∝ total stops",
+    x: "More searches",
+    y: "More contraband found",
+    bubbleNote: "Bubble size ∝ total stops",
   };
 
-  const W = 640;
-  const H = 420;
-  const pad = { top: 28, right: 40, bottom: 52, left: 56 };
+  const W = 660;
+  const H = 440;
+  const pad = { top: 48, right: 120, bottom: 58, left: 70 };
   const plotW = W - pad.left - pad.right;
   const plotH = H - pad.top - pad.bottom;
+  const baseY = pad.top + plotH;
 
-  const nice = (v, step) => Math.ceil(v / step) * step;
-  $: xMax = nice(Math.max(...races.map((r) => r.search_rate)) * 1.15, 1);
-  $: yMaxRaw = Math.max(...races.map((r) => r.contraband_hit_rate));
-  $: yMin = Math.max(0, Math.floor(Math.min(...races.map((r) => r.contraband_hit_rate)) / 5) * 5 - 5);
-  $: yMax = nice(yMaxRaw + 2, 5);
+  // Constrain BOTH axes to the data (with padding) rather than anchoring at 0,
+  // so the three bubbles spread into a clean diagonal. The numbers that matter
+  // are in the labels; the axes only carry direction.
+  const PADX = 0.6;
+  const PADY = 2.4;
+  $: xMin = Math.min(...races.map((r) => r.search_rate)) - PADX;
+  $: xMax = Math.max(...races.map((r) => r.search_rate)) + PADX;
+  $: yMin = Math.max(0, Math.min(...races.map((r) => r.contraband_hit_rate)) - PADY);
+  $: yMax = Math.max(...races.map((r) => r.contraband_hit_rate)) + PADY;
 
-  const x = (v) => pad.left + (v / xMax) * plotW;
+  const x = (v) => pad.left + ((v - xMin) / (xMax - xMin)) * plotW;
   $: y = (v) => pad.top + (1 - (v - yMin) / (yMax - yMin)) * plotH;
 
-  // sqrt-area radius: largest bubble ~ 46px.
   $: maxStops = Math.max(...races.map((r) => r.total_stops));
-  $: r = (stops) => 14 + (Math.sqrt(stops / maxStops)) * 32;
+  $: r = (stops) => 12 + Math.sqrt(stops / maxStops) * 30;
 
-  $: xTicks = Array.from({ length: xMax + 1 }, (_, i) => i);
-  $: yTicks = (() => {
-    const out = [];
-    for (let v = yMin; v <= yMax; v += 5) out.push(v);
-    return out;
-  })();
+  // Label placement: push each label into the empty space around the diagonal
+  // so they never collide. [dx, dy] are unit directions scaled by radius.
+  const PLACE = {
+    White: { anchor: "middle", dir: [0, -1] }, // above (top-left point)
+    Black: { anchor: "end", dir: [-0.7, 1] }, // below-left (middle point)
+    Hispanic: { anchor: "start", dir: [1, 0.15] }, // right (bottom-right point)
+  };
+  const place = (race) => PLACE[race] ?? { anchor: "middle", dir: [0, -1] };
 </script>
 
 <svg viewBox="0 0 {W} {H}" class="h-auto w-full" role="img">
-  <!-- grid -->
-  {#each yTicks as t}
-    <line x1={pad.left} y1={y(t)} x2={pad.left + plotW} y2={y(t)} stroke="#eef2f6" stroke-width="1" />
-    <text x={pad.left - 8} y={y(t) + 3} text-anchor="end" font-size="11" fill="#94a3b8">{t}%</text>
-  {/each}
-  {#each xTicks as t}
-    <text x={x(t)} y={pad.top + plotH + 18} text-anchor="middle" font-size="11" fill="#94a3b8">{t}</text>
-  {/each}
+  <defs>
+    <marker id="cb-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#94a3b8" />
+    </marker>
+  </defs>
 
-  <!-- axis titles -->
-  <text x={pad.left + plotW / 2} y={H - 12} text-anchor="middle" font-size="12" fill="#475569" font-weight="600">{labels.x}</text>
-  <text transform="rotate(-90)" x={-(pad.top + plotH / 2)} y="16" text-anchor="middle" font-size="12" fill="#475569" font-weight="600">{labels.y}</text>
+  <!-- directional axes (no numeric ticks) -->
+  <line x1={pad.left} y1={baseY} x2={pad.left + plotW + 6} y2={baseY} stroke="#94a3b8" stroke-width="1.25" marker-end="url(#cb-arrow)" />
+  <line x1={pad.left} y1={baseY} x2={pad.left} y2={pad.top - 6} stroke="#94a3b8" stroke-width="1.25" marker-end="url(#cb-arrow)" />
 
-  <!-- bubbles + direct labels -->
+  <text x={pad.left + plotW / 2} y={H - 14} text-anchor="middle" font-size="13" font-weight="700" fill="#475569">{labels.x} →</text>
+  <text transform="rotate(-90)" x={-(pad.top + plotH / 2)} y="18" text-anchor="middle" font-size="13" font-weight="700" fill="#475569">{labels.y} →</text>
+
+  <text x={pad.left + plotW + 6} y={pad.top - 14} text-anchor="end" font-size="10" fill="#94a3b8" font-style="italic">{labels.bubbleNote}</text>
+
+  <!-- bubbles + labels pushed into open space -->
   {#each races as d}
     {@const cx = x(d.search_rate)}
     {@const cy = y(d.contraband_hit_rate)}
     {@const c = raceColor(d.race)}
-    <circle {cx} {cy} r={r(d.total_stops)} fill={c} fill-opacity="0.18" stroke={c} stroke-width="2" />
-    <circle {cx} {cy} r="3" fill={c} />
-    <text x={cx} y={cy - r(d.total_stops) - 8} text-anchor="middle" font-size="14" font-weight="700" fill={c}>{d.race}</text>
-    <text x={cx} y={cy - r(d.total_stops) + 6} text-anchor="middle" font-size="10.5" fill="#475569">
-      {d.search_rate.toFixed(1)} / 100 · {d.contraband_hit_rate.toFixed(0)}% hit
+    {@const rad = r(d.total_stops)}
+    {@const p = place(d.race)}
+    {@const lx = cx + p.dir[0] * (rad + 12)}
+    {@const ly = cy + p.dir[1] * (rad + 12)}
+    <circle {cx} {cy} r={rad} fill={c} fill-opacity="0.16" stroke={c} stroke-width="2" />
+    <text x={lx} y={ly} text-anchor={p.anchor} font-size="14.5" font-weight="700" fill={c}>{d.race}</text>
+    <text x={lx} y={ly + 15} text-anchor={p.anchor} font-size="10.5" fill="#64748b">
+      {d.search_rate.toFixed(1)} searches / 100 · {d.contraband_hit_rate.toFixed(0)}% found
     </text>
   {/each}
-
-  <text x={pad.left + plotW} y={pad.top - 12} text-anchor="end" font-size="10" fill="#94a3b8" font-style="italic">{labels.bubbleNote}</text>
 </svg>
