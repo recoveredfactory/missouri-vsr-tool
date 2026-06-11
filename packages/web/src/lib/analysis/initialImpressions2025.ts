@@ -192,6 +192,15 @@ export const loadInitialImpressions2025 = async (
     fetchJson(fetchFn, `${II2025_BASE}/ii2025_agencies_reporting.json`).catch(() => null),
   ]);
 
+  // FUTURE — outcome-test year toggle (2019 / 2022 / 2025):
+  // wire a `ii2025_outcome_by_year.json` here once the pipeline emits it.
+  // Required shape (statewide, volume-weighted — must match ii2025_race_summary_2025.json for 2025):
+  //   { years: number[], by_year: { [year]: { by_race: { White|Black|Hispanic: {
+  //       search_rate, contraband_hit_rate, total_stops, stop_share_pct } } } } }
+  // Then ContrabandScatterChart gets a year toggle with tweened bubble positions
+  // over a domain fixed across all years. Degrade to the 2025-only raceSummary
+  // when the file is absent. See project_outcome_toggle_spec memory.
+
   const raceSummary = shapeRaceSummary(raceRaw);
   return {
     disparity: shapeDisparity(disparityRaw),

@@ -88,7 +88,7 @@ We extracted this data from the state's PDFs and now offer it for [download](/#d
 
 ## A hundred agencies vanished from the 2024 report — and came back in 2025
 
-Before any trend, we found a data quirk that changed how we read everything. This one caught us by surprise. We had noted that there seemed to be a dip in the number of agencies reporting in 2024, but didn't get very far in finding out why and it disappeared into our reporting notes. Then we got the 2025 data and surprise! 
+Before any trend, we found a data quirk that changed how we read everything. This one caught us by surprise. We had noted that there seemed to be a dip in the number of agencies reporting in 2024, but didn't get very far in finding out why and it disappeared into our reporting notes. Then we got the 2025 data and we surprised what a significant dip in reporting last year's data represents: 
 
 <Figure
   flush
@@ -107,7 +107,7 @@ The disappearing act matters for anyone looking at year over year numbers. State
 
 For this reason, we treat year-over-year changes in any absolute count — total stops, total searches, total arrests — as unreliable across this window, and lean instead on **long-term trends** as well as **shares, rates, and disparities**, which mute the effects of the apparent underreporting in the 2024 report. (We count an agency as having filed if it appears anywhere in the report, including a short list the state tucks into a "Zero Stops" paragraph for agencies that filed but recorded no stops.)
 
-With that caveat in mind, here is some of what the 2025 data shows.
+With this caveat in mind, here is some of what the 2025 data shows.
 
 ## Stops of Hispanic drivers are outpacing population growth, with increasingly disparate outcomes
 

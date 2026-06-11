@@ -10,7 +10,8 @@
   // down on a phone.
   export let data; // AgencyReportingPoint[]: { year, total_filed, ... }
   export let dipYear = 2024; // the anomalous low year, highlighted on its own
-  export let countYears = [2024, 2025]; // bars that carry a count label
+  export let countYears = [2024, 2025]; // bars that always carry a count label
+  export let desktopCountYears = [2023]; // count label shown only on wider screens
   export let keyYear = 2017; // bar annotated with the unit
   export let note = "About 110 agencies dropped out in 2024 — and nearly all came back in 2025";
 
@@ -34,6 +35,7 @@
   $: barH = (v) => (v / yMax) * plotH;
 
   const hasCount = (yr) => countYears.includes(yr);
+  const hasDesktopCount = (yr) => desktopCountYears.includes(yr);
   $: dipIdx = data.findIndex((d) => d.year === dipYear);
   $: keyIdx = data.findIndex((d) => d.year === keyYear);
   $: keyLabel = keyIdx >= 0 ? `${total(data[keyIdx])} agencies reported in ${keyYear}` : "";
@@ -46,7 +48,7 @@
     Chart data not yet published.
   </div>
 {:else}
-<div class="mx-auto max-w-xl">
+<div class="max-w-xl">
 <svg viewBox="0 0 {W} {H}" class="h-auto w-full" role="img">
   <!-- dip note, top-right, with a connector down to the 2024 bar -->
   {#if noteLines.length && dipIdx >= 0}
@@ -64,10 +66,12 @@
     {@const y = baseY - h}
     <rect x={xCenter(i) - barW / 2} y={y} width={barW} height={h} rx="1.5"
           fill={dip ? DIP : DARK} stroke={dip ? DIP_STROKE : "none"} stroke-width="1" />
-    {#if hasCount(d.year)}
-      <text x={xCenter(i)} y={y - 6} text-anchor="middle" font-size="13" font-weight="700" fill={DARK}>{total(d)}</text>
+    {#if hasCount(d.year) || hasDesktopCount(d.year)}
+      <text x={xCenter(i)} y={y - 6} text-anchor="middle" font-size="13" font-weight="700" fill={DARK}
+            class={hasDesktopCount(d.year) ? "sm-up" : ""}>{total(d)}</text>
     {/if}
     <text x={xCenter(i)} y={baseY + 16} text-anchor="middle" font-size="11.5"
+          class={hasDesktopCount(d.year) ? "year-sm-up" : ""}
           font-weight={hasCount(d.year) ? "700" : "400"} fill={hasCount(d.year) ? DARK : "#94a3b8"}>{d.year}</text>
   {/each}
 
@@ -83,3 +87,21 @@
 </svg>
 </div>
 {/if}
+
+<style>
+  /* The 2023 bar label is context — show it only on wider screens to keep the
+     mobile chart uncluttered. CSS beats the inline grey/normal attributes, so
+     the year label also picks up emphasis on desktop. */
+  .sm-up {
+    display: none;
+  }
+  @media (min-width: 640px) {
+    .sm-up {
+      display: inline;
+    }
+    .year-sm-up {
+      fill: #1f6f43;
+      font-weight: 700;
+    }
+  }
+</style>
