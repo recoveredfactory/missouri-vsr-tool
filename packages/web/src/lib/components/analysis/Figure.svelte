@@ -42,17 +42,15 @@
 </figure>
 
 <style>
-  /* Break charts out past the reading column on desktop, centered on the
-     viewport. Mobile (~60% of readers) keeps the full-column width. The width
-     cap prevents horizontal overflow. */
+  /* A figure stays in the reading column by default so its caption/source line
+     can't outrun a width-capped chart. Only `wide` figures (the small-multiple
+     charts that need the room) break out past the column on desktop, centered
+     on the viewport; the width cap prevents horizontal overflow. */
   @media (min-width: 1024px) {
-    figure.chart-fig {
-      width: min(60rem, calc(100vw - 3rem));
-      margin-left: 50%;
-      transform: translateX(-50%);
-    }
     figure.chart-fig.wide {
       width: min(74rem, calc(100vw - 3rem));
+      margin-left: 50%;
+      transform: translateX(-50%);
     }
   }
 </style>

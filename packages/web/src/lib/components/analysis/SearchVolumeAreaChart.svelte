@@ -2,26 +2,30 @@
   // Graphic 3 — stacked area of statewide search volume by reason
   // (consent / smell of drugs or alcohol / all other), per year.
   //
-  // Direct band labels, no legend. The "smell" band collapses after 2022
-  // (cannabis legalized Dec 2022; reporting-form change in 2023), which we
-  // annotate inline. Bands stack bottom->top: all other, consent, smell — so
-  // the two shrinking stories sit on top where the change reads clearly.
+  // The "smell" band collapses after 2022 (cannabis legalized Dec 2022;
+  // reporting-form change in 2023), annotated inline. Bands stack bottom->top:
+  // all other, consent, smell — so the shrinking stories sit on top.
+  //
+  // Mobile-first: a compact viewBox keeps the text legible when the SVG scales
+  // down on a phone, and the series are identified by an HTML legend below
+  // (real text, always readable) rather than in-SVG right-edge labels that
+  // would force a wide gutter and tiny type.
   export let data; // SearchReasonsData: { years, consent, smell, other, reliableFromYear }
-  // Anchor the window with the rest of the article. The odor reason wasn't
-  // reported separately from 2009–2017, so starting at 2018 also gives the
-  // "smell" band an unbroken run.
+  // The odor reason wasn't reported separately from 2009–2017, so starting at
+  // 2018 gives the "smell" band an unbroken run.
   export let startYear = 2018;
   export let labels = {
     consent: "Consent",
     smell: "Smell of drugs / alcohol",
     other: "All other reasons",
-    cannabis: "Recreational cannabis legalized, Dec 2022",
-    yAxis: "Searches",
+    cannabis: "Cannabis legalized, Dec 2022",
   };
 
-  const W = 720;
+  const COLORS = { other: "#cbd5e1", consent: "#0e7490", smell: "#c2410c" };
+
+  const W = 440;
   const H = 300;
-  const pad = { top: 22, right: 158, bottom: 34, left: 56 };
+  const pad = { top: 26, right: 16, bottom: 32, left: 44 };
   const plotW = W - pad.left - pad.right;
   const plotH = H - pad.top - pad.bottom;
 
@@ -31,9 +35,9 @@
   $: n = years.length;
   // Stack order bottom -> top.
   $: stack = [
-    { key: "other", values: data.other.slice(i0), color: "#cbd5e1", label: labels.other },
-    { key: "consent", values: data.consent.slice(i0), color: "#0e7490", label: labels.consent },
-    { key: "smell", values: data.smell.slice(i0), color: "#c2410c", label: labels.smell },
+    { key: "other", values: data.other.slice(i0), color: COLORS.other, label: labels.other },
+    { key: "consent", values: data.consent.slice(i0), color: COLORS.consent, label: labels.consent },
+    { key: "smell", values: data.smell.slice(i0), color: COLORS.smell, label: labels.smell },
   ];
   $: totals = years.map((_, i) => stack.reduce((s, b) => s + b.values[i], 0));
   $: yMax = Math.ceil(Math.max(...totals, 1) / 20000) * 20000;
@@ -43,9 +47,8 @@
 
   // Cumulative tops for each band (running sum from the bottom of the stack).
   $: bands = (() => {
-    const base = years.map(() => 0);
+    let lower = years.map(() => 0);
     const out = [];
-    let lower = base.slice();
     for (const b of stack) {
       const upper = lower.map((lo, i) => lo + b.values[i]);
       out.push({ ...b, lower: lower.slice(), upper: upper.slice() });
@@ -60,9 +63,6 @@
     return `M${top.join("L")}L${bottom.join("L")}Z`;
   };
 
-  // Label each band at its right edge, vertically centered in its last slice.
-  $: labelY = (band) => y((band.upper[n - 1] + band.lower[n - 1]) / 2);
-
   $: cannabisIdx = years.indexOf(2022);
   $: yearTicks = years
     .map((yr, i) => ({ yr, i }))
@@ -70,38 +70,39 @@
   $: fmt = (v) => (v >= 1000 ? `${Math.round(v / 1000)}k` : `${v}`);
 </script>
 
-<div class="mx-auto max-w-2xl">
-<svg viewBox="0 0 {W} {H}" class="h-auto w-full" role="img">
-  <!-- y grid + labels -->
-  {#each [0, 0.25, 0.5, 0.75, 1] as t}
-    <line x1={pad.left} y1={y(yMax * t)} x2={pad.left + plotW} y2={y(yMax * t)} stroke="#eef2f6" stroke-width="1" />
-    <text x={pad.left - 8} y={y(yMax * t) + 3} text-anchor="end" font-size="11" fill="#94a3b8">{fmt(yMax * t)}</text>
-  {/each}
-  <text x={pad.left - 8} y={pad.top - 10} text-anchor="end" font-size="10" fill="#64748b" font-weight="600">{labels.yAxis}</text>
+<div class="mx-auto max-w-xl">
+  <svg viewBox="0 0 {W} {H}" class="h-auto w-full" role="img">
+    <!-- y grid + labels -->
+    {#each [0, 0.5, 1] as t}
+      <line x1={pad.left} y1={y(yMax * t)} x2={pad.left + plotW} y2={y(yMax * t)} stroke="#eef2f6" stroke-width="1" />
+      <text x={pad.left - 7} y={y(yMax * t) + 4} text-anchor="end" font-size="12.5" fill="#94a3b8">{fmt(yMax * t)}</text>
+    {/each}
 
-  <!-- bands -->
-  {#each bands as band}
-    <path d={areaPath(band)} fill={band.color} opacity="0.92" />
-  {/each}
+    <!-- bands -->
+    {#each bands as band}
+      <path d={areaPath(band)} fill={band.color} opacity="0.92" />
+    {/each}
 
-  <!-- cannabis annotation -->
-  {#if cannabisIdx >= 0}
-    <line x1={x(cannabisIdx)} y1={pad.top} x2={x(cannabisIdx)} y2={pad.top + plotH} stroke="#475569" stroke-width="1" stroke-dasharray="3 3" />
-    <text x={x(cannabisIdx) - 6} y={pad.top + 12} text-anchor="end" font-size="10" fill="#475569" font-weight="600">
-      {labels.cannabis}
-    </text>
-  {/if}
+    <!-- cannabis annotation -->
+    {#if cannabisIdx >= 0}
+      <line x1={x(cannabisIdx)} y1={pad.top} x2={x(cannabisIdx)} y2={pad.top + plotH} stroke="#334155" stroke-width="1" stroke-dasharray="3 3" />
+      <text x={x(cannabisIdx) - 6} y={pad.top + 12} text-anchor="end" font-size="12" fill="#334155" font-weight="600">
+        {labels.cannabis}
+      </text>
+    {/if}
 
-  <!-- x ticks -->
-  {#each yearTicks as { yr, i }}
-    <text x={x(i)} y={pad.top + plotH + 18} text-anchor="middle" font-size="11" fill="#64748b">{yr}</text>
-  {/each}
+    <!-- x ticks -->
+    {#each yearTicks as { yr, i }}
+      <text x={x(i)} y={pad.top + plotH + 19} text-anchor="middle" font-size="12.5" fill="#64748b">{yr}</text>
+    {/each}
+  </svg>
 
-  <!-- direct band labels at right edge -->
-  {#each bands as band}
-    <text x={pad.left + plotW + 8} y={labelY(band) + 3} font-size="11" font-weight="600" fill={band.color}>
-      {band.label}
-    </text>
-  {/each}
-</svg>
+  <!-- legend (real text, readable at any width) -->
+  <div class="mt-3 flex flex-wrap justify-center gap-x-5 gap-y-1.5 text-xs sm:text-sm">
+    {#each [...bands].reverse() as band}
+      <span class="inline-flex items-center gap-1.5 text-slate-600">
+        <span class="inline-block h-2.5 w-2.5 rounded-sm" style="background:{band.color}"></span>{band.label}
+      </span>
+    {/each}
+  </div>
 </div>
