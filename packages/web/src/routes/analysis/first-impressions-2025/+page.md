@@ -114,8 +114,10 @@ With this caveat in mind, here is some of what the 2025 data shows.
 The share of Hispanic drivers has risen steadily and is now almost double what it was in 2016. Missouri's Hispanic population grew over the same span, but not nearly as quickly as their share of traffic stops. At the same time, Black drivers remain by far the most disproportionately stopped racial group.
 
 <Figure
-  flush
+  title="Stop share vs. population share, by race"
+  caption="Each panel compares a group's share of traffic stops (solid) with its share of the 16-and-over population (dashed). The readout under each race name is the relative change in each line over the window — e.g. Hispanic stop share grew far faster than Hispanic population share. Each panel uses its own vertical scale to frame its own data, so compare each line against its own population line within a panel — not slopes from one panel to the next."
   wide
+  flush
   source={sourceBundle}
   summary="For White, Black, and Hispanic drivers, each panel compares the group's share of traffic stops (solid) with its share of the 16-and-over population (dashed), from 2016 to 2025.">
   <StopShareVsPopChart metric={a.disparity.byMetric.stops} years={a.disparity.years} />
