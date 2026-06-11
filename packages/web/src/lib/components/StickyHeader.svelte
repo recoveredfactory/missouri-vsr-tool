@@ -483,7 +483,10 @@
             </ul>
           {/if}
         </div>
-        <nav class="-mx-4 flex items-center justify-end gap-4 overflow-x-auto px-4 text-xs font-semibold whitespace-nowrap md:mx-0 md:gap-2.5 md:overflow-visible md:px-0 md:text-sm">
+        <!-- Desktop-only inline nav. On mobile the same links live in the
+             hamburger menu, so showing this row too produced a clipped,
+             edge-to-edge horizontally-scrolling strip (issue #209). -->
+        <nav class="hidden items-center justify-end gap-2.5 text-sm font-semibold md:flex">
           <a href={homeAnchorHref("findings")} class="text-[#1b613c] no-underline hover:text-[#105430]">
             {nav_findings()}
           </a>
