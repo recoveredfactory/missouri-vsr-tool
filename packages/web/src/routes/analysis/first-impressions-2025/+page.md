@@ -99,11 +99,9 @@ Before any trend, we found a data quirk that changed how we read everything. Thi
     note={`About ${dropped2024} agencies dropped out in 2024 — ${returnedSharePct}% came back in 2025`} />
 </Figure>
 
-About one hundred agenices reappeared that were present in 2023 and in 2025, but not 2024. 
+When we crunched the numbers, we found about {dropped2024} agencies that reported in 2023 are simply absent from the 2024 report. Then the 2025 report landed and the count jumped back up — and it is largely the *same agencies*. About {returned2025} of them drop out in 2024 and return in 2025, roughly {returnedSharePct}% of the ones that left.
 
-When we crunched the numbers, we found about {dropped2024} agencies that reported in 2023 are simply absent from the 2024 report. Then the 2025 report landed and the count jumped back up — and it is largely the *same agencies*. **About {returned2025} of them drop out in 2024 and return in 2025**, roughly {returnedSharePct}% of the ones that left.
-
-They come back at nearly the same size, too. That cohort reported about {usNum(comebackStops2023)} stops in 2023 and about {usNum(comebackStops2025)} in 2025, and they are not all small departments — Nixa, Florissant, University City, and Arnold each blinked out of the report and back in.
+They also represent roughly the same volume of stops that disappeared from 2023 to 2024. The cohort of re-appearing agencies reported about {usNum(comebackStops2023)} stops in 2023 and about {usNum(comebackStops2025)} in 2025, and they are not all small departments — Nixa, Florissant, University City, and Arnold each blinked out of the report and back in.
 
 The disappearing act matters for anyone looking at year over year numbers. Statewide stops rise about {rawPctChange}% from 2024 to 2025, but roughly {comebackShareOfIncrease}% of that increase is just these returning agencies; among the agencies that reported in *every* year, stops rose only about {balancedPanelPct}%.  
 
@@ -115,9 +113,6 @@ With that caveat in mind, here is some of what the 2025 data shows.
 
 The share of Hispanic drivers has risen steadily and is now almost double what it was in 2016. Missouri's Hispanic population grew over the same span, but not nearly as quickly as their share of traffic stops. At the same time, Black drivers remain by far the most disproportionately stopped racial group.
 
-We calculated our version of the much-debated "disparity index" statewide by using the adult population as a rough estimate of the driving-age population. We agree with the critics of the disparity index that it is of limited value for understanding and comparing local agencies. For example, the residential population of a small town is unlikely to be reflective of who is driving on its roads, especially if that includes a major highway, tourist attraction, or infrastructure like an airport. But statewide, it gives us an imperfect but wide-screen picture of racial patterns.
- 
-
 <Figure
   flush
   wide
@@ -125,6 +120,8 @@ We calculated our version of the much-debated "disparity index" statewide by usi
   summary="For White, Black, and Hispanic drivers, each panel compares the group's share of traffic stops (solid) with its share of the 16-and-over population (dashed), from 2016 to 2025.">
   <StopShareVsPopChart metric={a.disparity.byMetric.stops} years={a.disparity.years} />
 </Figure>
+
+We calculated our version of the much-debated "disparity index" statewide by using the adult population as a rough estimate of the driving-age population. We agree with the critics of the disparity index that it is of limited value for understanding and comparing local agencies. For example, the residential population of a small town is unlikely to be reflective of who is driving on its roads, especially if that includes a major highway, tourist attraction, or infrastructure like an airport. But statewide, it gives us an imperfect but wide-screen picture of racial patterns.
 
 Looking at the disparity indexes of the searches, arrests, and share of stops shows that Black drivers are consistently stopped at the most disparate rates. The search disparity for Black drivers generally fell over this period, while the search disparity and arrest disparity for Hispanic drivers went from rough parity with White drivers towards increasing disparity.
 
@@ -155,8 +152,6 @@ Searches dropped from 6.7 per 100 stops in 2019 to 4.7 in 2025. Two forces drove
 
 Searches during stops of Black drivers and Hispanic drivers were more frequent than for White drivers, despite yielding a lower rate of contraband hits. This gap has widened somewhat since the pandemic for both groups compared to White drivers.
 
-As of 2025, White drivers are searched at a lower rate but are found with contraband at the highest rate of all races; Hispanic drivers are searched the most yet least often found with contraband.
-
 <Figure
   title="The outcome test, 2025"
   caption="Each group placed by how often its drivers are searched (left to right) against how often those searches find contraband (bottom to top). Bubble size reflects total stops."
@@ -165,6 +160,8 @@ As of 2025, White drivers are searched at a lower rate but are found with contra
   summary="Scatter plot of search rate against contraband hit rate by race in 2025; White drivers are searched least but found with contraband most often, while Hispanic drivers are searched most yet found with contraband least often.">
   <ContrabandScatterChart races={a.raceSummary.races} />
 </Figure>
+
+As of 2025, White drivers are searched at a lower rate but are found with contraband at the highest rate of all races; Hispanic drivers are searched the most yet least often found with contraband.
 
 An [influential 2001 paper](https://www.jstor.org/stable/10.1086/318603) by John Knowles, Nicola Persico, and Petra Todd, present this outcome test as a key tool for understanding bias in traffic stops. 
 

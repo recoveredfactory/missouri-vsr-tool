@@ -3,9 +3,8 @@
 
   // Graphic 2 — small multiple, one panel per outcome (stops / searches /
   // arrests). Within each panel, the disparity index for White / Black /
-  // Hispanic drivers. A value of 1.0× is parity (the group is
-  // stopped/searched/arrested exactly in proportion to its 16+ population);
-  // 1.9× means 1.9 times as often as its population share would predict.
+  // Hispanic drivers. 1.0× is parity (stopped/searched/arrested in proportion
+  // to the group's 16+ population); 1.9× means 1.9 times as often.
   export let byMetric; // { stops, searches, arrests } -> race -> year -> { disparity_index }
   export let years;
   export let races = ["White", "Black", "Hispanic"];
@@ -19,9 +18,10 @@
 
   $: yrs = years.filter((y) => y >= startYear);
 
-  const W = 252;
-  const H = 230;
-  const pad = { top: 20, right: 96, bottom: 30, left: 34 };
+  // Wider-than-tall panels read better and stack shorter on mobile.
+  const W = 280;
+  const H = 200;
+  const pad = { top: 18, right: 92, bottom: 28, left: 32 };
   const plotW = W - pad.left - pad.right;
   const plotH = H - pad.top - pad.bottom;
   const baseY = pad.top + plotH;
@@ -47,16 +47,33 @@
   const seriesFor = (metricKey, race) =>
     yrs.map((y) => byMetric?.[metricKey]?.[race]?.[y]?.disparity_index ?? null);
 
-  // Whole-number axis ticks (0×, 1×, 2× …) up to the domain max.
+  // Whole-number axis ticks (0×, 1×, 2× …).
   $: yTicks = Array.from({ length: Math.floor(yMax) + 1 }, (_, i) => i);
+
+  // End-of-line labels for the three races can collide where values are close
+  // (e.g. White vs Hispanic). Lay them out top-to-bottom with a minimum gap.
+  const MIN_GAP = 13;
+  const endLabels = (metricKey) => {
+    const items = races
+      .map((race) => {
+        const s = seriesFor(metricKey, race);
+        const v = s[n - 1];
+        return v == null ? null : { race, v, c: raceColor(race), y: yOf(v) + 3.5 };
+      })
+      .filter(Boolean)
+      .sort((a, b) => a.y - b.y);
+    for (let i = 1; i < items.length; i++)
+      if (items[i].y - items[i - 1].y < MIN_GAP) items[i].y = items[i - 1].y + MIN_GAP;
+    return items;
+  };
 </script>
 
-<div class="grid gap-4 sm:grid-cols-3">
-  {#each metrics as mtr}
-    <div>
+<div class="grid gap-6 sm:grid-cols-3 sm:gap-5">
+  {#each metrics as mtr, mi}
+    <div class={mi > 0 ? "border-t border-slate-200 pt-6 sm:border-0 sm:pt-0" : ""}>
       <div class="mb-1 text-center text-sm font-bold text-slate-900">{mtr.label}</div>
       <svg viewBox="0 0 {W} {H}" class="h-auto w-full" role="img">
-        <!-- axes: y spine + bottom x line (a touch more present than gridlines) -->
+        <!-- axes: y spine + bottom x line -->
         <line x1={pad.left} y1={pad.top} x2={pad.left} y2={baseY} stroke="#cbd5e1" stroke-width="1" />
         <line x1={pad.left} y1={baseY} x2={pad.left + plotW} y2={baseY} stroke="#cbd5e1" stroke-width="1" />
         {#each yTicks as t}
@@ -68,7 +85,7 @@
         <line x1={pad.left} y1={yOf(1)} x2={pad.left + plotW} y2={yOf(1)} stroke="#475569" stroke-width="1" stroke-dasharray="4 3" />
         <text x={pad.left + 3} y={yOf(1) - 4} font-size="9.5" fill="#64748b" font-style="italic">{parityLabel}</text>
 
-        <!-- year ticks: first + last only -->
+        <!-- year ticks: first + last -->
         {#each yrs as yr, i}
           {#if i === 0 || i === n - 1}
             <text x={x(i)} y={baseY + 16} text-anchor={i === 0 ? "start" : "end"} font-size="11" fill="#64748b">{yr}</text>
@@ -81,8 +98,12 @@
           <polyline fill="none" stroke={c} stroke-width="2.5" points={linePts(s)} />
           {#if s[n - 1] != null}
             <circle cx={x(n - 1)} cy={yOf(s[n - 1])} r="3" fill={c} />
-            <text x={x(n - 1) + 6} y={yOf(s[n - 1]) + 3} font-size="10.5" font-weight="700" fill={c}>{race} {s[n - 1].toFixed(1)}×</text>
           {/if}
+        {/each}
+
+        <!-- nudged end-of-line labels -->
+        {#each endLabels(mtr.key) as lab}
+          <text x={x(n - 1) + 6} y={lab.y} font-size="10.5" font-weight="700" fill={lab.c}>{lab.race} {lab.v.toFixed(1)}×</text>
         {/each}
       </svg>
     </div>

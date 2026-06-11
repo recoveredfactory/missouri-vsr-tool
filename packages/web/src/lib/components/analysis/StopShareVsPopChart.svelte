@@ -6,24 +6,23 @@
   // driving-age (16+) population (dashed grey). Where the stop-share line sits
   // above the population line, that group is over-represented in stops.
   //
-  // Every panel uses the SAME y-span (interval size) but a different offset —
-  // e.g. 0–10, 10–20, 70–80 — so a one-point change looks identical in every
-  // panel (apples-to-apples slope) while each line still fills its own panel.
+  // Every panel uses the SAME y-span (interval size) but a different offset, so
+  // a one-point change looks identical in every panel (apples-to-apples slope)
+  // while each line still fills its own panel.
   //
-  // The lines are labeled directly on the first panel (no legend); every panel
-  // carries its own end-of-line % so the absolute level stays legible.
+  // No top header: the race name rides at the end of its own (solid) line,
+  // alongside the stops/pop end-of-line labels carried on every panel.
   export let metric; // race -> year -> { share_pct, pop_pct_16plus }
   export let years; // number[] available in the bundle
   export let races = ["White", "Black", "Hispanic"];
   export let startYear = 0; // 0 = show every year the bundle carries (~10 years)
-  export let seriesLabels = { stops: "stops", pop: "pop." };
 
-  // Clip to the shared article window.
   $: yrs = years.filter((y) => y >= startYear);
 
-  const W = 248;
-  const H = 220;
-  const pad = { top: 22, right: 86, bottom: 30, left: 34 };
+  // Wider-than-tall panels read better and stack shorter on mobile.
+  const W = 304;
+  const H = 180;
+  const pad = { top: 16, right: 145, bottom: 26, left: 30 };
   const plotW = W - pad.left - pad.right;
   const plotH = H - pad.top - pad.bottom;
   const baseY = pad.top + plotH;
@@ -31,8 +30,7 @@
   $: n = yrs.length;
   const x = (i) => pad.left + (n <= 1 ? plotW / 2 : (i / (n - 1)) * plotW);
 
-  // Bounds snap to multiples of SNAP so axis labels stay clean; small padding
-  // keeps lines off the panel edges.
+  // Bounds snap to multiples of SNAP so axis labels stay clean.
   const SNAP = 5;
   const PAD_FRAC = 0.06;
 
@@ -51,8 +49,7 @@
     return { lo, hi };
   };
 
-  // One shared span across panels (apples-to-apples slope), tightened to the
-  // data: the widest group's range + padding, rounded up to a multiple of SNAP.
+  // One shared span across panels (apples-to-apples slope).
   $: span = (() => {
     let maxRange = 0;
     for (const race of races) {
@@ -80,7 +77,7 @@
   const linePts = (vals, p) =>
     vals.map((v, i) => (v == null ? null : `${x(i)},${yOf(v, p)}`)).filter(Boolean).join(" ");
 
-  // Endpoint labels can nearly overlap within a narrow band; nudge them apart.
+  // Endpoint labels can collide within a narrow band; nudge them apart.
   const MIN_GAP = 13;
   const endpointLabelYs = (stopV, popV, p) => {
     const sy = yOf(stopV, p) + 4;
@@ -92,20 +89,18 @@
   };
 </script>
 
-<div class="grid gap-4 sm:grid-cols-3">
+<div class="grid gap-6 sm:grid-cols-3 sm:gap-5">
   {#each panels as p, pi}
     {@const c = raceColor(p.race)}
-    <div>
-      <div class="mb-1 text-center text-sm font-bold" style="color:{c}">{p.race}</div>
+    <div class={pi > 0 ? "border-t border-slate-200 pt-6 sm:border-0 sm:pt-0" : ""}>
       <svg viewBox="0 0 {W} {H}" class="h-auto w-full" role="img">
-        <!-- axes: faint-but-legible y spine + bottom x line, with bound ticks -->
+        <!-- axes: y spine + bottom x line, with bound ticks -->
         <line x1={pad.left} y1={pad.top} x2={pad.left} y2={baseY} stroke="#cbd5e1" stroke-width="1" />
         <line x1={pad.left} y1={baseY} x2={pad.left + plotW} y2={baseY} stroke="#cbd5e1" stroke-width="1" />
-        <line x1={pad.left - 3} y1={pad.top} x2={pad.left} y2={pad.top} stroke="#94a3b8" stroke-width="1" />
-        <text x={pad.left - 6} y={pad.top + 4} text-anchor="end" font-size="10" fill="#64748b">{p.yMax}%</text>
-        <text x={pad.left - 6} y={baseY} text-anchor="end" font-size="10" fill="#64748b">{p.yMin}%</text>
+        <text x={pad.left - 6} y={pad.top + 4} text-anchor="end" font-size="9.5" fill="#64748b">{p.yMax}%</text>
+        <text x={pad.left - 6} y={baseY} text-anchor="end" font-size="9.5" fill="#64748b">{p.yMin}%</text>
 
-        <!-- year ticks: first + last only (panels are narrow) -->
+        <!-- year ticks: first + last -->
         {#each yrs as yr, i}
           {#if i === 0 || i === n - 1}
             <text x={x(i)} y={baseY + 16} text-anchor={i === 0 ? "start" : "end"} font-size="11" fill="#64748b">{yr}</text>
@@ -117,7 +112,6 @@
         <!-- stop-share line (solid, race color) -->
         <polyline fill="none" stroke={c} stroke-width="2.5" points={linePts(p.stops, p)} />
 
-        <!-- endpoint dots only (interior points stay clean on the trend line) -->
         {#if p.stops[n - 1] != null}
           <circle cx={x(n - 1)} cy={yOf(p.stops[n - 1], p)} r="3.5" fill={c} />
         {/if}
@@ -125,12 +119,12 @@
           <circle cx={x(n - 1)} cy={yOf(p.pop[n - 1], p)} r="3" fill="#94a3b8" />
         {/if}
 
-        <!-- right-edge labels: words on the first panel identify the lines,
-             every panel keeps its % so the level is legible -->
+        <!-- end-of-line labels: race name + value on the stops line, value on
+             the pop line — on every panel -->
         {#if p.stops[n - 1] != null && p.pop[n - 1] != null}
           {@const ys = endpointLabelYs(p.stops[n - 1], p.pop[n - 1], p)}
-          <text x={x(n - 1) + 6} y={ys[0]} font-size="11" font-weight="700" fill={c}>{p.stops[n - 1].toFixed(1)}%{pi === 0 ? ` ${seriesLabels.stops}` : ""}</text>
-          <text x={x(n - 1) + 6} y={ys[1]} font-size="11" font-weight="600" fill="#64748b">{p.pop[n - 1].toFixed(1)}%{pi === 0 ? ` ${seriesLabels.pop}` : ""}</text>
+          <text x={x(n - 1) + 7} y={ys[0]} font-size="11" font-weight="700" fill={c}>{p.stops[n - 1].toFixed(1)}% {p.race} stops</text>
+          <text x={x(n - 1) + 7} y={ys[1]} font-size="11" font-weight="600" fill="#64748b">{p.pop[n - 1].toFixed(1)}% {p.race} pop.</text>
         {/if}
       </svg>
     </div>
