@@ -7,9 +7,9 @@
   // above the population line, that group is over-represented in stops.
   //
   // Each panel carries a header (race name) and a one-line readout of the
-  // percentage-point change in each line over the window, so a reader can
-  // directly compare how stop-share moved against population-share — the
-  // whole point of the graphic. (The prose carries the relative framing.)
+  // relative change in each line over the window, so a reader can directly
+  // compare how fast stop-share grew against how fast population-share grew —
+  // the whole point of the graphic.
   //
   // Y-AXIS: each panel frames its OWN data (independent y-range), so a line
   // fills its panel instead of hugging one edge. The trade-off — slopes are NOT
@@ -69,22 +69,22 @@
     return { lo, hi };
   };
 
-  // Percentage-POINT change from first to last non-null value in a series (e.g.
-  // a stop share that goes 2.2% → 3.8% returns +1.6). Null when uncomputable.
-  const ptsChange = (vals) => {
+  // Relative change from first to last non-null value in a series (e.g. a stop
+  // share that goes 2.2% → 3.8% returns +73). Null when it can't be computed.
+  const pctChange = (vals) => {
     const first = vals.find((v) => v != null);
     const last = [...vals].reverse().find((v) => v != null);
-    return first == null || last == null ? null : last - first;
+    return first == null || last == null || first === 0 ? null : ((last - first) / first) * 100;
   };
-  const fmtPts = (v) =>
-    v == null ? "—" : `${v >= 0 ? "↑ up" : "↓ down"} ${Math.abs(v).toFixed(1)} pts`;
+  const fmtPct = (v) =>
+    v == null ? "—" : `${v >= 0 ? "↑ up" : "↓ down"} ${Math.round(Math.abs(v))}%`;
 
   // Each panel frames its own data: pad the group's range and snap to SNAP.
   const buildPanel = (race) => {
     const stops = yrs.map((y) => metric?.[race]?.[y]?.share_pct ?? null);
     const pop = yrs.map((y) => metric?.[race]?.[y]?.pop_pct_16plus ?? null);
     const { lo, hi } = rangeFor(race);
-    const change = { stops: ptsChange(stops), pop: ptsChange(pop) };
+    const change = { stops: pctChange(stops), pop: pctChange(pop) };
     if (!isFinite(lo)) return { race, stops, pop, change, yMin: 0, yMax: 5 };
     return { race, stops, pop, change, ...niceBounds(lo, hi) };
   };
@@ -112,9 +112,9 @@
     <div class={pi > 0 ? "border-t border-slate-200 pt-6 sm:border-0 sm:pt-0" : ""}>
       <div class="text-center text-[0.95rem] font-bold" style="color:{c}">{p.race}</div>
       <div class="mb-1 text-center text-[0.8rem] leading-tight text-slate-500">
-        stops: <span class="font-bold" style="color:{c}">{fmtPts(p.change.stops)}</span>
+        stops: <span class="font-bold" style="color:{c}">{fmtPct(p.change.stops)}</span>
         <span class="px-1 text-slate-300">|</span>
-        pop: <span class="font-bold text-slate-600">{fmtPts(p.change.pop)}</span>
+        pop: <span class="font-bold text-slate-600">{fmtPct(p.change.pop)}</span>
       </div>
       <svg viewBox="0 0 {W} {H}" class="h-auto w-full" role="img">
         <!-- axes: y spine + bottom x line, with bound ticks -->
