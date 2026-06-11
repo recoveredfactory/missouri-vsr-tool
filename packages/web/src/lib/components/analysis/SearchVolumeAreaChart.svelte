@@ -20,8 +20,8 @@
   };
 
   const W = 720;
-  const H = 360;
-  const pad = { top: 24, right: 132, bottom: 36, left: 56 };
+  const H = 300;
+  const pad = { top: 22, right: 158, bottom: 34, left: 56 };
   const plotW = W - pad.left - pad.right;
   const plotH = H - pad.top - pad.bottom;
 
@@ -70,6 +70,7 @@
   $: fmt = (v) => (v >= 1000 ? `${Math.round(v / 1000)}k` : `${v}`);
 </script>
 
+<div class="mx-auto max-w-2xl">
 <svg viewBox="0 0 {W} {H}" class="h-auto w-full" role="img">
   <!-- y grid + labels -->
   {#each [0, 0.25, 0.5, 0.75, 1] as t}
@@ -103,3 +104,4 @@
     </text>
   {/each}
 </svg>
+</div>

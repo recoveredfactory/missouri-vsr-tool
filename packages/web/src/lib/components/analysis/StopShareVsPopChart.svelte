@@ -15,7 +15,7 @@
   export let metric; // race -> year -> { share_pct, pop_pct_16plus }
   export let years; // number[] available in the bundle
   export let races = ["White", "Black", "Hispanic"];
-  export let startYear = 2018; // anchor the window with the rest of the article
+  export let startYear = 0; // 0 = show every year the bundle carries (~10 years)
   export let seriesLabels = { stops: "stops", pop: "pop." };
 
   // Clip to the shared article window.

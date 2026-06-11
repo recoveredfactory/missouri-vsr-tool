@@ -60,9 +60,9 @@ authors:
   $: comebackShareOfIncrease = Math.round(churn?.comeback_share_of_raw_increase_pct ?? 63);
   $: balancedPanelPct = Math.round(churn?.balanced_panel_pct_change_2023_to_2025 ?? 4.4);
 
-  // The trend charts share one window: 2018 onward, matching the search chart
-  // (the odor search reason isn't reported separately before 2018).
-  const startYear = 2018;
+  // Charts show the full ~10-year window the bundle carries. The lone exception
+  // is the search chart, which starts in 2018 because the state didn't report
+  // the odor search reason separately from 2009–2017 (handled in that figure).
 </script>
 
 <svelte:head>
@@ -113,7 +113,7 @@ With that caveat in mind, here is some of what the 2025 data shows.
 
 ## Stops of Hispanic drivers are outpacing population growth, with increasingly disparate outcomes
 
-The share of Hispanic drivers has risen steadily — up by roughly two-thirds since 2018. Missouri's Hispanic population grew over the same span, but not nearly as quickly as their share of traffic stops. At the same time, Black drivers remain by far the most disproportionately stopped racial group.
+The share of Hispanic drivers has risen steadily and is now almost double what it was in 2016. Missouri's Hispanic population grew over the same span, but not nearly as quickly as their share of traffic stops. At the same time, Black drivers remain by far the most disproportionately stopped racial group.
 
 We calculated our version of the much-debated "disparity index" statewide by using the adult population as a rough estimate of the driving-age population. We agree with the critics of the disparity index that it is of limited value for understanding and comparing local agencies. For example, the residential population of a small town is unlikely to be reflective of who is driving on its roads, especially if that includes a major highway, tourist attraction, or infrastructure like an airport. But statewide, it gives us an imperfect but wide-screen picture of racial patterns.
  
@@ -122,8 +122,8 @@ We calculated our version of the much-debated "disparity index" statewide by usi
   flush
   wide
   source={sourceBundle}
-  summary="For White, Black, and Hispanic drivers, each panel compares the group's share of traffic stops (solid) with its share of the 16-and-over population (dashed), from 2018 to 2025.">
-  <StopShareVsPopChart metric={a.disparity.byMetric.stops} years={a.disparity.years} {startYear} />
+  summary="For White, Black, and Hispanic drivers, each panel compares the group's share of traffic stops (solid) with its share of the 16-and-over population (dashed), from 2016 to 2025.">
+  <StopShareVsPopChart metric={a.disparity.byMetric.stops} years={a.disparity.years} />
 </Figure>
 
 Looking at the disparity indexes of the searches, arrests, and share of stops shows that Black drivers are consistently stopped at the most disparate rates. The search disparity for Black drivers generally fell over this period, while the search disparity and arrest disparity for Hispanic drivers went from rough parity with White drivers towards increasing disparity.
@@ -134,8 +134,8 @@ Looking at the disparity indexes of the searches, arrests, and share of stops sh
   wide
   flush
   source={sourceBundle}
-  summary="Disparity index for stops, searches, and arrests, by race, from 2018 to 2025, where 1.0× marks parity with the group's share of the 16-and-over population.">
-  <DisparityIndexChart byMetric={a.disparity.byMetric} years={a.disparity.years} {startYear} />
+  summary="Disparity index for stops, searches, and arrests, by race, from 2016 to 2025, where 1.0× marks parity with the group's share of the 16-and-over population.">
+  <DisparityIndexChart byMetric={a.disparity.byMetric} years={a.disparity.years} />
 </Figure>
 
 ## Search intensity is down over the decade
@@ -145,11 +145,10 @@ Searches dropped from 6.7 per 100 stops in 2019 to 4.7 in 2025. Two forces drove
 <Figure
   title="Searches by reason, statewide"
   caption="A single search can cite more than one authority, so the reasons can sum above total searches. Statewide reporting didn't break out the smell of drugs or alcohol separately from 2009 to 2017, so this view starts in 2018."
-  wide
   flush
   source={sourceBundle}
   summary="Stacked area of statewide searches per year from 2018 to 2025, split into consent searches, searches citing the smell of drugs or alcohol, and all other reasons.">
-  <SearchVolumeAreaChart data={a.searchReasons} {startYear} />
+  <SearchVolumeAreaChart data={a.searchReasons} />
 </Figure>
 
 ## Racial disparities widened on the search / contraband-found outcome test

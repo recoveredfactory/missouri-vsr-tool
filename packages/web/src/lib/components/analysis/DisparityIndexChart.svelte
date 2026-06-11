@@ -9,7 +9,7 @@
   export let byMetric; // { stops, searches, arrests } -> race -> year -> { disparity_index }
   export let years;
   export let races = ["White", "Black", "Hispanic"];
-  export let startYear = 2018; // anchor the window with the rest of the article
+  export let startYear = 0; // 0 = show every year the bundle carries (~10 years)
   export let metrics = [
     { key: "stops", label: "Stops" },
     { key: "searches", label: "Searches" },
