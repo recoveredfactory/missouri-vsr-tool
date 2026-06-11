@@ -18,7 +18,7 @@
     consent: "Consent",
     smell: "Smell of drugs / alcohol",
     other: "All other reasons",
-    cannabis: "Cannabis legalized, Dec 2022",
+    cannabis: "Cannabis legalized",
   };
 
   const COLORS = { other: "#cbd5e1", consent: "#0e7490", smell: "#c2410c" };
@@ -85,12 +85,11 @@
     text: band.label,
   });
 
-  // Cannabis was legalized at the END of 2022 (Dec), so the marker sits on the
-  // 2022|2023 boundary — between the two data points — not on the 2022 point.
+  // The legalization effect lands in the 2023 data (sales began 2023; the smell
+  // band collapses that year), so the marker sits on the 2023 point.
   $: i2022 = years.indexOf(2022);
   $: i2023 = years.indexOf(2023);
-  $: cannabisX =
-    i2022 >= 0 && i2023 >= 0 ? (x(i2022) + x(i2023)) / 2 : i2022 >= 0 ? x(i2022) : null;
+  $: cannabisX = i2023 >= 0 ? x(i2023) : i2022 >= 0 ? x(i2022) : null;
   // Show first, last, the 2023 effect year, and every fifth year.
   $: yearTicks = years
     .map((yr, i) => ({ yr, i }))
@@ -117,16 +116,17 @@
       <text x={labelX} y={l.y + 9} text-anchor="start" font-size="14" font-weight="700" fill={l.fill}>{l.text}</text>
     {/each}
 
-    <!-- "smell" collapses after 2022, so label it in its own color up in the
-         top-right rather than inside the shrinking band -->
-    <text x={pad.left + plotW} y={pad.top - 13} text-anchor="end" font-size="14" font-weight="700" fill={COLORS.smell}>{labels.smell}</text>
+    <!-- "smell" collapses after 2022; label it in its own color riding above
+         the band on the left, where the band is tall and the top dips away -->
+    <text x={pad.left + 12} y={pad.top + 10} text-anchor="start" font-size="14" font-weight="700" fill={COLORS.smell}>{labels.smell}</text>
 
-    <!-- cannabis marker on the 2022|2023 boundary -->
+    <!-- cannabis marker on the 2023 point; label stacked to the right of the
+         line so it fits in the narrow space before the chart's right edge -->
     {#if cannabisX != null}
       <line x1={cannabisX} y1={pad.top} x2={cannabisX} y2={pad.top + plotH} stroke="#334155" stroke-width="1" stroke-dasharray="3 3" />
-      <text x={cannabisX - 6} y={pad.top + 12} text-anchor="end" font-size="12" fill="#334155" font-weight="600">
-        {labels.cannabis}
-      </text>
+      {#each labels.cannabis.split(" ") as word, wi}
+        <text x={cannabisX + 6} y={pad.top + 12 + wi * 14} text-anchor="start" font-size="12" fill="#334155" font-weight="600">{word}</text>
+      {/each}
     {/if}
 
     <!-- x ticks -->
