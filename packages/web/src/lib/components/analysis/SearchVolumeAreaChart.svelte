@@ -63,31 +63,38 @@
     return `M${top.join("L")}L${bottom.join("L")}Z`;
   };
 
-  // Direct labels, all anchored at ONE column so they line up as a tidy
-  // left-aligned stack rather than scattering across the chart. The column is
-  // the one where the THINNEST band is thickest, so every label has room in its
-  // band (this naturally lands left of 2022, before the smell band collapses).
+  // "Consent" and "All other reasons" are labeled directly inside their bands,
+  // anchored at ONE column so they line up as a tidy left-aligned stack. The
+  // column is where the thinner of the two is thickest. ("Smell" collapses
+  // after 2022, so it's labeled separately, off to the right — see markup.)
+  $: inlineBands = bands.filter((b) => b.key !== "smell");
   $: labelIdx = (() => {
     let idx = 0;
     let best = -Infinity;
     for (let i = 0; i < n; i++) {
-      const minT = Math.min(...bands.map((b) => b.upper[i] - b.lower[i]));
+      const minT = Math.min(...inlineBands.map((b) => b.upper[i] - b.lower[i]));
       if (minT > best) { best = minT; idx = i; }
     }
     return idx;
   })();
-  $: labelX = Math.min(Math.max(x(labelIdx), pad.left + 4), pad.left + plotW - 150);
-  // Light "other" band takes dark text; the saturated consent/smell bands white.
+  $: labelX = Math.min(Math.max(x(labelIdx) + 18, pad.left + 12), pad.left + plotW - 150);
+  // Light "other" band takes dark text; the saturated consent band white.
   const labelFor = (band) => ({
     y: y((band.upper[labelIdx] + band.lower[labelIdx]) / 2),
     fill: band.key === "other" ? "#334155" : "#ffffff",
     text: band.label,
   });
 
-  $: cannabisIdx = years.indexOf(2022);
+  // Cannabis was legalized at the END of 2022 (Dec), so the marker sits on the
+  // 2022|2023 boundary — between the two data points — not on the 2022 point.
+  $: i2022 = years.indexOf(2022);
+  $: i2023 = years.indexOf(2023);
+  $: cannabisX =
+    i2022 >= 0 && i2023 >= 0 ? (x(i2022) + x(i2023)) / 2 : i2022 >= 0 ? x(i2022) : null;
+  // Show first, last, the 2023 effect year, and every fifth year.
   $: yearTicks = years
     .map((yr, i) => ({ yr, i }))
-    .filter(({ yr, i }) => yr % 5 === 0 || i === 0 || i === n - 1);
+    .filter(({ yr, i }) => yr % 5 === 0 || yr === 2023 || i === 0 || i === n - 1);
   $: fmt = (v) => (v >= 1000 ? `${Math.round(v / 1000)}k` : `${v}`);
 </script>
 
@@ -104,16 +111,20 @@
       <path d={areaPath(band)} fill={band.color} opacity="0.92" />
     {/each}
 
-    <!-- direct band labels (replaces the legend), aligned at one column -->
-    {#each bands as band}
+    <!-- inline labels for consent + all-other, left-aligned at one column -->
+    {#each inlineBands as band}
       {@const l = labelFor(band)}
-      <text x={labelX} y={l.y + 4} text-anchor="start" font-size="13" font-weight="700" fill={l.fill}>{l.text}</text>
+      <text x={labelX} y={l.y + 9} text-anchor="start" font-size="14" font-weight="700" fill={l.fill}>{l.text}</text>
     {/each}
 
-    <!-- cannabis annotation -->
-    {#if cannabisIdx >= 0}
-      <line x1={x(cannabisIdx)} y1={pad.top} x2={x(cannabisIdx)} y2={pad.top + plotH} stroke="#334155" stroke-width="1" stroke-dasharray="3 3" />
-      <text x={x(cannabisIdx) - 6} y={pad.top + 12} text-anchor="end" font-size="12" fill="#334155" font-weight="600">
+    <!-- "smell" collapses after 2022, so label it in its own color up in the
+         top-right rather than inside the shrinking band -->
+    <text x={pad.left + plotW} y={pad.top - 13} text-anchor="end" font-size="14" font-weight="700" fill={COLORS.smell}>{labels.smell}</text>
+
+    <!-- cannabis marker on the 2022|2023 boundary -->
+    {#if cannabisX != null}
+      <line x1={cannabisX} y1={pad.top} x2={cannabisX} y2={pad.top + plotH} stroke="#334155" stroke-width="1" stroke-dasharray="3 3" />
+      <text x={cannabisX - 6} y={pad.top + 12} text-anchor="end" font-size="12" fill="#334155" font-weight="600">
         {labels.cannabis}
       </text>
     {/if}
