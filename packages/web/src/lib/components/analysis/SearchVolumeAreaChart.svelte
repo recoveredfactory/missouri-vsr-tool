@@ -7,9 +7,9 @@
   // all other, consent, smell — so the shrinking stories sit on top.
   //
   // Mobile-first: a compact viewBox keeps the text legible when the SVG scales
-  // down on a phone, and the series are identified by an HTML legend below
-  // (real text, always readable) rather than in-SVG right-edge labels that
-  // would force a wide gutter and tiny type.
+  // down on a phone. Series are labeled DIRECTLY on each band (at its thickest
+  // column) instead of a separate legend, so a reader never has to map a swatch
+  // back to a color.
   export let data; // SearchReasonsData: { years, consent, smell, other, reliableFromYear }
   // The odor reason wasn't reported separately from 2009–2017, so starting at
   // 2018 gives the "smell" band an unbroken run.
@@ -63,6 +63,22 @@
     return `M${top.join("L")}L${bottom.join("L")}Z`;
   };
 
+  // Direct label: drop it into the band's thickest column, vertically centered,
+  // x clamped so the text stays inside the plot. The light "other" band takes
+  // dark text; the saturated consent/smell bands take white.
+  const labelFor = (band) => {
+    let bi = 0;
+    let bt = -Infinity;
+    for (let i = 0; i < n; i++) {
+      const t = band.upper[i] - band.lower[i];
+      if (t > bt) { bt = t; bi = i; }
+    }
+    const cx = Math.min(Math.max(x(bi), pad.left + 90), pad.left + plotW - 90);
+    const cy = y((band.upper[bi] + band.lower[bi]) / 2);
+    const fill = band.key === "other" ? "#334155" : "#ffffff";
+    return { cx, cy, fill, text: band.label };
+  };
+
   $: cannabisIdx = years.indexOf(2022);
   $: yearTicks = years
     .map((yr, i) => ({ yr, i }))
@@ -83,6 +99,12 @@
       <path d={areaPath(band)} fill={band.color} opacity="0.92" />
     {/each}
 
+    <!-- direct band labels (replaces the legend) -->
+    {#each bands as band}
+      {@const l = labelFor(band)}
+      <text x={l.cx} y={l.cy + 4} text-anchor="middle" font-size="13" font-weight="700" fill={l.fill}>{l.text}</text>
+    {/each}
+
     <!-- cannabis annotation -->
     {#if cannabisIdx >= 0}
       <line x1={x(cannabisIdx)} y1={pad.top} x2={x(cannabisIdx)} y2={pad.top + plotH} stroke="#334155" stroke-width="1" stroke-dasharray="3 3" />
@@ -96,13 +118,4 @@
       <text x={x(i)} y={pad.top + plotH + 19} text-anchor="middle" font-size="12.5" fill="#64748b">{yr}</text>
     {/each}
   </svg>
-
-  <!-- legend (real text, readable at any width) -->
-  <div class="mt-3 flex flex-wrap justify-center gap-x-5 gap-y-1.5 text-xs sm:text-sm">
-    {#each [...bands].reverse() as band}
-      <span class="inline-flex items-center gap-1.5 text-slate-600">
-        <span class="inline-block h-2.5 w-2.5 rounded-sm" style="background:{band.color}"></span>{band.label}
-      </span>
-    {/each}
-  </div>
 </div>

@@ -15,6 +15,9 @@
     { key: "arrests", label: "Arrests" },
   ];
   export let parityLabel = "parity";
+  // Two-line directional cue, shown once (first panel) just inside the y-axis so
+  // a reader groks that up = more disproportionate. Kept terse for mobile.
+  export let hintLines = ["↑ more often than", "population predicts"];
 
   $: yrs = years.filter((y) => y >= startYear);
 
@@ -84,6 +87,13 @@
         <!-- parity line at 1.0× -->
         <line x1={pad.left} y1={yOf(1)} x2={pad.left + plotW} y2={yOf(1)} stroke="#475569" stroke-width="1" stroke-dasharray="4 3" />
         <text x={pad.left + 3} y={yOf(1) - 4} font-size="9.5" fill="#64748b" font-style="italic">{parityLabel}</text>
+
+        <!-- directional cue, first panel only (meaning is shared across panels) -->
+        {#if mi === 0}
+          {#each hintLines as line, li}
+            <text x={pad.left + 5} y={pad.top + 9 + li * 11} font-size="9" fill="#94a3b8">{line}</text>
+          {/each}
+        {/if}
 
         <!-- year ticks: first + last -->
         {#each yrs as yr, i}

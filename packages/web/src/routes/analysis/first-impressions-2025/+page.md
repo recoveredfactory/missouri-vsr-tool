@@ -63,6 +63,23 @@ authors:
   // Charts show the full ~10-year window the bundle carries. The lone exception
   // is the search chart, which starts in 2018 because the state didn't report
   // the odor search reason separately from 2009–2017 (handled in that figure).
+
+  // Relative changes over the window, computed from the same disparity bundle
+  // the stop-share chart reads, so the prose tracks the chart. Fallbacks match
+  // the v2.2 values if a field is missing.
+  $: disp = a?.disparity;
+  $: dispYears = disp?.years ?? [];
+  $: firstYear = dispYears[0] ?? 2016;
+  $: lastYear = dispYears[dispYears.length - 1] ?? 2025;
+  const pctChange = (from, to) =>
+    from == null || to == null || from === 0 ? null : Math.round(((to - from) / from) * 100);
+  $: hispStops = disp?.byMetric?.stops?.Hispanic ?? {};
+  $: hispStopChange =
+    pctChange(hispStops?.[firstYear]?.share_pct, hispStops?.[lastYear]?.share_pct) ?? 72;
+  $: hispPopChange =
+    pctChange(hispStops?.[firstYear]?.pop_pct_16plus, hispStops?.[lastYear]?.pop_pct_16plus) ?? 41;
+  // Black stops disparity in the latest year, for the worked example in G2's caption.
+  $: blackStopsDI = (disp?.byMetric?.stops?.Black?.[lastYear]?.disparity_index ?? 1.6).toFixed(1);
 </script>
 
 <svelte:head>
@@ -111,7 +128,7 @@ With this caveat in mind, here is some of what the 2025 data shows.
 
 ## Stops of Hispanic drivers are outpacing population growth, with increasingly disparate outcomes
 
-The share of Hispanic drivers has risen steadily and is now almost double what it was in 2016. Missouri's Hispanic population grew over the same span, but not nearly as quickly as their share of traffic stops. At the same time, Black drivers remain by far the most disproportionately stopped racial group.
+The share of Hispanic drivers has risen steadily — up about {hispStopChange}% since {firstYear}. Missouri's Hispanic share of the driving-age population grew over the same span too, but only about {hispPopChange}%, so stops have climbed roughly twice as fast as population alone would predict. At the same time, Black drivers remain by far the most disproportionately stopped racial group.
 
 <Figure
   title="Stop share vs. population share, by race"
@@ -129,7 +146,7 @@ Looking at the disparity indexes of the searches, arrests, and share of stops sh
 
 <Figure
   title="Disparity index by outcome"
-  caption="A group's share of an outcome divided by its share of the 16-and-over population. 1.0× is parity; 1.9× means stopped, searched, or arrested 1.9 times as often as population alone would predict."
+  caption={`A group's share of an outcome divided by its share of the 16-and-over population. 1.0× is parity; higher means more often than population alone would predict. For example, the Black "stops" line near ${blackStopsDI}× means Black drivers were stopped about ${blackStopsDI} times as often as their share of the driving-age population would predict.`}
   wide
   flush
   source={sourceBundle}
