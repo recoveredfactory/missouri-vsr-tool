@@ -75,10 +75,23 @@ export type ReportingChurn = {
   balanced_panel_pct_change_2023_to_2025: number;
 };
 
+/**
+ * Outcome-test scatter across more than one year, for the animated year toggle
+ * on graphic 4. Each year's points share the 2025 bubble sizes (stop volume by
+ * race barely moves across the window, so freezing size keeps the toggle
+ * animation about the x/y shift — the actual story — rather than breathing
+ * bubbles). Null when the bundle file is absent or carries < 2 usable years.
+ */
+export type OutcomeByYear = {
+  years: number[]; // ascending, e.g. [2023, 2025]
+  byYear: Record<number, RaceSummaryPoint[]>; // W/B/H per year
+};
+
 export type InitialImpressions2025 = {
   disparity: DisparityData;
   searchReasons: SearchReasonsData;
   raceSummary: { year: number; races: RaceSummaryPoint[]; total: RaceSummaryPoint | null };
+  outcomeByYear: OutcomeByYear | null;
   agenciesReporting: AgencyReportingPoint[];
   reportingChurn: ReportingChurn | null;
 };
@@ -147,6 +160,52 @@ const shapeRaceSummary = (raw: any) => {
   return { year: Number(raw.year), races, total };
 };
 
+/**
+ * Years offered in the outcome-test toggle. Contraband-found counts are only
+ * reported statewide from 2020 on, and the 2023 reporting-form change (plus Dec
+ * 2022 cannabis legalization) makes pre-2023 contraband hit rates not
+ * apples-to-apples with today — so we compare only across the clean window. See
+ * the bundle's outcome_test_by_year `note` and project_outcome_toggle_spec.
+ */
+export const OUTCOME_TOGGLE_YEARS = [2023, 2025] as const;
+
+const shapeOutcomeByYear = (
+  raw: any,
+  raceSummary: { races: RaceSummaryPoint[] },
+): OutcomeByYear | null => {
+  const byYearRaw = raw?.by_year;
+  if (!byYearRaw) return null;
+  // Bubble size rides on 2025 stop volume by race, held constant across years.
+  const size = new Map(
+    raceSummary.races.map((p) => [p.race, { total_stops: p.total_stops, stop_share_pct: p.stop_share_pct }]),
+  );
+  const years: number[] = [];
+  const byYear: Record<number, RaceSummaryPoint[]> = {};
+  for (const year of OUTCOME_TOGGLE_YEARS) {
+    const block = byYearRaw[String(year)];
+    if (!block || block.outcome_test_computable !== true) continue;
+    const points = FOCUS_RACES.map((race): RaceSummaryPoint | null => {
+      const c = block.by_race?.[race];
+      if (!c || c.search_rate == null || c.contraband_hit_rate == null) return null;
+      const s = size.get(race);
+      return {
+        race,
+        search_rate: c.search_rate,
+        contraband_hit_rate: c.contraband_hit_rate,
+        total_stops: s?.total_stops ?? 0,
+        stop_share_pct: s?.stop_share_pct ?? 0,
+      };
+    }).filter((p): p is RaceSummaryPoint => p != null);
+    if (points.length) {
+      years.push(year);
+      byYear[year] = points;
+    }
+  }
+  // A toggle needs at least two years; otherwise let the chart fall back to its
+  // static single-year render.
+  return years.length > 1 ? { years, byYear } : null;
+};
+
 const shapeAgenciesReporting = (raw: any): AgencyReportingPoint[] => {
   const byYear = raw?.by_year ?? {};
   return Object.keys(byYear)
@@ -183,29 +242,25 @@ const shapeReportingChurn = (raw: any): ReportingChurn | null => {
 export const loadInitialImpressions2025 = async (
   fetchFn: FetchFn,
 ): Promise<InitialImpressions2025> => {
-  const [disparityRaw, searchRaw, raceRaw, reportingRaw] = await Promise.all([
+  const [disparityRaw, searchRaw, raceRaw, reportingRaw, outcomeRaw] = await Promise.all([
     fetchJson(fetchFn, `${II2025_BASE}/ii2025_disparity_index.json`),
     fetchJson(fetchFn, `${II2025_BASE}/ii2025_search_reasons_by_year.json`),
     fetchJson(fetchFn, `${II2025_BASE}/ii2025_race_summary_2025.json`),
     // Optional: if this file hasn't been published yet, degrade gracefully
     // rather than 500-ing the whole article (the chart shows an empty state).
     fetchJson(fetchFn, `${II2025_BASE}/ii2025_agencies_reporting.json`).catch(() => null),
+    // Outcome-test year toggle (graphic 4). Statewide volume-weighted, computed
+    // from the 'Missouri (all agencies)' aggregate — 2025 ties out to the AG's
+    // official numbers. Optional: degrade to the 2025-only render if absent.
+    fetchJson(fetchFn, `${II2025_BASE}/ii2025_outcome_test_by_year.json`).catch(() => null),
   ]);
-
-  // FUTURE — outcome-test year toggle (2019 / 2022 / 2025):
-  // wire a `ii2025_outcome_by_year.json` here once the pipeline emits it.
-  // Required shape (statewide, volume-weighted — must match ii2025_race_summary_2025.json for 2025):
-  //   { years: number[], by_year: { [year]: { by_race: { White|Black|Hispanic: {
-  //       search_rate, contraband_hit_rate, total_stops, stop_share_pct } } } } }
-  // Then ContrabandScatterChart gets a year toggle with tweened bubble positions
-  // over a domain fixed across all years. Degrade to the 2025-only raceSummary
-  // when the file is absent. See project_outcome_toggle_spec memory.
 
   const raceSummary = shapeRaceSummary(raceRaw);
   return {
     disparity: shapeDisparity(disparityRaw),
     searchReasons: shapeSearchReasons(searchRaw),
     raceSummary,
+    outcomeByYear: outcomeRaw ? shapeOutcomeByYear(outcomeRaw, raceSummary) : null,
     agenciesReporting: reportingRaw ? shapeAgenciesReporting(reportingRaw) : [],
     reportingChurn: reportingRaw ? shapeReportingChurn(reportingRaw) : null,
   };
