@@ -122,21 +122,24 @@
     const half = MIN_GAP / 2;
     return sy <= py ? [mid - half, mid + half] : [mid + half, mid - half];
   };
-  // Start labels: when the two lines sit far enough apart (per-panel "fit"
-  // view), tuck each label INSIDE the gap — the upper line's label rides just
-  // below it, the lower's just above — so e.g. the Black stop-share label sits
-  // under its line. When the lines crowd together (shared scale), fall back to
-  // spreading the pair OUTWARD so they never collide. Returns [stopY, popY].
+  // Start labels: when the lines sit far enough apart, the POPULATION label
+  // rides on the OUTER side (away from the stop-share line) and the stop-share
+  // label tucks toward it — so the Black stop-share label sits below its line
+  // (stops on top) and the White stop-share label sits above its line (stops
+  // below). When the lines crowd together, spread the pair outward so the two
+  // never collide. Returns [stopY, popY].
   const startYs = (stopV, popV, p) => {
     const s = yOf(stopV, p);
     const q = yOf(popV, p);
-    const upperIsStop = s <= q;
-    const upperY = Math.min(s, q);
-    const lowerY = Math.max(s, q);
-    const inside = lowerY - upperY >= 40;
-    const upLabel = inside ? upperY + 13 : upperY - 6;
-    const loLabel = inside ? lowerY - 6 : lowerY + 13;
-    return upperIsStop ? [upLabel, loLabel] : [loLabel, upLabel];
+    const stopsUpper = s < q;
+    if (Math.abs(s - q) >= 30) {
+      const stopY = stopsUpper ? s + 13 : s - 6; // toward population
+      const popY = stopsUpper ? q + 13 : q - 6; // away from stops
+      return [stopY, popY];
+    }
+    const stopY = stopsUpper ? s - 6 : s + 13;
+    const popY = stopsUpper ? q + 13 : q - 6;
+    return [stopY, popY];
   };
 
   // Floating tooltip + vertical locator, relative to the hovered panel.
