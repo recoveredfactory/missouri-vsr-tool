@@ -22,8 +22,12 @@
   export let labels = {
     x: "More searches",
     y: "More contraband found",
-    bubbleNote: "Bubble size ∝ total stops",
   };
+
+  // Compact stop count for the annotation, so the bubble area never needs a
+  // separate "∝ total stops" legend — the number carries the scale.
+  const fmtStops = (n) =>
+    n >= 1e6 ? `${(n / 1e6).toFixed(1)}M` : n >= 1e3 ? `${Math.round(n / 1e3)}k` : `${n}`;
 
   const RACE_ORDER = ["White", "Black", "Hispanic"];
   const orderPts = (pts) =>
@@ -108,7 +112,7 @@
   const hideTip = () => (tip = null);
 </script>
 
-<div class="tip-host relative not-prose">
+<div class="tip-host relative mx-auto max-w-md not-prose">
   {#if toggle}
     <div class="mb-1 flex items-center justify-end gap-2">
       <span class="mr-1 text-xs font-medium uppercase tracking-wide text-slate-400">Year</span>
@@ -146,8 +150,6 @@
     <text x={pad.left + plotW / 2} y={H - 8} text-anchor="middle" font-size="13" font-weight="700" fill="#475569">{labels.x} →</text>
     <text transform="rotate(-90)" x={-(pad.top + plotH / 2)} y="15" text-anchor="middle" font-size="13" font-weight="700" fill="#475569">{labels.y} →</text>
 
-    <text x={pad.left + plotW} y={pad.top - 8} text-anchor="end" font-size="10.5" fill="#94a3b8" font-style="italic">{labels.bubbleNote}</text>
-
     <!-- Bubbles + labels. Labels ride with their dots: in toggle mode the
          position comes from the tween, so the label stays glued to its bubble
          in every frame; the readout numbers snap to the selected year. -->
@@ -162,6 +164,7 @@
       <text x={p.bx} y={p.name} text-anchor={p.anchor} font-size="13.5" font-weight="700" fill={c}>{d.race}</text>
       <text x={p.bx} y={p.name + 15} text-anchor={p.anchor} font-size="11.5" fill="#475569">{d.search_rate.toFixed(1)} searches / 100 stops</text>
       <text x={p.bx} y={p.name + 29} text-anchor={p.anchor} font-size="11.5" fill="#475569">Contraband found: {d.contraband_hit_rate.toFixed(0)}%</text>
+      <text x={p.bx} y={p.name + 43} text-anchor={p.anchor} font-size="11.5" fill="#94a3b8">{fmtStops(d.total_stops)} stops total (bubble size)</text>
     {/each}
   </svg>
   <ChartTooltip {tip} />

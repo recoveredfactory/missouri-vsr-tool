@@ -67,7 +67,7 @@
 <svg viewBox="0 0 {W} {H}" class="h-auto w-full" role="img">
   <!-- y gridlines + labels (a light scale to read the bars against) -->
   {#each yTicks as t}
-    <line x1={pad.left} y1={yOf(t)} x2={pad.left + plotW} y2={yOf(t)} stroke="#eef2f6" stroke-width="1" />
+    <line x1={pad.left} y1={yOf(t)} x2={pad.left + plotW} y2={yOf(t)} stroke="#e2e8f0" stroke-width="1" />
     <text x={pad.left - 6} y={yOf(t) + 3.5} text-anchor="end" font-size="10" fill="#94a3b8">{t}</text>
   {/each}
 
@@ -101,7 +101,7 @@
   {/each}
 
   <!-- baseline -->
-  <line x1={pad.left} y1={baseY} x2={pad.left + plotW} y2={baseY} stroke="#cbd5e1" stroke-width="1" />
+  <line x1={pad.left} y1={baseY} x2={pad.left + plotW} y2={baseY} stroke="#94a3b8" stroke-width="1" />
 </svg>
 <ChartTooltip {tip} />
 </div>

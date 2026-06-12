@@ -15,19 +15,18 @@
     { key: "searches", label: "Searches" },
     { key: "arrests", label: "Arrests" },
   ];
-  // The word "parity" rides under the 1× tick in the y-axis gutter, where it
-  // labels the dashed parity line without ever being written over by a data
-  // line (the old in-plot label collided with the White line, which hugs 1×).
+  // "parity" rides under the 1× tick in the y-axis gutter, labeling the dashed
+  // parity line without ever being written over by a data line.
   export let parityLabel = "parity";
 
   $: yrs = years.filter((y) => y >= startYear);
 
-  // Wider-than-tall panels read better and stack shorter on mobile. The right
-  // margin carries the end-of-line labels — wide enough for the Black label,
+  // Wider-than-tall panels, taller than before for more vertical room. The
+  // right margin carries the end labels — wide enough for the Black label,
   // which spells out "× share of population" on a second line.
   const W = 280;
-  const H = 200;
-  const pad = { top: 18, right: 108, bottom: 28, left: 34 };
+  const H = 230;
+  const pad = { top: 18, right: 108, bottom: 30, left: 34 };
   const plotW = W - pad.left - pad.right;
   const plotH = H - pad.top - pad.bottom;
   const baseY = pad.top + plotH;
@@ -56,16 +55,16 @@
   // Whole-number axis ticks (0×, 1×, 2× …).
   $: yTicks = Array.from({ length: Math.floor(yMax) + 1 }, (_, i) => i);
 
-  // Labels stack in a FIXED top→bottom order — Black, then Hispanic, then White
-  // — so the three never swap places from panel to panel (White always sits
-  // below Hispanic). Each starts at its own dot and is only pushed DOWN to keep
-  // the order and a minimum gap; Black gets extra room for its second line.
+  // END labels stack in a FIXED top→bottom order — Black, Hispanic, White — so
+  // they never swap panel to panel (White always below Hispanic). Each starts
+  // at its dot and is only pushed DOWN to keep order + a min gap; Black gets
+  // extra room for its second line.
   const ORDER = ["Black", "Hispanic", "White"];
   const GAP = 12;
-  const orderedLabels = (metricKey, idx, off, blackTwoLine) => {
+  const endLabels = (metricKey) => {
     const items = ORDER.map((race) => {
-      const v = seriesFor(metricKey, race)[idx];
-      return v == null ? null : { race, v, c: raceColor(race), y: yOf(v) + off, two: blackTwoLine && race === "Black" };
+      const v = seriesFor(metricKey, race)[n - 1];
+      return v == null ? null : { race, v, c: raceColor(race), y: yOf(v) + 4, two: race === "Black" };
     }).filter(Boolean);
     for (let i = 1; i < items.length; i++) {
       const need = items[i - 1].y + GAP + (items[i - 1].two ? 9 : 0);
@@ -74,7 +73,26 @@
     return items;
   };
 
-  // Floating tooltip — positioned relative to the hovered panel's .tip-host.
+  // START labels follow NATURAL order: each value-only label sits beside its own
+  // dot, with the LOWEST of the three tucked below its line and the others above
+  // — so White rides below the line only when it actually starts below Hispanic.
+  const startLabels = (metricKey) => {
+    const items = races
+      .map((race) => {
+        const v = seriesFor(metricKey, race)[0];
+        return v == null ? null : { race, v, c: raceColor(race) };
+      })
+      .filter(Boolean);
+    if (!items.length) return [];
+    const minV = Math.min(...items.map((it) => it.v));
+    items.forEach((it) => (it.y = it.v === minV ? yOf(it.v) + 13 : yOf(it.v) - 6));
+    items.sort((a, b) => a.y - b.y);
+    for (let i = 1; i < items.length; i++)
+      if (items[i].y - items[i - 1].y < 11) items[i].y = items[i - 1].y + 11;
+    return items;
+  };
+
+  // Floating tooltip + vertical locator, relative to the hovered panel.
   let tip = null;
   const showTip = (e, pi, payload) => {
     const host = e.currentTarget.closest(".tip-host");
@@ -93,32 +111,38 @@
       const v = seriesFor(metricKey, race)[i];
       return v == null ? null : { label: race, value: `${v.toFixed(1)}×`, color: raceColor(race) };
     }).filter(Boolean);
+
+  $: yearTick = (yr, i) => i === 0 || i === n - 1 || yr % 3 === 0;
 </script>
 
 <div class="grid gap-6 sm:grid-cols-3 sm:gap-5">
   {#each metrics as mtr, mi}
     <div class="tip-host relative {mi > 0 ? 'border-t border-slate-200 pt-6 sm:border-0 sm:pt-0' : ''}">
-      <div class="mb-1 text-center text-[0.95rem] font-bold text-slate-900">{mtr.label}</div>
+      <div class="mb-1 text-center text-[1.05rem] font-bold text-slate-900">{mtr.label}</div>
       <svg viewBox="0 0 {W} {H}" class="h-auto w-full" role="img">
+        <!-- vertical locator (behind the data) -->
+        {#if tip && tip.pi === mi && tip.lx != null}
+          <line x1={tip.lx} y1={pad.top} x2={tip.lx} y2={baseY} stroke="#94a3b8" stroke-width="1" opacity="0.55" />
+        {/if}
+
         <!-- axes: y spine + bottom x line -->
-        <line x1={pad.left} y1={pad.top} x2={pad.left} y2={baseY} stroke="#cbd5e1" stroke-width="1" />
-        <line x1={pad.left} y1={baseY} x2={pad.left + plotW} y2={baseY} stroke="#cbd5e1" stroke-width="1" />
+        <line x1={pad.left} y1={pad.top} x2={pad.left} y2={baseY} stroke="#94a3b8" stroke-width="1" />
+        <line x1={pad.left} y1={baseY} x2={pad.left + plotW} y2={baseY} stroke="#94a3b8" stroke-width="1" />
         {#each yTicks as t}
           <line x1={pad.left - 3} y1={yOf(t)} x2={pad.left} y2={yOf(t)} stroke="#94a3b8" stroke-width="1" />
           <text x={pad.left - 6} y={yOf(t) + 3.5} text-anchor="end" font-size="9.5" fill="#64748b">{t}×</text>
-          <!-- the parity line is the 1× tick — name it once, in the gutter -->
           {#if t === 1}
-            <text x={pad.left - 6} y={yOf(t) + 13} text-anchor="end" font-size="8" fill="#94a3b8" font-style="italic">{parityLabel}</text>
+            <text x={pad.left - 6} y={yOf(t) + 13} text-anchor="end" font-size="9" fill="#94a3b8" font-style="italic">{parityLabel}</text>
           {/if}
         {/each}
 
         <!-- parity line at 1.0× -->
         <line x1={pad.left} y1={yOf(1)} x2={pad.left + plotW} y2={yOf(1)} stroke="#475569" stroke-width="1" stroke-dasharray="4 3" />
 
-        <!-- year ticks: first + last -->
+        <!-- year ticks: first, last, and a few in between -->
         {#each yrs as yr, i}
-          {#if i === 0 || i === n - 1}
-            <text x={x(i)} y={baseY + 16} text-anchor={i === 0 ? "start" : "end"} font-size="11" fill="#64748b">{yr}</text>
+          {#if yearTick(yr, i)}
+            <text x={x(i)} y={baseY + 16} text-anchor={i === 0 ? "start" : i === n - 1 ? "end" : "middle"} font-size="11" fill="#64748b">{yr}</text>
           {/if}
         {/each}
 
@@ -134,24 +158,24 @@
           {/if}
         {/each}
 
-        <!-- start-of-line value labels (first dots), fixed order, above the line -->
-        {#each orderedLabels(mtr.key, 0, -5, false) as lab}
-          <text x={x(0) + 5} y={lab.y} font-size="9.5" font-weight="600" fill={lab.c}>{lab.v.toFixed(1)}×</text>
+        <!-- start-of-line value labels (first dots), natural order -->
+        {#each startLabels(mtr.key) as lab}
+          <text x={x(0) + 5} y={lab.y} font-size="10.5" font-weight="600" fill={lab.c}>{lab.v.toFixed(1)}×</text>
         {/each}
 
         <!-- end-of-line labels: fixed order; Black spells out the unit -->
-        {#each orderedLabels(mtr.key, n - 1, 3.5, true) as lab}
-          <text x={x(n - 1) + 6} y={lab.y} font-size="10.5" font-weight="700" fill={lab.c}>{lab.race} {lab.v.toFixed(1)}×</text>
+        {#each endLabels(mtr.key) as lab}
+          <text x={x(n - 1) + 6} y={lab.y} font-size="11.5" font-weight="700" fill={lab.c}>{lab.race} {lab.v.toFixed(1)}×</text>
           {#if lab.two}
-            <text x={x(n - 1) + 6} y={lab.y + 10} font-size="8" fill="#94a3b8">share of population</text>
+            <text x={x(n - 1) + 6} y={lab.y + 11} font-size="9" fill="#94a3b8">share of population</text>
           {/if}
         {/each}
 
-        <!-- per-year hover columns drive the floating tooltip -->
+        <!-- per-year hover columns drive the floating tooltip + locator -->
         {#each yrs as yr, i}
           {@const bw = n > 1 ? plotW / (n - 1) : plotW}
           <rect x={x(i) - bw / 2} y={pad.top} width={bw} height={plotH} fill="transparent"
-                on:pointermove={(e) => showTip(e, mi, { title: yr, rows: tipRows(mtr.key, i) })}
+                on:pointermove={(e) => showTip(e, mi, { title: yr, lx: x(i), rows: tipRows(mtr.key, i) })}
                 on:pointerleave={hideTip} />
         {/each}
       </svg>

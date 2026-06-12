@@ -124,7 +124,7 @@ The share of Hispanic drivers has risen steadily and is now almost double what i
 
 <Figure
   title="Stop share vs. population share, by race"
-  caption="Solid: share of traffic stops. Dashed: share of the 16-and-over population. Each panel has its own vertical scale — compare a line to its own population line, not across panels."
+  caption="Solid: share of traffic stops. Dashed: share of the 16-and-over population. Panels share one vertical scale, so shares are comparable across races and the lines look flat — read the labeled change; switch to “Fit each” to zoom every panel to its own range."
   wide
   flush
   source={sourceBundle}
@@ -165,7 +165,7 @@ Searches during stops of Black drivers and Hispanic drivers were more frequent t
 
 <Figure
   title="The outcome test"
-  caption="Each group placed by how often its drivers are searched (left to right) against how often those searches find contraband (bottom to top). Bubble size reflects total stops. Toggle between 2023 and 2025 — contraband-found counts are only apples-to-apples from 2023 on (a 2023 reporting change), so we compare across that window."
+  caption="Each group placed by how often its drivers are searched (left to right) against how often those searches find contraband (bottom to top). Toggle between 2023 and 2025 — contraband-found counts are only apples-to-apples from 2023 on (a 2023 reporting change), so we compare across that window."
   flush
   source={sourceBundle}
   summary="Scatter plot of search rate against contraband hit rate by race, with a toggle between 2023 and 2025; in both years White drivers are searched least but found with contraband most often, while Hispanic drivers are searched most yet found with contraband least often.">

@@ -92,10 +92,11 @@
   $: i2022 = years.indexOf(2022);
   $: i2023 = years.indexOf(2023);
   $: cannabisX = i2023 >= 0 ? x(i2023) : i2022 >= 0 ? x(i2022) : null;
-  // Show first, last, the 2023 effect year, and every fifth year.
+  // Show first, last, the 2023 effect year, and the even years (skipping 2024
+  // so it doesn't crowd the 2025 endpoint).
   $: yearTicks = years
     .map((yr, i) => ({ yr, i }))
-    .filter(({ yr, i }) => yr % 5 === 0 || yr === 2023 || i === 0 || i === n - 1);
+    .filter(({ yr, i }) => i === 0 || i === n - 1 || yr === 2023 || (yr % 2 === 0 && yr !== 2024));
   $: fmt = (v) => (v >= 1000 ? `${Math.round(v / 1000)}k` : `${v}`);
 
   // Floating tooltip — positioned relative to the .tip-host wrapper.
@@ -122,7 +123,7 @@
   <svg viewBox="0 0 {W} {H}" class="h-auto w-full" role="img">
     <!-- y grid + labels -->
     {#each [0, 0.5, 1] as t}
-      <line x1={pad.left} y1={y(yMax * t)} x2={pad.left + plotW} y2={y(yMax * t)} stroke="#eef2f6" stroke-width="1" />
+      <line x1={pad.left} y1={y(yMax * t)} x2={pad.left + plotW} y2={y(yMax * t)} stroke="#e2e8f0" stroke-width="1" />
       <text x={pad.left - 7} y={y(yMax * t) + 4} text-anchor="end" font-size="12.5" fill="#94a3b8">{fmt(yMax * t)}</text>
     {/each}
 
@@ -159,11 +160,16 @@
       <text x={x(i)} y={pad.top + plotH + 19} text-anchor="middle" font-size="11.5" fill="#64748b">{yr}</text>
     {/each}
 
-    <!-- per-year hover columns drive the floating tooltip -->
+    <!-- vertical locator on hover (over the bands, under the tooltip) -->
+    {#if tip && tip.lx != null}
+      <line x1={tip.lx} y1={pad.top} x2={tip.lx} y2={pad.top + plotH} stroke="#1e293b" stroke-width="1" opacity="0.4" />
+    {/if}
+
+    <!-- per-year hover columns drive the floating tooltip + locator -->
     {#each years as yr, i}
       {@const bw = n > 1 ? plotW / (n - 1) : plotW}
       <rect x={x(i) - bw / 2} y={pad.top} width={bw} height={plotH} fill="transparent"
-            on:pointermove={(e) => showTip(e, { title: yr, rows: tipRows(i) })}
+            on:pointermove={(e) => showTip(e, { title: yr, lx: x(i), rows: tipRows(i) })}
             on:pointerleave={hideTip} />
     {/each}
   </svg>
