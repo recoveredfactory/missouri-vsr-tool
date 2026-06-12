@@ -55,17 +55,21 @@
   // Whole-number axis ticks (0×, 1×, 2× …).
   $: yTicks = Array.from({ length: Math.floor(yMax) + 1 }, (_, i) => i);
 
-  // END labels stack in a FIXED top→bottom order — Black, Hispanic, White — so
-  // they never swap panel to panel (White always below Hispanic). Each starts
-  // at its dot and is only pushed DOWN to keep order + a min gap; Black gets
-  // extra room for its second line.
-  const ORDER = ["Black", "Hispanic", "White"];
+  const ORDER = ["Black", "Hispanic", "White"]; // tooltip row order
   const GAP = 12;
+
+  // END labels follow NATURAL order — each sits beside its own dot, so the label
+  // stack matches the line stack (e.g. on Stops, White's 1.0× rides above
+  // Hispanic's 0.8×). Pushed down only to keep a min gap; Black gets extra room
+  // for its second line.
   const endLabels = (metricKey) => {
-    const items = ORDER.map((race) => {
-      const v = seriesFor(metricKey, race)[n - 1];
-      return v == null ? null : { race, v, c: raceColor(race), y: yOf(v) + 4, two: race === "Black" };
-    }).filter(Boolean);
+    const items = races
+      .map((race) => {
+        const v = seriesFor(metricKey, race)[n - 1];
+        return v == null ? null : { race, v, c: raceColor(race), y: yOf(v) + 4, two: race === "Black" };
+      })
+      .filter(Boolean)
+      .sort((a, b) => a.y - b.y);
     for (let i = 1; i < items.length; i++) {
       const need = items[i - 1].y + GAP + (items[i - 1].two ? 9 : 0);
       if (items[i].y < need) items[i].y = need;
@@ -73,9 +77,10 @@
     return items;
   };
 
-  // START labels follow NATURAL order: each value-only label sits beside its own
-  // dot, with the LOWEST of the three tucked below its line and the others above
-  // — so White rides below the line only when it actually starts below Hispanic.
+  // START labels: Black always rides BELOW its dot (open space under the top
+  // line); of the remaining two, the lower-starting one tucks below its line and
+  // the higher one above — so White rides below only when it starts below
+  // Hispanic.
   const startLabels = (metricKey) => {
     const items = races
       .map((race) => {
@@ -84,8 +89,12 @@
       })
       .filter(Boolean);
     if (!items.length) return [];
-    const minV = Math.min(...items.map((it) => it.v));
-    items.forEach((it) => (it.y = it.v === minV ? yOf(it.v) + 13 : yOf(it.v) - 6));
+    const nonBlack = items.filter((it) => it.race !== "Black").map((it) => it.v);
+    const minNonBlack = nonBlack.length ? Math.min(...nonBlack) : Infinity;
+    items.forEach((it) => {
+      const below = it.race === "Black" || it.v === minNonBlack;
+      it.y = below ? yOf(it.v) + 13 : yOf(it.v) - 6;
+    });
     items.sort((a, b) => a.y - b.y);
     for (let i = 1; i < items.length; i++)
       if (items[i].y - items[i - 1].y < 11) items[i].y = items[i - 1].y + 11;

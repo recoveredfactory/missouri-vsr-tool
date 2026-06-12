@@ -66,15 +66,23 @@
     return { lo, hi };
   };
 
-  // Shared range: 0 → the rounded global max, so every panel reads on one scale.
-  $: sharedBounds = (() => {
-    let hi = 0;
+  // Shared scale = one common SPAN (the same number of points per panel), each
+  // window centered on that race's own band. Slopes are directly comparable
+  // across panels, but the lines still fill their panel (a 1-point move looks
+  // the same size everywhere) instead of being flattened onto a 0–90% axis.
+  $: sharedSpan = (() => {
+    let maxRange = 0;
     for (const race of races) {
       const r = rangeFor(race);
-      if (isFinite(r.hi)) hi = Math.max(hi, r.hi);
+      if (isFinite(r.lo)) maxRange = Math.max(maxRange, r.hi - r.lo);
     }
-    return { yMin: 0, yMax: Math.max(10, Math.ceil(hi / 10) * 10) };
+    return Math.max(2, Math.ceil((maxRange * 1.3) / 2) * 2); // headroom, snapped even
   })();
+  const sharedWindow = (lo, hi, span) => {
+    let yMin = Math.floor((lo + hi) / 2 - span / 2);
+    if (yMin < 0) yMin = 0;
+    return { yMin, yMax: yMin + span };
+  };
 
   // Relative change from first to last non-null value in a series.
   const pctChange = (vals) => {
@@ -85,16 +93,20 @@
   const fmtPct = (v) =>
     v == null ? "—" : `${v >= 0 ? "↑ up" : "↓ down"} ${Math.round(Math.abs(v))}%`;
 
-  const buildPanel = (race, shared, sBounds) => {
+  const buildPanel = (race, shared, span) => {
     const stops = yrs.map((y) => metric?.[race]?.[y]?.share_pct ?? null);
     const pop = yrs.map((y) => metric?.[race]?.[y]?.pop_pct_16plus ?? null);
     const { lo, hi } = rangeFor(race);
     const change = { stops: pctChange(stops), pop: pctChange(pop) };
-    const bounds = shared ? sBounds : isFinite(lo) ? niceBounds(lo, hi) : { yMin: 0, yMax: 5 };
+    const bounds = !isFinite(lo)
+      ? { yMin: 0, yMax: 5 }
+      : shared
+        ? sharedWindow(lo, hi, span)
+        : niceBounds(lo, hi);
     return { race, stops, pop, change, ...bounds };
   };
-  // sharedScale + sharedBounds referenced here so the toggle recomputes panels.
-  $: panels = races.map((race) => buildPanel(race, sharedScale, sharedBounds));
+  // sharedScale + sharedSpan referenced here so the toggle recomputes panels.
+  $: panels = races.map((race) => buildPanel(race, sharedScale, sharedSpan));
 
   const yOf = (v, p) => pad.top + (1 - (v - p.yMin) / (p.yMax - p.yMin)) * plotH;
   const linePts = (vals, p) =>

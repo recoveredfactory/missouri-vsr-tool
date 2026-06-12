@@ -124,7 +124,7 @@ The share of Hispanic drivers has risen steadily and is now almost double what i
 
 <Figure
   title="Stop share vs. population share, by race"
-  caption="Solid: share of traffic stops. Dashed: share of the 16-and-over population. Panels share one vertical scale, so shares are comparable across races and the lines look flat — read the labeled change; switch to “Fit each” to zoom every panel to its own range."
+  caption="Solid: share of traffic stops. Dashed: share of the 16-and-over population. Every panel spans the same number of points — just centered on each race's own band — so the slopes are directly comparable across races; switch to “Fit each” to zoom each panel as tight as its data allows."
   wide
   flush
   source={sourceBundle}
