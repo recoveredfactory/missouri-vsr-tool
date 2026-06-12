@@ -176,7 +176,7 @@ Searches during stops of Black drivers and Hispanic drivers were more frequent t
 
 This gap doesn't move cleanly in one direction across the two years we can compare: the search-rate gap for Hispanic drivers widens a little, while on the contraband side both Black and Hispanic drivers edge slightly closer to White drivers' hit rate. What's striking is less any single year's wobble than how durable the shape is — searched more, found with less. As of 2025, White drivers are searched at a lower rate but are found with contraband at the highest rate of all races; Hispanic drivers are searched the most yet least often found with contraband.
 
-The outcome test is a useful lens rather than a verdict: economists have argued ever since over exactly what a hit-rate gap does and doesn't prove.
+The outcome test is a useful lens rather than a verdict.
 
 ## Want to dig deeper?
 
