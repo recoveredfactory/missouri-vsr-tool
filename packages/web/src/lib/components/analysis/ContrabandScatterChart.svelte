@@ -137,7 +137,9 @@
       {@const c = raceColor(d.race)}
       {@const rad = r(d.total_stops)}
       {@const p = place(d.race, cx, cy, rad)}
-      <circle {cx} {cy} r={rad} fill={c} fill-opacity="0.16" stroke={c} stroke-width="2" />
+      <circle {cx} {cy} r={rad} fill={c} fill-opacity="0.16" stroke={c} stroke-width="2">
+        <title>{d.race} — {d.search_rate.toFixed(1)} searches / 100 stops, contraband found {d.contraband_hit_rate.toFixed(0)}%, {d.total_stops.toLocaleString()} stops</title>
+      </circle>
       <text x={p.bx} y={p.name} text-anchor={p.anchor} font-size="13.5" font-weight="700" fill={c}>{d.race}</text>
       <text x={p.bx} y={p.name + 15} text-anchor={p.anchor} font-size="11.5" fill="#475569">{d.search_rate.toFixed(1)} searches / 100 stops</text>
       <text x={p.bx} y={p.name + 29} text-anchor={p.anchor} font-size="11.5" fill="#475569">Contraband found: {d.contraband_hit_rate.toFixed(0)}%</text>

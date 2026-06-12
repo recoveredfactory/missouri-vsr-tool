@@ -21,10 +21,13 @@
 
   $: yrs = years.filter((y) => y >= startYear);
 
-  // Wider-than-tall panels read better and stack shorter on mobile.
-  const W = 304;
+  // Wider-than-tall panels read better and stack shorter on mobile. The right
+  // margin is generous so the end-of-line value labels ("75.8% stops") sit
+  // fully inside the viewBox — on a phone, where panels go full-width, a tight
+  // margin clipped the trailing word.
+  const W = 326;
   const H = 180;
-  const pad = { top: 16, right: 84, bottom: 26, left: 30 };
+  const pad = { top: 16, right: 106, bottom: 26, left: 30 };
   const plotW = W - pad.left - pad.right;
   const plotH = H - pad.top - pad.bottom;
   const baseY = pad.top + plotH;
@@ -95,7 +98,7 @@
     vals.map((v, i) => (v == null ? null : `${x(i)},${yOf(v, p)}`)).filter(Boolean).join(" ");
 
   // Endpoint labels can collide within a narrow band; nudge them apart.
-  const MIN_GAP = 13;
+  const MIN_GAP = 14;
   const endpointLabelYs = (stopV, popV, p) => {
     const sy = yOf(stopV, p) + 4;
     const py = yOf(popV, p) + 4;
@@ -145,9 +148,17 @@
         <!-- end-of-line value labels (race carried by the panel header) -->
         {#if p.stops[n - 1] != null && p.pop[n - 1] != null}
           {@const ys = endpointLabelYs(p.stops[n - 1], p.pop[n - 1], p)}
-          <text x={x(n - 1) + 7} y={ys[0]} font-size="11" font-weight="700" fill={c}>{p.stops[n - 1].toFixed(1)}% stops</text>
-          <text x={x(n - 1) + 7} y={ys[1]} font-size="11" font-weight="600" fill="#64748b">{p.pop[n - 1].toFixed(1)}% pop.</text>
+          <text x={x(n - 1) + 7} y={ys[0]} font-size="10.5" font-weight="700" fill={c}>{p.stops[n - 1].toFixed(1)}% stops</text>
+          <text x={x(n - 1) + 7} y={ys[1]} font-size="10.5" font-weight="600" fill="#64748b">{p.pop[n - 1].toFixed(1)}% pop.</text>
         {/if}
+
+        <!-- per-year hover columns: a native tooltip with both values -->
+        {#each yrs as yr, i}
+          {@const bw = n > 1 ? plotW / (n - 1) : plotW}
+          <rect x={x(i) - bw / 2} y={pad.top} width={bw} height={plotH} fill="transparent">
+            <title>{yr} — {p.stops[i] != null ? p.stops[i].toFixed(1) + "% of stops" : "no stop data"}, {p.pop[i] != null ? p.pop[i].toFixed(1) + "% of population" : "no population data"}</title>
+          </rect>
+        {/each}
       </svg>
     </div>
   {/each}

@@ -87,7 +87,7 @@
   @media (min-width: 640px) {
     :global(.article-prose > p) {
       margin-bottom: 1.75rem;
-      font-size: 1.25rem; /* ~20px */
+      font-size: 1.1875rem; /* ~19px — nudged down from 20px per editorial */
     }
     :global(.article-prose > h2) {
       font-size: 1.875rem;

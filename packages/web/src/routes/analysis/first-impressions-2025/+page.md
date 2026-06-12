@@ -43,7 +43,7 @@ authors:
     return `${analysis_byline_prefix()} ${joined}`;
   };
 
-  const sourceBundle = "Source: Missouri Vehicle Stops Report v2.2 analysis bundle (initial-impressions-2025), cross-checked against the Missouri AG's statewide annual report.";
+  const sourceBundle = "Source: Missouri Attorney General's Vehicle Stops Report, processed by Recovered Factory.";
 
   // Churn headline numbers, wired to the bundle's reportingChurn block so the
   // prose tracks the data. Fallbacks match the v2.2 values, so the paragraphs
@@ -97,6 +97,7 @@ Please [support our work](https://grupovisual.org) and [subscribe to our newslet
 When we started looking at this data in 2025, we noticed that there was a dip in the number of agencies reporting 2024 data, but we were focused on just extracting the data and preparing it for release and didn't look into why.
 
 <Figure
+  title="Agencies filing a vehicle-stops report, by year"
   flush
   source={sourceBundle}
   summary="Bar chart of the number of agencies filing a vehicle-stops report each year over the last decade. The count sits near 500–540 most years but drops sharply in 2024 before rebounding in 2025.">
@@ -151,9 +152,9 @@ Searches dropped from 6.7 per 100 stops in 2019 to 4.7 in 2025. Two forces drove
 
 <Figure
   title="Searches by reason, statewide"
-  caption="A single search can cite more than one authority, so the reasons can sum above total searches. Statewide reporting didn't break out the smell of drugs or alcohol separately from 2009 to 2017, so this view starts in 2018."
+  caption="Statewide searches each year, by the reason cited."
   flush
-  source={sourceBundle}
+  source={`${sourceBundle} A single search can cite more than one authority, so the reasons can sum above total searches; the smell-of-drugs-or-alcohol reason wasn't reported separately before 2018.`}
   summary="Stacked area of statewide searches per year from 2018 to 2025, split into consent searches, searches citing the smell of drugs or alcohol, and all other reasons.">
   <SearchVolumeAreaChart data={a.searchReasons} />
 </Figure>

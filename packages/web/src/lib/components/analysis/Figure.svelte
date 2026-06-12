@@ -35,7 +35,7 @@
   <slot />
 
   {#if source}
-    <figcaption class="mt-4 text-xs leading-relaxed text-slate-400">
+    <figcaption class="mt-4 text-[0.8125rem] leading-relaxed text-slate-500">
       {source}
     </figcaption>
   {/if}

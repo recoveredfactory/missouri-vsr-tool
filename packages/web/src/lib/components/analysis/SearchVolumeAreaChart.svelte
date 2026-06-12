@@ -18,7 +18,7 @@
     consent: "Consent",
     smell: "Smell of drugs / alcohol",
     other: "All other reasons",
-    cannabis: "Cannabis legalized",
+    cannabis: "Recreational cannabis legalized",
   };
 
   const COLORS = { other: "#cbd5e1", consent: "#0e7490", smell: "#c2410c" };
@@ -105,9 +105,13 @@
       <text x={pad.left - 7} y={y(yMax * t) + 4} text-anchor="end" font-size="12.5" fill="#94a3b8">{fmt(yMax * t)}</text>
     {/each}
 
-    <!-- bands -->
+    <!-- bands: lighter fill, with the band's own color picked out as a crisp
+         stroke along the top edge so the shape reads more from the line than
+         the wash -->
     {#each bands as band}
-      <path d={areaPath(band)} fill={band.color} opacity="0.92" />
+      <path d={areaPath(band)} fill={band.color} fill-opacity="0.55" />
+      <polyline points={band.upper.map((v, i) => `${x(i)},${y(v)}`).join(" ")}
+                fill="none" stroke={band.color} stroke-width="2.75" stroke-linejoin="round" />
     {/each}
 
     <!-- inline labels for consent + all-other, left-aligned at one column -->
@@ -131,7 +135,15 @@
 
     <!-- x ticks -->
     {#each yearTicks as { yr, i }}
-      <text x={x(i)} y={pad.top + plotH + 19} text-anchor="middle" font-size="12.5" fill="#64748b">{yr}</text>
+      <text x={x(i)} y={pad.top + plotH + 19} text-anchor="middle" font-size="11.5" fill="#64748b">{yr}</text>
+    {/each}
+
+    <!-- per-year hover columns: native tooltip with the reason breakdown -->
+    {#each years as yr, i}
+      {@const bw = n > 1 ? plotW / (n - 1) : plotW}
+      <rect x={x(i) - bw / 2} y={pad.top} width={bw} height={plotH} fill="transparent">
+        <title>{yr} — consent {fmt(stack[1].values[i])}, smell {fmt(stack[2].values[i])}, all other {fmt(stack[0].values[i])}</title>
+      </rect>
     {/each}
   </svg>
 </div>
