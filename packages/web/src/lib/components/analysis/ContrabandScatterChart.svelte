@@ -2,6 +2,7 @@
   import { raceColor } from "./colors";
   import { tweened } from "svelte/motion";
   import { cubicOut } from "svelte/easing";
+  import ChartTooltip from "./ChartTooltip.svelte";
 
   // Graphic 4 — the outcome test, drawn abstractly. The axes are directional:
   // rightward = more searches, upward = more contraband found. Each race is one
@@ -86,9 +87,28 @@
     easing: cubicOut,
   });
   $: if (toggle) motion.set(toMotion(byYear[selectedYear]));
+
+  // Floating tooltip — positioned relative to the .tip-host wrapper.
+  let tip = null;
+  const showTip = (e, d) => {
+    const host = e.currentTarget.closest(".tip-host");
+    if (!host) return;
+    const r = host.getBoundingClientRect();
+    tip = {
+      x: Math.max(90, Math.min(r.width - 90, e.clientX - r.left)),
+      y: e.clientY - r.top,
+      title: d.race,
+      rows: [
+        { label: "Searches / 100 stops", value: d.search_rate.toFixed(1), color: raceColor(d.race) },
+        { label: "Contraband found", value: `${d.contraband_hit_rate.toFixed(0)}%` },
+        { label: "Total stops", value: d.total_stops.toLocaleString() },
+      ],
+    };
+  };
+  const hideTip = () => (tip = null);
 </script>
 
-<div class="not-prose">
+<div class="tip-host relative not-prose">
   {#if toggle}
     <div class="mb-1 flex items-center justify-end gap-2">
       <span class="mr-1 text-xs font-medium uppercase tracking-wide text-slate-400">Year</span>
@@ -137,12 +157,12 @@
       {@const c = raceColor(d.race)}
       {@const rad = r(d.total_stops)}
       {@const p = place(d.race, cx, cy, rad)}
-      <circle {cx} {cy} r={rad} fill={c} fill-opacity="0.16" stroke={c} stroke-width="2">
-        <title>{d.race} — {d.search_rate.toFixed(1)} searches / 100 stops, contraband found {d.contraband_hit_rate.toFixed(0)}%, {d.total_stops.toLocaleString()} stops</title>
-      </circle>
+      <circle {cx} {cy} r={rad} fill={c} fill-opacity="0.16" stroke={c} stroke-width="2"
+              on:pointermove={(e) => showTip(e, d)} on:pointerleave={hideTip} />
       <text x={p.bx} y={p.name} text-anchor={p.anchor} font-size="13.5" font-weight="700" fill={c}>{d.race}</text>
       <text x={p.bx} y={p.name + 15} text-anchor={p.anchor} font-size="11.5" fill="#475569">{d.search_rate.toFixed(1)} searches / 100 stops</text>
       <text x={p.bx} y={p.name + 29} text-anchor={p.anchor} font-size="11.5" fill="#475569">Contraband found: {d.contraband_hit_rate.toFixed(0)}%</text>
     {/each}
   </svg>
+  <ChartTooltip {tip} />
 </div>

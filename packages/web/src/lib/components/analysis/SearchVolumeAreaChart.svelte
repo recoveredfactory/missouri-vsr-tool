@@ -1,4 +1,6 @@
 <script>
+  import ChartTooltip from "./ChartTooltip.svelte";
+
   // Graphic 3 — stacked area of statewide search volume by reason
   // (consent / smell of drugs or alcohol / all other), per year.
   //
@@ -95,9 +97,28 @@
     .map((yr, i) => ({ yr, i }))
     .filter(({ yr, i }) => yr % 5 === 0 || yr === 2023 || i === 0 || i === n - 1);
   $: fmt = (v) => (v >= 1000 ? `${Math.round(v / 1000)}k` : `${v}`);
+
+  // Floating tooltip — positioned relative to the .tip-host wrapper.
+  let tip = null;
+  const showTip = (e, payload) => {
+    const host = e.currentTarget.closest(".tip-host");
+    if (!host) return;
+    const r = host.getBoundingClientRect();
+    tip = {
+      x: Math.max(80, Math.min(r.width - 80, e.clientX - r.left)),
+      y: e.clientY - r.top,
+      ...payload,
+    };
+  };
+  const hideTip = () => (tip = null);
+  const tipRows = (i) => [
+    { label: "Consent", value: stack[1].values[i].toLocaleString(), color: COLORS.consent },
+    { label: "Smell of drugs / alcohol", value: stack[2].values[i].toLocaleString(), color: COLORS.smell },
+    { label: "All other reasons", value: stack[0].values[i].toLocaleString(), color: COLORS.other },
+  ];
 </script>
 
-<div class="mx-auto max-w-xl">
+<div class="tip-host relative mx-auto max-w-xl">
   <svg viewBox="0 0 {W} {H}" class="h-auto w-full" role="img">
     <!-- y grid + labels -->
     {#each [0, 0.5, 1] as t}
@@ -138,12 +159,13 @@
       <text x={x(i)} y={pad.top + plotH + 19} text-anchor="middle" font-size="11.5" fill="#64748b">{yr}</text>
     {/each}
 
-    <!-- per-year hover columns: native tooltip with the reason breakdown -->
+    <!-- per-year hover columns drive the floating tooltip -->
     {#each years as yr, i}
       {@const bw = n > 1 ? plotW / (n - 1) : plotW}
-      <rect x={x(i) - bw / 2} y={pad.top} width={bw} height={plotH} fill="transparent">
-        <title>{yr} — consent {fmt(stack[1].values[i])}, smell {fmt(stack[2].values[i])}, all other {fmt(stack[0].values[i])}</title>
-      </rect>
+      <rect x={x(i) - bw / 2} y={pad.top} width={bw} height={plotH} fill="transparent"
+            on:pointermove={(e) => showTip(e, { title: yr, rows: tipRows(i) })}
+            on:pointerleave={hideTip} />
     {/each}
   </svg>
+  <ChartTooltip {tip} />
 </div>

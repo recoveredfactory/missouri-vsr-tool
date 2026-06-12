@@ -1,4 +1,6 @@
 <script>
+  import ChartTooltip from "./ChartTooltip.svelte";
+
   // Agencies filing a report each year. Just the absolute count per year — the
   // story is the 2024 dip and the 2025 rebound. Every bar is the site's dark
   // brand green; the anomalous 2024 year (and that year alone) is a brighter
@@ -40,6 +42,20 @@
   $: dipIdx = data.findIndex((d) => d.year === dipYear);
   // The note reads as two lines, split on its em dash.
   $: noteLines = note ? note.split(" — ") : [];
+
+  // Floating tooltip — positioned relative to the .tip-host wrapper.
+  let tip = null;
+  const showTip = (e, payload) => {
+    const host = e.currentTarget.closest(".tip-host");
+    if (!host) return;
+    const r = host.getBoundingClientRect();
+    tip = {
+      x: Math.max(70, Math.min(r.width - 70, e.clientX - r.left)),
+      y: e.clientY - r.top,
+      ...payload,
+    };
+  };
+  const hideTip = () => (tip = null);
 </script>
 
 {#if !data.length}
@@ -47,7 +63,7 @@
     Chart data not yet published.
   </div>
 {:else}
-<div class="mx-auto max-w-xl">
+<div class="tip-host relative mx-auto max-w-xl">
 <svg viewBox="0 0 {W} {H}" class="h-auto w-full" role="img">
   <!-- y gridlines + labels (a light scale to read the bars against) -->
   {#each yTicks as t}
@@ -70,9 +86,13 @@
     {@const h = barH(total(d))}
     {@const y = baseY - h}
     <rect x={xCenter(i) - barW / 2} y={y} width={barW} height={h} rx="1.5"
-          fill={dip ? DIP : DARK} stroke={dip ? DIP_STROKE : "none"} stroke-width="1">
-      <title>{d.year}: {total(d)} agencies reported</title>
-    </rect>
+          fill={dip ? DIP : DARK} stroke={dip ? DIP_STROKE : "none"} stroke-width="1"
+          on:pointermove={(e) => showTip(e, { title: d.year, rows: [{ label: "Agencies reported", value: total(d), color: dip ? DIP : DARK }] })}
+          on:pointerleave={hideTip} />
+    <!-- wider invisible hit area so the thin/short bars are easy to hover -->
+    <rect x={xCenter(i) - bandW / 2} y={pad.top} width={bandW} height={plotH} fill="transparent"
+          on:pointermove={(e) => showTip(e, { title: d.year, rows: [{ label: "Agencies reported", value: total(d), color: dip ? DIP : DARK }] })}
+          on:pointerleave={hideTip} />
     {#if hasCount(d.year) || hasDesktopCount(d.year)}
       <text x={xCenter(i)} y={y - 6} text-anchor="middle" font-size="13" font-weight="700" fill={DARK}
             class={hasDesktopCount(d.year) ? "sm-up" : ""}>{total(d)}</text>
@@ -83,6 +103,7 @@
   <!-- baseline -->
   <line x1={pad.left} y1={baseY} x2={pad.left + plotW} y2={baseY} stroke="#cbd5e1" stroke-width="1" />
 </svg>
+<ChartTooltip {tip} />
 </div>
 {/if}
 

@@ -1,5 +1,6 @@
 <script>
   import { raceColor } from "./colors";
+  import ChartTooltip from "./ChartTooltip.svelte";
 
   // Graphic 1 — small multiple, one panel per race. Each panel compares a
   // race's SHARE OF STOPS (solid, race color) against its share of the
@@ -97,22 +98,43 @@
   const linePts = (vals, p) =>
     vals.map((v, i) => (v == null ? null : `${x(i)},${yOf(v, p)}`)).filter(Boolean).join(" ");
 
-  // Endpoint labels can collide within a narrow band; nudge them apart.
+  // The stop / pop value labels can collide within a narrow band; nudge them
+  // apart. `off` shifts the pair off the dots (+ below for end labels, − above
+  // for the start labels along the y-axis).
   const MIN_GAP = 14;
-  const endpointLabelYs = (stopV, popV, p) => {
-    const sy = yOf(stopV, p) + 4;
-    const py = yOf(popV, p) + 4;
+  const labelYs = (stopV, popV, p, off) => {
+    const sy = yOf(stopV, p) + off;
+    const py = yOf(popV, p) + off;
     if (Math.abs(sy - py) >= MIN_GAP) return [sy, py];
     const mid = (sy + py) / 2;
     const half = MIN_GAP / 2;
     return sy <= py ? [mid - half, mid + half] : [mid + half, mid - half];
   };
+
+  // Floating tooltip — positioned relative to the hovered panel's .tip-host.
+  let tip = null;
+  const showTip = (e, pi, payload) => {
+    const host = e.currentTarget.closest(".tip-host");
+    if (!host) return;
+    const r = host.getBoundingClientRect();
+    tip = {
+      pi,
+      x: Math.max(72, Math.min(r.width - 72, e.clientX - r.left)),
+      y: e.clientY - r.top,
+      ...payload,
+    };
+  };
+  const hideTip = () => (tip = null);
+  const tipRows = (p, i) => [
+    { label: "Share of stops", value: p.stops[i] != null ? `${p.stops[i].toFixed(1)}%` : "—", color: raceColor(p.race) },
+    { label: "Share of population", value: p.pop[i] != null ? `${p.pop[i].toFixed(1)}%` : "—", color: "#94a3b8" },
+  ];
 </script>
 
 <div class="grid gap-6 sm:grid-cols-3 sm:gap-5">
   {#each panels as p, pi}
     {@const c = raceColor(p.race)}
-    <div class={pi > 0 ? "border-t border-slate-200 pt-6 sm:border-0 sm:pt-0" : ""}>
+    <div class="tip-host relative {pi > 0 ? 'border-t border-slate-200 pt-6 sm:border-0 sm:pt-0' : ''}">
       <div class="text-center text-[0.95rem] font-bold" style="color:{c}">{p.race}</div>
       <div class="mb-1 text-center text-[0.8rem] leading-tight text-slate-500">
         stops: <span class="font-bold" style="color:{c}">{fmtPct(p.change.stops)}</span>
@@ -138,6 +160,14 @@
         <!-- stop-share line (solid, race color) -->
         <polyline fill="none" stroke={c} stroke-width="2.5" points={linePts(p.stops, p)} />
 
+        <!-- first dots -->
+        {#if p.stops[0] != null}
+          <circle cx={x(0)} cy={yOf(p.stops[0], p)} r="3" fill={c} />
+        {/if}
+        {#if p.pop[0] != null}
+          <circle cx={x(0)} cy={yOf(p.pop[0], p)} r="2.5" fill="#94a3b8" />
+        {/if}
+        <!-- last dots -->
         {#if p.stops[n - 1] != null}
           <circle cx={x(n - 1)} cy={yOf(p.stops[n - 1], p)} r="3.5" fill={c} />
         {/if}
@@ -145,21 +175,30 @@
           <circle cx={x(n - 1)} cy={yOf(p.pop[n - 1], p)} r="3" fill="#94a3b8" />
         {/if}
 
+        <!-- start-of-line value labels, lifted above the opening dots so a
+             reader can read each line's change first→last -->
+        {#if p.stops[0] != null && p.pop[0] != null}
+          {@const sy = labelYs(p.stops[0], p.pop[0], p, -7)}
+          <text x={x(0) + 5} y={sy[0]} font-size="10" font-weight="700" fill={c}>{p.stops[0].toFixed(1)}%</text>
+          <text x={x(0) + 5} y={sy[1]} font-size="10" font-weight="600" fill="#64748b">{p.pop[0].toFixed(1)}%</text>
+        {/if}
+
         <!-- end-of-line value labels (race carried by the panel header) -->
         {#if p.stops[n - 1] != null && p.pop[n - 1] != null}
-          {@const ys = endpointLabelYs(p.stops[n - 1], p.pop[n - 1], p)}
+          {@const ys = labelYs(p.stops[n - 1], p.pop[n - 1], p, 4)}
           <text x={x(n - 1) + 7} y={ys[0]} font-size="10.5" font-weight="700" fill={c}>{p.stops[n - 1].toFixed(1)}% stops</text>
           <text x={x(n - 1) + 7} y={ys[1]} font-size="10.5" font-weight="600" fill="#64748b">{p.pop[n - 1].toFixed(1)}% pop.</text>
         {/if}
 
-        <!-- per-year hover columns: a native tooltip with both values -->
+        <!-- per-year hover columns drive the floating tooltip -->
         {#each yrs as yr, i}
           {@const bw = n > 1 ? plotW / (n - 1) : plotW}
-          <rect x={x(i) - bw / 2} y={pad.top} width={bw} height={plotH} fill="transparent">
-            <title>{yr} — {p.stops[i] != null ? p.stops[i].toFixed(1) + "% of stops" : "no stop data"}, {p.pop[i] != null ? p.pop[i].toFixed(1) + "% of population" : "no population data"}</title>
-          </rect>
+          <rect x={x(i) - bw / 2} y={pad.top} width={bw} height={plotH} fill="transparent"
+                on:pointermove={(e) => showTip(e, pi, { title: yr, rows: tipRows(p, i) })}
+                on:pointerleave={hideTip} />
         {/each}
       </svg>
+      <ChartTooltip tip={tip && tip.pi === pi ? tip : null} />
     </div>
   {/each}
 </div>

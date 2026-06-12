@@ -1,5 +1,6 @@
 <script>
   import { raceColor } from "./colors";
+  import ChartTooltip from "./ChartTooltip.svelte";
 
   // Graphic 2 — small multiple, one panel per outcome (stops / searches /
   // arrests). Within each panel, the disparity index for White / Black /
@@ -18,18 +19,15 @@
   // labels the dashed parity line without ever being written over by a data
   // line (the old in-plot label collided with the White line, which hugs 1×).
   export let parityLabel = "parity";
-  // Directional cues, shown once (first panel) just inside the y-axis so a
-  // reader groks that up = more, down = less disproportionate than population
-  // alone would predict. Kept terse for mobile.
-  export let hintLines = ["↑ more often than", "population predicts"];
-  export let lowHint = "↓ less often";
 
   $: yrs = years.filter((y) => y >= startYear);
 
-  // Wider-than-tall panels read better and stack shorter on mobile.
+  // Wider-than-tall panels read better and stack shorter on mobile. The right
+  // margin carries the end-of-line labels — wide enough for the Black label,
+  // which spells out "× share of population" on a second line.
   const W = 280;
   const H = 200;
-  const pad = { top: 18, right: 92, bottom: 28, left: 34 };
+  const pad = { top: 18, right: 108, bottom: 28, left: 34 };
   const plotW = W - pad.left - pad.right;
   const plotH = H - pad.top - pad.bottom;
   const baseY = pad.top + plotH;
@@ -58,56 +56,48 @@
   // Whole-number axis ticks (0×, 1×, 2× …).
   $: yTicks = Array.from({ length: Math.floor(yMax) + 1 }, (_, i) => i);
 
-  // End-of-line labels (race + value) for the three races can collide where
-  // values are close; lay them out top-to-bottom with a minimum gap.
-  const MIN_GAP = 13;
-  const endLabels = (metricKey) => {
-    const items = races
-      .map((race) => {
-        const s = seriesFor(metricKey, race);
-        const v = s[n - 1];
-        return v == null ? null : { race, v, c: raceColor(race), y: yOf(v) + 3.5 };
-      })
-      .filter(Boolean)
-      .sort((a, b) => a.y - b.y);
-    for (let i = 1; i < items.length; i++)
-      if (items[i].y - items[i - 1].y < MIN_GAP) items[i].y = items[i - 1].y + MIN_GAP;
+  // Labels stack in a FIXED top→bottom order — Black, then Hispanic, then White
+  // — so the three never swap places from panel to panel (White always sits
+  // below Hispanic). Each starts at its own dot and is only pushed DOWN to keep
+  // the order and a minimum gap; Black gets extra room for its second line.
+  const ORDER = ["Black", "Hispanic", "White"];
+  const GAP = 12;
+  const orderedLabels = (metricKey, idx, off, blackTwoLine) => {
+    const items = ORDER.map((race) => {
+      const v = seriesFor(metricKey, race)[idx];
+      return v == null ? null : { race, v, c: raceColor(race), y: yOf(v) + off, two: blackTwoLine && race === "Black" };
+    }).filter(Boolean);
+    for (let i = 1; i < items.length; i++) {
+      const need = items[i - 1].y + GAP + (items[i - 1].two ? 9 : 0);
+      if (items[i].y < need) items[i].y = need;
+    }
     return items;
   };
 
-  // Start-of-line value labels (first dots) so a reader can read each line's
-  // change first→last. Lifted just ABOVE each opening dot (not centered on it),
-  // so the line runs below the number instead of striking through it.
-  const START_GAP = 12;
-  const startLabels = (metricKey) => {
-    const items = races
-      .map((race) => {
-        const s = seriesFor(metricKey, race);
-        const v = s[0];
-        return v == null ? null : { race, v, c: raceColor(race), y: yOf(v) - 5 };
-      })
-      .filter(Boolean)
-      .sort((a, b) => a.y - b.y);
-    for (let i = 1; i < items.length; i++)
-      if (items[i].y - items[i - 1].y < START_GAP) items[i].y = items[i - 1].y + START_GAP;
-    return items;
+  // Floating tooltip — positioned relative to the hovered panel's .tip-host.
+  let tip = null;
+  const showTip = (e, pi, payload) => {
+    const host = e.currentTarget.closest(".tip-host");
+    if (!host) return;
+    const r = host.getBoundingClientRect();
+    tip = {
+      pi,
+      x: Math.max(70, Math.min(r.width - 70, e.clientX - r.left)),
+      y: e.clientY - r.top,
+      ...payload,
+    };
   };
-
-  // Per-year hover tooltip text: all three races' disparity for one outcome/year.
-  const tipFor = (metricKey, i) =>
-    `${yrs[i]} — ` +
-    races
-      .map((race) => {
-        const v = seriesFor(metricKey, race)[i];
-        return v == null ? null : `${race} ${v.toFixed(1)}×`;
-      })
-      .filter(Boolean)
-      .join(", ");
+  const hideTip = () => (tip = null);
+  const tipRows = (metricKey, i) =>
+    ORDER.map((race) => {
+      const v = seriesFor(metricKey, race)[i];
+      return v == null ? null : { label: race, value: `${v.toFixed(1)}×`, color: raceColor(race) };
+    }).filter(Boolean);
 </script>
 
 <div class="grid gap-6 sm:grid-cols-3 sm:gap-5">
   {#each metrics as mtr, mi}
-    <div class={mi > 0 ? "border-t border-slate-200 pt-6 sm:border-0 sm:pt-0" : ""}>
+    <div class="tip-host relative {mi > 0 ? 'border-t border-slate-200 pt-6 sm:border-0 sm:pt-0' : ''}">
       <div class="mb-1 text-center text-[0.95rem] font-bold text-slate-900">{mtr.label}</div>
       <svg viewBox="0 0 {W} {H}" class="h-auto w-full" role="img">
         <!-- axes: y spine + bottom x line -->
@@ -124,14 +114,6 @@
 
         <!-- parity line at 1.0× -->
         <line x1={pad.left} y1={yOf(1)} x2={pad.left + plotW} y2={yOf(1)} stroke="#475569" stroke-width="1" stroke-dasharray="4 3" />
-
-        <!-- directional cues, first panel only (meaning is shared across panels) -->
-        {#if mi === 0}
-          {#each hintLines as line, li}
-            <text x={pad.left + 5} y={pad.top + 9 + li * 11} font-size="9" fill="#94a3b8">{line}</text>
-          {/each}
-          <text x={pad.left + 5} y={baseY - 6} font-size="9" fill="#94a3b8">{lowHint}</text>
-        {/if}
 
         <!-- year ticks: first + last -->
         {#each yrs as yr, i}
@@ -152,24 +134,28 @@
           {/if}
         {/each}
 
-        <!-- start-of-line value labels (first dots), nudged apart -->
-        {#each startLabels(mtr.key) as lab}
+        <!-- start-of-line value labels (first dots), fixed order, above the line -->
+        {#each orderedLabels(mtr.key, 0, -5, false) as lab}
           <text x={x(0) + 5} y={lab.y} font-size="9.5" font-weight="600" fill={lab.c}>{lab.v.toFixed(1)}×</text>
         {/each}
 
-        <!-- nudged end-of-line labels (race + value) -->
-        {#each endLabels(mtr.key) as lab}
+        <!-- end-of-line labels: fixed order; Black spells out the unit -->
+        {#each orderedLabels(mtr.key, n - 1, 3.5, true) as lab}
           <text x={x(n - 1) + 6} y={lab.y} font-size="10.5" font-weight="700" fill={lab.c}>{lab.race} {lab.v.toFixed(1)}×</text>
+          {#if lab.two}
+            <text x={x(n - 1) + 6} y={lab.y + 10} font-size="8" fill="#94a3b8">share of population</text>
+          {/if}
         {/each}
 
-        <!-- per-year hover columns: native tooltip with all three races -->
+        <!-- per-year hover columns drive the floating tooltip -->
         {#each yrs as yr, i}
           {@const bw = n > 1 ? plotW / (n - 1) : plotW}
-          <rect x={x(i) - bw / 2} y={pad.top} width={bw} height={plotH} fill="transparent">
-            <title>{tipFor(mtr.key, i)}</title>
-          </rect>
+          <rect x={x(i) - bw / 2} y={pad.top} width={bw} height={plotH} fill="transparent"
+                on:pointermove={(e) => showTip(e, mi, { title: yr, rows: tipRows(mtr.key, i) })}
+                on:pointerleave={hideTip} />
         {/each}
       </svg>
+      <ChartTooltip tip={tip && tip.pi === mi ? tip : null} />
     </div>
   {/each}
 </div>
