@@ -15,8 +15,8 @@
   export let desktopCountYears = [2023]; // count label shown only on wider screens
   export let note = "About 110 agencies dropped out in 2024 — and nearly all came back in 2025";
 
-  const DARK = "#1f6f43"; // site brand green — the baseline bars
-  const DIP = "#fbbf24"; // warm amber — the 2024 reporting artifact (caution)
+  const DARK = "#25784c"; // chart brand green (matches the app's chart palette) — baseline bars
+  const DIP = "#fbbf24"; // warm amber — the 2024 reporting artifact (caution; amber is the app's note/caution hue)
   const DIP_STROKE = "#f59e0b";
 
   const W = 400;

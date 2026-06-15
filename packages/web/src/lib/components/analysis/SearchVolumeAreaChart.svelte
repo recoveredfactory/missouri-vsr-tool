@@ -23,7 +23,9 @@
     cannabis: "Recreational cannabis legalized",
   };
 
-  const COLORS = { other: "#cbd5e1", consent: "#0e7490", smell: "#c2410c" };
+  // Brand-family bands: neutral grey baseline, brand green for consent, maroon
+  // for the collapsing "smell" story — consistent with the app chart palette.
+  const COLORS = { other: "#cbd5e1", consent: "#25784c", smell: "#792a3b" };
 
   const W = 440;
   const H = 300;
