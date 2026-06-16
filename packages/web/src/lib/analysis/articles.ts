@@ -30,7 +30,7 @@ export type Article = {
 export const ARTICLES: Article[] = [
   {
     slug: "first-impressions-2025",
-    date: "2026-06-09",
+    date: "2026-06-16",
     status: "published",
     titleKey: "analysis_ii2025_title",
     dekKey: "analysis_ii2025_dek",

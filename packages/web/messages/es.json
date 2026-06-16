@@ -502,6 +502,9 @@
   "home_mcp_banner_tag": "Nuevo",
   "home_mcp_banner_text": "Consulta estos datos desde tu asistente de IA — conecta el servidor MCP de VSR Missouri.",
   "home_mcp_banner_cta": "Cómo conectarlo",
+  "home_analysis_banner_tag": "Nuevo",
+  "home_analysis_banner_text": "¡Ya están los datos de 2025!",
+  "home_analysis_banner_cta": "Lee nuestro análisis",
   "home_mcp_heading": "Consulta los datos desde cualquier cliente MCP",
   "home_mcp_intro": "Conecta cualquier asistente de IA compatible con MCP —Claude Desktop, Cursor, ChatGPT y más— a estos datos. Pregunta en lenguaje natural por tendencias, comparaciones y mapas; el modelo explica qué significa cada métrica y qué no, explica las limitaciones fundamentales de los datos y comparte enlaces a recursos sobre los métodos utilizados.",
   "home_mcp_limits_heading": "Límites de uso",
@@ -536,6 +539,7 @@
   "analysis_card_kicker": "Último análisis",
   "analysis_card_cta": "Leer el análisis →",
   "analysis_ii2025_title": "Primeras impresiones del Informe de Paradas de Vehículos de Missouri 2025",
-  "analysis_ii2025_dek": "La proporción de paradas de conductores hispanos aumenta, las disparidades raciales persisten, los registros bajan y más de cien agencias adicionales reportaron datos que en 2024.",
-  "analysis_byline_prefix": "Por"
+  "analysis_ii2025_dek": "La proporción de paradas de conductores hispanos aumenta, las disparidades raciales persisten, los registros bajan y más de 100 agencias adicionales reportaron datos en comparación con 2024.",
+  "analysis_byline_prefix": "Por",
+  "analysis_edited_by": "Editado por"
 }

@@ -26,7 +26,7 @@
 </script>
 
 {#if byYear && years?.length}
-  <div class="grid gap-6 sm:grid-cols-2 sm:gap-8">
+  <div class="grid gap-8 sm:grid-cols-2 sm:gap-12">
     {#each orderedYears as year}
       <div>
         <div class="mb-2 text-center text-[1.05rem] font-bold text-slate-900">{year}</div>

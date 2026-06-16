@@ -497,6 +497,9 @@
   "home_mcp_banner_tag": "New",
   "home_mcp_banner_text": "Query this dataset from your AI assistant — connect the Missouri VSR MCP server.",
   "home_mcp_banner_cta": "Learn how",
+  "home_analysis_banner_tag": "New",
+  "home_analysis_banner_text": "The 2025 data is out!",
+  "home_analysis_banner_cta": "Read our analysis",
   "home_mcp_heading": "Query the data from any MCP client",
   "home_mcp_intro": "Connect any MCP-compatible AI assistant — Claude Desktop, Cursor, ChatGPT, and more — to this dataset. Ask in plain English for trends, comparisons, and maps; the model explains what each metric means and what it doesn't, explains fundamental data limitations, and shares links to resources about the methods used.",
   "home_mcp_limits_heading": "Usage limits",
@@ -531,6 +534,7 @@
   "analysis_card_kicker": "Latest analysis",
   "analysis_card_cta": "Read the analysis →",
   "analysis_ii2025_title": "First impressions of the 2025 Missouri Vehicle Stops Report",
-  "analysis_ii2025_dek": "Hispanic stop share is up, racial disparities persist, searches are down, and more than a hundred more agencies reported data than in 2024.",
-  "analysis_byline_prefix": "By"
+  "analysis_ii2025_dek": "Hispanic stop share is up, racial disparities persist, searches are down, and over 100 more agencies reported data than in 2024.",
+  "analysis_byline_prefix": "By",
+  "analysis_edited_by": "Edited by"
 }

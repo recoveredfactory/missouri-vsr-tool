@@ -48,6 +48,15 @@
   ];
   $: totals = years.map((_, i) => stack.reduce((s, b) => s + b.values[i], 0));
   $: yMax = Math.ceil(Math.max(...totals, 1) / 20000) * 20000;
+  // Gridlines at a round 60k step (0, 60k, 120k) rather than halves of yMax —
+  // keeps the tick labels on clean numbers that don't compete with the band
+  // labels. The lines stop below yMax, so the early-year peak still has headroom.
+  $: yTicks = (() => {
+    const step = 60000;
+    const out = [];
+    for (let v = 0; v <= yMax; v += step) out.push(v);
+    return out;
+  })();
 
   const x = (i) => pad.left + (n <= 1 ? 0 : (i / (n - 1)) * plotW);
   $: y = (v) => pad.top + (1 - v / yMax) * plotH;
@@ -128,9 +137,9 @@
 <div class="tip-host relative mx-auto max-w-xl">
   <svg viewBox="0 0 {W} {H}" class="h-auto w-full" role="img">
     <!-- y grid + labels -->
-    {#each [0, 0.5, 1] as t}
-      <line x1={pad.left} y1={y(yMax * t)} x2={pad.left + plotW} y2={y(yMax * t)} stroke="#e2e8f0" stroke-width="1" />
-      <text x={pad.left - 7} y={y(yMax * t) + 4} text-anchor="end" font-size="12.5" fill="#94a3b8">{fmt(yMax * t)}</text>
+    {#each yTicks as t}
+      <line x1={pad.left} y1={y(t)} x2={pad.left + plotW} y2={y(t)} stroke="#e2e8f0" stroke-width="1" />
+      <text x={pad.left - 7} y={y(t) + 4} text-anchor="end" font-size="12.5" fill="#94a3b8">{fmt(t)}</text>
     {/each}
 
     <!-- bands: lighter fill, with the band's own color picked out as a crisp

@@ -7,17 +7,17 @@
   // driving-age (16+) population (dashed grey). Where the stop-share line sits
   // above the population line, that group is over-represented in stops.
   //
-  // Y-AXIS: defaults to a SHARED range across panels (slopes are comparable;
-  // the big White share and the tiny Hispanic share are drawn at true relative
-  // scale, so the small lines look flat and the change readout does the work).
-  // A selector switches to a per-panel "fit" range, where each line fills its
-  // own panel but slopes are no longer comparable across panels.
+  // Y-AXIS: defaults to a per-panel "fit" range, where each line fills its own
+  // panel so a race's stop and population lines are easy to read against each
+  // other. A selector switches to a SHARED range across panels (slopes become
+  // directly comparable, but the tiny Hispanic share looks flat next to the big
+  // White one, so the change readout does the work).
   export let metric; // race -> year -> { share_pct, pop_pct_16plus }
   export let years; // number[] available in the bundle
   export let races = ["White", "Black", "Hispanic"];
   export let startYear = 0; // 0 = show every year the bundle carries (~10 years)
 
-  let sharedScale = true; // default: one comparable scale across all panels
+  let sharedScale = false; // default: per-panel fit; toggle to one shared scale
 
   $: yrs = years.filter((y) => y >= startYear);
 
@@ -169,10 +169,10 @@
 <div class="not-prose mb-3 flex items-center justify-end gap-2 text-xs">
   <span class="font-medium uppercase tracking-wide text-slate-400">Vertical scale</span>
   <div class="inline-flex overflow-hidden rounded-md border border-slate-300" role="group" aria-label="Vertical scale">
-    <button type="button" class="px-2.5 py-1 font-semibold transition-colors {sharedScale ? 'bg-slate-800 text-white' : 'bg-white text-slate-600 hover:bg-slate-100'}"
-            aria-pressed={sharedScale} on:click={() => (sharedScale = true)}>Same scale</button>
     <button type="button" class="px-2.5 py-1 font-semibold transition-colors {!sharedScale ? 'bg-slate-800 text-white' : 'bg-white text-slate-600 hover:bg-slate-100'}"
             aria-pressed={!sharedScale} on:click={() => (sharedScale = false)}>Fit each</button>
+    <button type="button" class="px-2.5 py-1 font-semibold transition-colors {sharedScale ? 'bg-slate-800 text-white' : 'bg-white text-slate-600 hover:bg-slate-100'}"
+            aria-pressed={sharedScale} on:click={() => (sharedScale = true)}>Same scale</button>
   </div>
 </div>
 
