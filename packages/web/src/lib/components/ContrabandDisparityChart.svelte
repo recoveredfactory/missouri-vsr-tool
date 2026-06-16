@@ -30,7 +30,7 @@
       searches,
       contraband,
       hitRate,
-      color: raceColors[race] || "#25784c"
+      color: raceColors[race] || "#17643b"
     };
   });
 

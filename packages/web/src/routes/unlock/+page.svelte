@@ -17,7 +17,7 @@
     class="w-full max-w-sm rounded-2xl border border-slate-200 bg-white p-8 shadow-sm"
   >
     <p
-      class="text-xs font-semibold uppercase tracking-wider text-[#25784c]"
+      class="text-xs font-semibold uppercase tracking-wider text-[#17643b]"
     >
       Staging preview
     </p>
@@ -44,7 +44,7 @@
           autocomplete="current-password"
           required
           autofocus
-          class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-900 shadow-sm focus:border-[#25784c] focus:outline-none focus:ring-2 focus:ring-[#25784c]/30"
+          class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-900 shadow-sm focus:border-[#17643b] focus:outline-none focus:ring-2 focus:ring-[#17643b]/30"
         />
       </div>
 
@@ -56,7 +56,7 @@
 
       <button
         type="submit"
-        class="w-full rounded-lg bg-[#25784c] px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-[#1f6440] focus:outline-none focus:ring-2 focus:ring-[#25784c]/40"
+        class="w-full rounded-lg bg-[#17643b] px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-[#1c5c3a] focus:outline-none focus:ring-2 focus:ring-[#17643b]/40"
       >
         Enter
       </button>

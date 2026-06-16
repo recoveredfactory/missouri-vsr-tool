@@ -7,7 +7,7 @@
   export let lineValuesByYear = {};
   export let raceKeys = [];
   export let raceLabel = (value) => value;
-  export let raceColor = () => "#25784c";
+  export let raceColor = () => "#17643b";
   export let formatChartValue = (value) =>
     value === null || value === undefined ? "—" : String(value);
 

@@ -315,7 +315,7 @@
         y="y"
         r={sizeByStops ? undefined : activePointRadius}
         class="pointer-events-none"
-        fill="#25784c"
+        fill="#17643b"
         stroke="#134e4a"
         strokeWidth={1}
       />

@@ -18,7 +18,7 @@
 
   $: lineSeries = raceKeys.map(race => ({
     race,
-    color: raceColors[race] || "#25784c",
+    color: raceColors[race] || "#17643b",
     data: years.map(year => ({
       year,
       value: Number(dataByYear[year]?.[race]) || 0,

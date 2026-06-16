@@ -1,44 +1,43 @@
 /**
  * Shared color palettes for charts and visualizations.
  *
- * Race data uses a green gradient (brand color family).
- * Outcome data uses a blue gradient.
- * Accent colors use a rose/pink palette for callouts.
+ * Race and outcome data share a green/blue/amber palette (two shades each,
+ * no red). Accent colors use the amber pair for callouts/highlights.
  */
 
-/** Green gradient — race categories (wide spread, light → dark) */
+/** Green/blue/amber palette — race categories, two shades per hue family */
 export const raceColors = {
-  White: "#25784c",
-  Hispanic: "#1c4f74",
-  Asian: "#b5697a",
-  "Native American": "#61c7ed",
-  Other: "#658cad",
-  Black: "#792a3b",
+  White: "#17643b",
+  Hispanic: "#5a7bd8",
+  Asian: "#db9006",
+  "Native American": "#2ab76b",
+  Other: "#2748a5",
+  Black: "#fbc560",
 };
 
 /** Text colors for race segments — dark text on light backgrounds, white on dark */
 export const raceTextColors = {
-  White: "#022613",
-  Hispanic: "#022613",
-  Asian: "#ffffff",
-  "Native American": "#ffffff",
+  White: "#ffffff",
+  Hispanic: "#ffffff",
+  Asian: "#2b1900",
+  "Native American": "#022613",
   Other: "#ffffff",
-  Black: "#6abb8d",
+  Black: "#3d2a00",
 };
 
 /** Distinct colors — outcome categories (one per color family) */
 export const outcomeColors = {
-  noAction: "#658cad",
-  warnings: "#25784c",
-  searches: "#25784c",
-  arrests: "#1c4f74",
-  citations: "#792a3b",
+  noAction: "#57534e",
+  warnings: "#17643b",
+  searches: "#17643b",
+  arrests: "#5a7bd8",
+  citations: "#fbc560",
 };
 
-/** Accent colors for callouts and highlights */
+/** Accent colors for callouts and highlights — amber pair, light → dark */
 export const accentColors = {
-  dark: "#792a3b",
-  mid: "#b5697a",
-  light: "#f1a7b8",
-  lightest: "#f5c2ce",
+  dark: "#db9006",
+  mid: "#fbc560",
+  light: "#fdd9a0",
+  lightest: "#fef0d6",
 };

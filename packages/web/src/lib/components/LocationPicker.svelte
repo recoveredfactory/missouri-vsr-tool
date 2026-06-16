@@ -172,7 +172,7 @@
     aria-label={m.home_location_picker_label()}
     autocomplete="off"
     spellcheck="false"
-    class="w-full rounded-xl border-2 border-slate-300 bg-white px-5 py-3.5 text-base text-slate-900 shadow-sm transition-colors focus:border-[#25784c] focus:outline-none"
+    class="w-full rounded-xl border-2 border-slate-300 bg-white px-5 py-3.5 text-base text-slate-900 shadow-sm transition-colors focus:border-[#17643b] focus:outline-none"
   />
   {#if results.length}
     <ul
