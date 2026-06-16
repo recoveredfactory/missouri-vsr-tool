@@ -142,8 +142,11 @@ const shapeSearchReasons = (raw: any): SearchReasonsData => {
     consent: years.map((y) => at(y, "consent")),
     smell: years.map((y) => at(y, "smell_of_drugs_alcohol")),
     other: years.map((y) => at(y, "all_other")),
-    // Per the bundle README: the odor category is only apples-to-apples from
-    // 2023 on (2023 reporting-form change; cannabis legalized Dec 2022).
+    // The odor series breaks at 2023 because Missouri legalized recreational
+    // cannabis (Amendment 3, Nov 2022; possession legal Dec 8, 2022) — odor-based
+    // searches crater, so pre-2023 and 2023+ aren't directly comparable. This is
+    // a legal/behavioral change, NOT a reporting-form change (the AG documents
+    // only a 2019→2020 form change; see the OUTCOME_TABLE_YEARS note below).
     reliableFromYear: 2023,
   };
 };

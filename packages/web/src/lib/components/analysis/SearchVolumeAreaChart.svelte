@@ -4,9 +4,11 @@
   // Graphic 3 — stacked area of statewide search volume by reason
   // (consent / smell of drugs or alcohol / all other), per year.
   //
-  // The "smell" band collapses after 2022 (cannabis legalized Dec 2022;
-  // reporting-form change in 2023), annotated inline. Bands stack bottom->top:
-  // all other, consent, smell — so the shrinking stories sit on top.
+  // The "smell" band collapses after 2022 — Missouri legalized recreational
+  // cannabis (Amendment 3, Nov 2022; possession legal Dec 8, 2022) and
+  // odor-based searches crater in the 2023 data. This is a legal/behavioral
+  // change, NOT a reporting-form change. Annotated inline. Bands stack
+  // bottom->top: all other, consent, smell — so the shrinking stories sit on top.
   //
   // Mobile-first: a compact viewBox keeps the text legible when the SVG scales
   // down on a phone. Series are labeled DIRECTLY on each band (at its thickest
