@@ -74,6 +74,11 @@
   // MSHP dominates count scales — excluded from grey series by default.
   const MSHP_NORMALIZED = "missouri state highway patrol";
 
+  // The statewide aggregate row ("Missouri (all agencies)"). Its rate is the
+  // stop-weighted statewide rate (Σnumerator / Σdenominator) — what the grey
+  // "MO" reference line should show.
+  const STATEWIDE_AGG_NORMALIZED = "missouri all agencies";
+
   const fetchMetricRows = (key) => {
     if (!key) return Promise.resolve([]);
     const cached = metricCache.get(key);
@@ -167,19 +172,15 @@
     const cols = ["Total", "White", "Black", "Hispanic", "Native American", "Asian", "Other"];
     let globalMax = 0;
 
+    // Range over the selected agency AND the statewide aggregate (the two lines
+    // the rate chart draws), so the shared y-axis fits both.
     for (const row of allRows) {
       const ag = normalizeAgency(String(row.agency || "").trim());
-      if (ag !== normalizedAgencyName) continue;
+      if (ag !== normalizedAgencyName && ag !== STATEWIDE_AGG_NORMALIZED) continue;
       for (const col of cols) {
         const v = sanitizeRateValue(row[col], isRateMetric);
         if (v !== null && v > globalMax) globalMax = v;
       }
-    }
-
-    for (const r of baselines) {
-      if (r.row_key !== metricKey) continue;
-      const v = sanitizeRateValue(r.mean__no_mshp, isRateMetric);
-      if (v !== null && v > globalMax) globalMax = v;
     }
 
     return globalMax > 0 ? Math.min(globalMax * 1.1, 100) : null;
@@ -261,21 +262,26 @@
 
   // ── Statewide series (rate metrics) ───────────────────────────────────────
 
-  // baselines schema: { row_key, year, metric (race/category), count (# agencies),
-  //   mean, median, mean__no_mshp, median__no_mshp }
-  // col maps to the `metric` field ("Total", "White", "Black", etc.)
-  const buildStatewideSeries = (col, baselines, key) => {
+  // The grey "MO" reference line is the true statewide rate: the stop-weighted
+  // "Missouri (all agencies)" aggregate (Σnumerator / Σdenominator), which is
+  // already a row in metric_year/<key>.json (fetched as allRows). We deliberately
+  // do NOT use the statewide_slug_baselines mean/median — that is the *unweighted
+  // mean of per-agency rates* (and excludes MSHP), a different statistic that
+  // diverges from the published statewide rate. Most visibly, on the
+  // missouri-all-agencies page the agency line IS this aggregate, so the two
+  // lines now coincide instead of disagreeing.
+  const buildStatewideSeries = (col, rows, key) => {
     const isRate = key.includes("-rate") || key.includes("-percentage");
     return {
-      data: baselines
-        .filter((r) => r.row_key === key && r.metric === col)
-        .map((r) => ({ year: Number(r.year), value: sanitizeRateValue(r.mean__no_mshp, isRate) }))
+      data: rows
+        .filter((r) => normalizeAgency(String(r.agency || "")) === STATEWIDE_AGG_NORMALIZED)
+        .map((r) => ({ year: Number(r.year), value: sanitizeRateValue(r[col], isRate) }))
         .filter((p) => Number.isFinite(p.year))
         .sort((a, b) => a.year - b.year),
     };
   };
 
-  $: totalStatewideSeries = buildStatewideSeries("Total", baselines, metricKey);
+  $: totalStatewideSeries = buildStatewideSeries("Total", allRows, metricKey);
 
   // Does the selected agency have any actual value for this metric? The metric
   // may exist for other agencies (so allRows > 0) while being absent or nulled
@@ -309,7 +315,7 @@
     race,
     label,
     color: raceColors[race] || "#64748b",
-    statewideSeries: buildStatewideSeries(race, baselines, metricKey),
+    statewideSeries: buildStatewideSeries(race, allRows, metricKey),
     colMetricValue: agencyMetricRow?.[race] ?? null,
     ...buildPanel(race, race, allRows, stopsRows, allYears, panelCtx),
   }));
