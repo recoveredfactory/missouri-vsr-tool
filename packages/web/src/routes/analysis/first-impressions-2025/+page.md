@@ -129,7 +129,7 @@ In the 2025 data, we see the agency count jump back up. About {returnedSharePct}
 
 These re-appearing agencies were not all small departments — Nixa, Florissant, University City, and Arnold each dropped out of the report in 2024 and came back in 2025. Before and after the missing year of data, this cohort of agencies were responsible for around 100,000 stops in a year, a notable portion of the total stops statewide.
 
-This disappearing act matters for anyone looking at year over year numbers. Statewide stops rise about {rawPctChange}% from 2024 to 2025, but roughly {comebackShareOfIncrease}% of that increase is just these returning agencies. Among the agencies that reported in both 2023 and 2025, stops rose only about {balancedPanelPct}% over that two-year span.
+This disappearing act matters for anyone looking at year over year numbers. Statewide stops rise about {rawPctChange}% from 2024 to 2025, but roughly {comebackShareOfIncrease}% of that increase is just these returning agencies. Among the agencies that reported in both 2023 and 2025, stops rose about {balancedPanelPct}% over that two-year span.
 
 In response to our questions, the Attorney General's office said that "Governor Kehoe's Blue Shield program and funding eligibility criteria includes 'Compliance with Missouri crime reporting and traffic stop data requirements and other related statutes.' This could be part of the reason for the rebound that you note, as this program was enacted at the beginning of 2025." Missouri's [Blue Shield program](https://governor.mo.gov/press-releases/archive/governor-kehoe-announces-launch-missouri-blue-shield-program-recognize) offers grant funding to local law enforcement agencies in the state for officer training and equipment.
 
