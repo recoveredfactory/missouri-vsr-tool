@@ -958,7 +958,7 @@
 
       <!-- v2 downloads — manifest-driven so JSON shows as one combined file -->
       <p class="mb-3 text-center text-xs font-semibold uppercase tracking-widest text-slate-400">
-        {home_download_v2_heading()}
+        {home_download_v2_heading({ year: latestDataYear ?? 2025 })}
       </p>
       {#if v2DownloadGroups.length}
         <div class="grid gap-6 md:grid-cols-3">
@@ -1008,7 +1008,7 @@
           <div class="grid gap-6 md:grid-cols-2">
             <div class="flex flex-col rounded-lg border-2 border-slate-200 bg-slate-50 p-6 text-center">
               <h3 class="mb-1 text-lg font-bold text-slate-900">
-                {home_download_wide_all_title()}
+                {home_download_wide_all_title({ year: latestDataYear ?? 2025 })}
               </h3>
               <p class="mb-4 min-h-[40px] text-sm text-slate-600">
                 {home_download_wide_all_subtitle()}
