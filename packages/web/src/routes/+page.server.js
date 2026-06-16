@@ -152,8 +152,11 @@ export async function load({ fetch, url }) {
         return null;
       }
     })(),
-    // v2 manifest lives under the release path
-    fetchJson(fetch, "/data/downloads/missouri_vsr_2000_2024_downloads_manifest.json", dataBaseUrl),
+    // v2 manifest lives under the release path. Its filename carries the
+    // release's last year (e.g. 2000_2025), so derive it from latestYear
+    // rather than hardcoding — otherwise a new release silently 404s and
+    // the section stays stuck on "Download links are loading…".
+    fetchJson(fetch, `/data/downloads/missouri_vsr_2000_${latestYear}_downloads_manifest.json`, dataBaseUrl),
   ]);
 
   const { historicalData, historicalOutcomes } = buildHistoricalData(statewideYearSums);
