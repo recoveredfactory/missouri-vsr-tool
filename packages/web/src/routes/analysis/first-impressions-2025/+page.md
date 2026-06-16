@@ -46,6 +46,13 @@ authors:
 
   const sourceBundle = "Source: Missouri Attorney General's Vehicle Stops Report, processed by Recovered Factory.";
 
+  // Social/OG metadata. The card is baked by scripts/bake-og-images.mjs into
+  // static/og/analysis/first-impressions-2025.png and shipped by sst deploy.
+  const siteUrl = import.meta.env.PUBLIC_SITE_URL ?? "https://vsr.recoveredfactory.net";
+  const ogImage = `${siteUrl}/og/analysis/first-impressions-2025.png`;
+  const metaDescription =
+    "A first look at the 2025 Missouri vehicle stops data: why ~90 agencies dropped out of the 2024 report and returned in 2025, plus Hispanic stop share, racial disparities, declining searches, and the contraband outcome test.";
+
   // Churn headline numbers, wired to the bundle's reportingChurn block so the
   // prose tracks the data. Fallbacks match the v2.2 values, so the paragraphs
   // still read correctly if the file is missing and reportingChurn is null.
@@ -67,9 +74,21 @@ authors:
 
 <svelte:head>
   <title>First impressions of the 2025 Missouri Vehicle Stops Report</title>
-  <meta name="description" content="A first look at the 2025 Missouri vehicle stops data: why ~90 agencies dropped out of the 2024 report and returned in 2025, plus Hispanic stop share, racial disparities, declining searches, and the contraband outcome test." />
+  <meta name="description" content={metaDescription} />
   <meta property="og:type" content="article" />
+  <meta property="og:url" content="{siteUrl}/analysis/first-impressions-2025" />
   <meta property="og:title" content="First impressions of the 2025 Missouri Vehicle Stops Report" />
+  <meta property="og:description" content={metaDescription} />
+  <meta property="og:image" content={ogImage} />
+  <meta property="og:image:secure_url" content={ogImage} />
+  <meta property="og:image:alt" content="First impressions of the 2025 Missouri Vehicle Stops Report" />
+  <meta property="og:image:type" content="image/png" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta property="twitter:card" content="summary_large_image" />
+  <meta property="twitter:image" content={ogImage} />
+  <meta property="twitter:title" content="First impressions of the 2025 Missouri Vehicle Stops Report" />
+  <meta property="twitter:description" content={metaDescription} />
 </svelte:head>
 
 <StickyHeader />
