@@ -14,6 +14,7 @@
   } from "$lib/paraglide/messages";
   import * as m from "$lib/paraglide/messages";
   import { raceColors } from "$lib/colors.js";
+  import { STATEWIDE_AGG_NORMALIZED } from "$lib/statewide.js";
   import SpaghettiChart from "$lib/components/SpaghettiChart.svelte";
   import StatewideComparisonChart from "$lib/components/StatewideComparisonChart.svelte";
 
@@ -74,10 +75,9 @@
   // MSHP dominates count scales — excluded from grey series by default.
   const MSHP_NORMALIZED = "missouri state highway patrol";
 
-  // The statewide aggregate row ("Missouri (all agencies)"). Its rate is the
-  // stop-weighted statewide rate (Σnumerator / Σdenominator) — what the grey
-  // "MO" reference line should show.
-  const STATEWIDE_AGG_NORMALIZED = "missouri all agencies";
+  // The statewide aggregate row ("Missouri (all agencies)") — STATEWIDE_AGG_NORMALIZED,
+  // imported from $lib/statewide. Its rate is the stop-weighted statewide rate
+  // (Σnumerator / Σdenominator) — what the grey "MO" reference line should show.
 
   const fetchMetricRows = (key) => {
     if (!key) return Promise.resolve([]);
@@ -139,6 +139,13 @@
     .filter(Number.isFinite)
     .sort((a, b) => a - b);
   $: normalizedAgencyName = normalizeAgency(agencyName);
+  // On the statewide aggregate's own page the selected line IS the statewide
+  // total, so the grey spaghetti / "MO" reference line is redundant noise —
+  // suppress it and draw just the single statewide line.
+  $: isStatewidePage = normalizedAgencyName === STATEWIDE_AGG_NORMALIZED;
+
+  // A blank rate series → StatewideComparisonChart draws no grey "MO" line.
+  const EMPTY_RATE_SERIES = { data: [] };
 
   // Most recent stops row for the selected agency (used for panel skip + header label)
   $: agencyStopsRow = (() => {
@@ -190,7 +197,7 @@
   const buildPanel = (col, stopsCol, allRows, stopsRows, allYears, ctx) => {
     const {
       normalizedAgencyName, isRateMetric, minStopsThreshold, maxStopsThreshold,
-      showMSHP, sharedRateYMax, agencyStopsRow, agencyMaxTotalStops,
+      showMSHP, sharedRateYMax, agencyStopsRow, agencyMaxTotalStops, isStatewidePage,
     } = ctx;
 
     const byAgency = new Map();
@@ -223,10 +230,15 @@
         selectedSeries = { agency, data };
       } else {
         const isMSHP = normAgency === MSHP_NORMALIZED;
+        const isStatewideAgg = normAgency === STATEWIDE_AGG_NORMALIZED;
         const totalStops = agencyMaxTotalStops.get(normAgency) ?? 0;
         const passesMin = totalStops >= minStopsThreshold;
         const passesMax = maxStopsThreshold == null || totalStops <= maxStopsThreshold;
-        if (passesMin && passesMax && (showMSHP || !isMSHP)) {
+        // Never draw the statewide aggregate as a grey count line — its
+        // Σ-all-agencies magnitude dwarfs every real agency and warps the
+        // y-axis. And on the statewide page itself, suppress the grey
+        // spaghetti entirely so only the single statewide line shows.
+        if (!isStatewidePage && !isStatewideAgg && passesMin && passesMax && (showMSHP || !isMSHP)) {
           greySeries.push({ agency, data });
         }
       }
@@ -257,7 +269,7 @@
 
   $: panelCtx = {
     normalizedAgencyName, isRateMetric, minStopsThreshold, maxStopsThreshold,
-    showMSHP, sharedRateYMax, agencyStopsRow, agencyMaxTotalStops,
+    showMSHP, sharedRateYMax, agencyStopsRow, agencyMaxTotalStops, isStatewidePage,
   };
 
   // ── Statewide series (rate metrics) ───────────────────────────────────────
@@ -394,8 +406,9 @@
         {:else if !agencyHasData}
           <p class="text-sm text-slate-500">{modal_no_agency_data()}</p>
         {:else}
-          <!-- Filter / scale controls (count metrics only) -->
-          {#if !isRateMetric}
+          <!-- Filter / scale controls (count metrics only; none apply on the
+               statewide page — one line, no grey series, fixed linear scale) -->
+          {#if !isRateMetric && !isStatewidePage}
             <div class="mb-4 flex flex-wrap items-center justify-end gap-3">
               <!-- MSHP toggle -->
               <button
@@ -465,7 +478,7 @@
                   <div class="h-[280px]">
                     {#if isRateMetric}
                       <StatewideComparisonChart
-                        statewideSeries={totalStatewideSeries}
+                        statewideSeries={isStatewidePage ? EMPTY_RATE_SERIES : totalStatewideSeries}
                         selectedSeries={totalPanelData.selectedSeries}
                         {allYears}
                         yMax={totalPanelData.yMax}
@@ -479,7 +492,7 @@
                         selectedSeries={totalPanelData.selectedSeries}
                         {allYears}
                         yMax={totalPanelData.yMax}
-                        useSqrt={useSqrtScale && !isRateMetric}
+                        useSqrt={useSqrtScale && !isRateMetric && !isStatewidePage}
                         {isRateMetric}
                         color={TOTAL_COLOR}
                         {agencyName}
@@ -508,7 +521,7 @@
                   <div class="h-[280px]">
                     {#if isRateMetric}
                       <StatewideComparisonChart
-                        statewideSeries={panel.statewideSeries}
+                        statewideSeries={isStatewidePage ? EMPTY_RATE_SERIES : panel.statewideSeries}
                         selectedSeries={panel.selectedSeries}
                         {allYears}
                         yMax={panel.yMax}
@@ -522,7 +535,7 @@
                         selectedSeries={panel.selectedSeries}
                         {allYears}
                         yMax={panel.yMax}
-                        useSqrt={useSqrtScale && !isRateMetric}
+                        useSqrt={useSqrtScale && !isRateMetric && !isStatewidePage}
                         {isRateMetric}
                         color={panel.color}
                         {agencyName}
@@ -535,7 +548,7 @@
             {/each}
           </div>
 
-          {#if agencyName}
+          {#if agencyName && !isStatewidePage}
             {#if isRateMetric}
               <p class="mt-3 text-[10px] text-slate-400">
                 <span style="color:{TOTAL_COLOR}" class="font-semibold">{agencyName}</span>

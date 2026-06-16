@@ -14,6 +14,7 @@
   import { onMount, tick } from "svelte";
   import * as m from "$lib/paraglide/messages";
   import { withDataBase } from "$lib/dataBase";
+  import { STATEWIDE_SLUG } from "$lib/statewide.js";
   import { getLocale } from "$lib/paraglide/runtime";
   import {
     agency_location_heading,
@@ -153,6 +154,11 @@
 
   // v2: latestYearData is SSR-loaded; other years are lazy-loaded client-side.
   $: agencyData = data.latestYearData;
+  // The synthetic statewide aggregate ("Missouri (all agencies)") gets a
+  // stripped-down page: no map, no agency metadata card, no neighbors, no
+  // peer scatter. Just identity → census (when the backend ships it) → the
+  // statewide metric table/charts (which suppress the grey spaghetti).
+  $: isStatewide = data.slug === STATEWIDE_SLUG;
   $: baselines = Array.isArray(data.baselines) ? data.baselines : [];
   $: agencyCount = Number(data?.agencyCount) || 0;
   $: metadata = agencyData?.agency_metadata;
@@ -1526,6 +1532,7 @@
     {/if}
   </header>
 
+  {#if !isStatewide}
   <section class="mb-1 grid gap-4 md:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] md:items-start">
     <div class="rounded-2xl border border-slate-200 bg-white p-3">
       {#if stopVolumeLead}
@@ -1709,6 +1716,7 @@
     {localeBase}
     agencySlug={agencyData?.agency ?? data.slug}
   />
+  {/if}
 
   <CensusPanel
     {geocodioDemographics}
@@ -1830,14 +1838,16 @@
                 {" "}{agency_reporting_count({ count: stopCountFormatter.format(reportingAgencyCount), year: selectedYear })}
               {/if}
             </p>
-            <ScatterSection
-              {years}
-              {selectedYear}
-              agencyName={agencyData?.agency ?? data.slug}
-              excludeAgencies={scatterExcludedAgencies}
-              {formatPercentTick}
-              on:yearselect={(e) => selectYear(e.detail.year, e.detail.source)}
-            />
+            {#if !isStatewide}
+              <ScatterSection
+                {years}
+                {selectedYear}
+                agencyName={agencyData?.agency ?? data.slug}
+                excludeAgencies={scatterExcludedAgencies}
+                {formatPercentTick}
+                on:yearselect={(e) => selectYear(e.detail.year, e.detail.source)}
+              />
+            {/if}
           </div>
         {/if}
       </article>

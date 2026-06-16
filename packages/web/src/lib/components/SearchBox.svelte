@@ -1,6 +1,7 @@
 <script>
   import { goto } from "$app/navigation";
   import { QuickScore } from "quick-score";
+  import { STATEWIDE_SLUG, STATEWIDE_AGG_NORMALIZED } from "$lib/statewide.js";
   import { searchState } from "$lib/stores/search";
   import { getLocale } from "$lib/paraglide/runtime";
   import {
@@ -137,7 +138,23 @@
       ...strongMatches.sort(compareStrong),
       ...fuzzyMatches.sort(compareFuzzy),
     ].slice(0, 10);
-    results = reranked;
+
+    // Pin the statewide overview ("Missouri (all agencies)") to the top while the
+    // query is still a prefix of its name ("m" → "missouri" → "missouri all…").
+    // It has no stop count, so it would otherwise sort last; and specific queries
+    // like "missouri state highway patrol" aren't a prefix, so they rank normally.
+    if (STATEWIDE_AGG_NORMALIZED.startsWith(queryNorm)) {
+      const statewide = enrichedAgencies.find((a) => toSlug(a) === STATEWIDE_SLUG);
+      if (statewide) {
+        const existing = reranked.find((e) => toSlug(e.item) === STATEWIDE_SLUG);
+        const rest = reranked.filter((e) => toSlug(e.item) !== STATEWIDE_SLUG);
+        results = [existing ?? { item: statewide, score: 1 }, ...rest].slice(0, 10);
+      } else {
+        results = reranked;
+      }
+    } else {
+      results = reranked;
+    }
   } else {
     results = [];
   }
