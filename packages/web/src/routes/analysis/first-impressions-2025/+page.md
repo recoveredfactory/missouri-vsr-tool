@@ -165,7 +165,7 @@ Looking at the disparity indexes of the searches, arrests, and share of stops sh
   <DisparityIndexChart byMetric={a.disparity.byMetric} years={a.disparity.years} />
 </Figure>
 
-We show charts for Black, Hispanic, and White drivers because they are the most stopped groups in the state as well as having the largest share of the overall population. Detailed information about Asian, Native American, and Other drivers is available in [our explorer](https://vsr.recoveredfactory.net/en#agencies). One notable trend: Self-identification as an “Other” race is the fastest growing race demographic in Missouri according to the American Community Survey — its share of residents 16 and older has more than doubled since 2016, to about 7.6% — yet officers recorded only about 1.6% of stops as “Other” drivers in 2025.
+We show charts for Black, Hispanic, and White drivers because they are the most stopped groups in the state as well as having the largest share of the overall population. Detailed information about Asian, Native American, and Other drivers is available in [our explorer](https://vsr.recoveredfactory.net/en#agencies). One notable trend: Self-identification as an “Other” race is the fastest growing race demographic in Missouri according to the American Community Survey — its share of residents 16 and older has more than doubled since 2016, to about 7.6% — yet officers recorded only about 1.6% of stops of “Other” drivers in 2025.
 
 ## Search rates rebounded slightly in recent years, but remain lower than pre-pandemic
 
