@@ -90,8 +90,10 @@
     const last = [...vals].reverse().find((v) => v != null);
     return first == null || last == null || first === 0 ? null : ((last - first) / first) * 100;
   };
+  // Sentence-style change readout that reads like talk: "up 72%" / "down 5%" /
+  // "flat" — slotted into "Stops up 72% and pop. up 41% since 2016".
   const fmtPct = (v) =>
-    v == null ? "—" : `${v >= 0 ? "↑ up" : "↓ down"} ${Math.round(Math.abs(v))}%`;
+    v == null ? "—" : Math.round(Math.abs(v)) === 0 ? "flat" : `${v >= 0 ? "up" : "down"} ${Math.round(Math.abs(v))}%`;
 
   const buildPanel = (race, shared, span) => {
     const stops = yrs.map((y) => metric?.[race]?.[y]?.share_pct ?? null);
@@ -180,9 +182,9 @@
     <div class="tip-host relative {pi > 0 ? 'border-t border-slate-200 pt-6 sm:border-0 sm:pt-0' : ''}">
       <div class="text-center text-[1.05rem] font-bold" style="color:{c}">{p.race}</div>
       <div class="mb-1 text-center text-[0.875rem] leading-tight text-slate-500">
-        stops: <span class="font-bold" style="color:{c}">{fmtPct(p.change.stops)}</span>
-        <span class="px-1 text-slate-300">|</span>
-        pop: <span class="font-bold text-slate-600">{fmtPct(p.change.pop)}</span>
+        Stops <span class="font-bold" style="color:{c}">{fmtPct(p.change.stops)}</span>
+        and pop. <span class="font-bold text-slate-600">{fmtPct(p.change.pop)}</span>
+        since {yrs[0]}
       </div>
       <svg viewBox="0 0 {W} {H}" class="h-auto w-full" role="img">
         <!-- vertical locator (behind the data) -->

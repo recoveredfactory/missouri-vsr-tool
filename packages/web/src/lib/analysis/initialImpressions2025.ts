@@ -47,6 +47,8 @@ export type RaceSummaryPoint = {
   contraband_hit_rate: number;
   total_stops: number;
   stop_share_pct: number;
+  /** Statewide total searches for the year (outcome-test table only). */
+  total_searches?: number | null;
 };
 
 export type AgencyReportingPoint = {
@@ -161,13 +163,30 @@ const shapeRaceSummary = (raw: any) => {
 };
 
 /**
- * Years offered in the outcome-test toggle. Contraband-found counts are only
- * reported statewide from 2020 on, and the 2023 reporting-form change (plus Dec
- * 2022 cannabis legalization) makes pre-2023 contraband hit rates not
- * apples-to-apples with today — so we compare only across the clean window. See
- * the bundle's outcome_test_by_year `note` and project_outcome_toggle_spec.
+ * Years shown in the outcome-test tables. Contraband-found rates aren't reported
+ * statewide before 2020 and break sharply at 2023 (rates ~halve, the racial
+ * ordering flips), so 2023+ is the only apples-to-apples window. We show 2023 and
+ * 2025 and omit 2024 — it's the Kirkwood-inflated ingest year AND the agency-
+ * dropout year the article tells readers to distrust. NB: the cause of the 2023
+ * break is NOT a documented reporting-form change (the AG documents only a
+ * 2019→2020 form change); don't assert one. See project_outcome_toggle_spec.
+ * The table renders these most-recent-first.
  */
-export const OUTCOME_TOGGLE_YEARS = [2023, 2025] as const;
+export const OUTCOME_TABLE_YEARS = [2023, 2025] as const;
+
+/**
+ * Statewide total searches by race for the table years, from the AG's "Missouri
+ * (all agencies)" aggregate (metric_year/searches.json). Carried here as a small
+ * constant because the outcome bundle ships only rates, not counts, and pulling
+ * the 13.9k-row metric file in SSR for six numbers isn't worth it. Verified to
+ * tie out exactly: search_rate × statewide stops ÷ 100 = these counts. If a
+ * release supersedes v2.2, refresh these (or add `searches` to the outcome
+ * bundle and read it through instead of hardcoding).
+ */
+const STATEWIDE_SEARCHES: Record<number, Record<FocusRace, number>> = {
+  2023: { White: 45701, Black: 12275, Hispanic: 2739 },
+  2025: { White: 49842, Black: 13783, Hispanic: 3758 },
+};
 
 const shapeOutcomeByYear = (
   raw: any,
@@ -181,7 +200,7 @@ const shapeOutcomeByYear = (
   );
   const years: number[] = [];
   const byYear: Record<number, RaceSummaryPoint[]> = {};
-  for (const year of OUTCOME_TOGGLE_YEARS) {
+  for (const year of OUTCOME_TABLE_YEARS) {
     const block = byYearRaw[String(year)];
     if (!block || block.outcome_test_computable !== true) continue;
     const points = FOCUS_RACES.map((race): RaceSummaryPoint | null => {
@@ -194,6 +213,7 @@ const shapeOutcomeByYear = (
         contraband_hit_rate: c.contraband_hit_rate,
         total_stops: s?.total_stops ?? 0,
         stop_share_pct: s?.stop_share_pct ?? 0,
+        total_searches: STATEWIDE_SEARCHES[year]?.[race] ?? null,
       };
     }).filter((p): p is RaceSummaryPoint => p != null);
     if (points.length) {

@@ -23,9 +23,12 @@
     cannabis: "Recreational cannabis legalized",
   };
 
-  // Brand-family bands: neutral grey baseline, brand green for consent, maroon
-  // for the collapsing "smell" story — consistent with the app chart palette.
-  const COLORS = { other: "#cbd5e1", consent: "#25784c", smell: "#792a3b" };
+  // Reason bands get their OWN palette, deliberately kept off the race colors so
+  // a reader never mistakes a search-reason band for a racial group. A neutral
+  // grey base for the catch-all "all other" band, then a violet/gold complementary
+  // pair — violet for consent, amber-gold for the collapsing "smell" story (gold,
+  // not red-orange, so it stays well clear of the maroon "Black" race color).
+  const COLORS = { other: "#cbd5e1", consent: "#6d28d9", smell: "#d97706" };
 
   const W = 440;
   const H = 300;
@@ -82,10 +85,11 @@
     return idx;
   })();
   $: labelX = Math.min(Math.max(x(labelIdx) + 18, pad.left + 12), pad.left + plotW - 150);
-  // Light "other" band takes dark text; the saturated consent band white.
+  // Bands are light washes (0.55), so each label rides in its own band color
+  // (dark slate for the grey "other" base) rather than white-on-wash.
   const labelFor = (band) => ({
     y: y((band.upper[labelIdx] + band.lower[labelIdx]) / 2),
-    fill: band.key === "other" ? "#334155" : "#ffffff",
+    fill: band.key === "other" ? "#334155" : band.color,
     text: band.label,
   });
 

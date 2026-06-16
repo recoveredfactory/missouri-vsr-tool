@@ -11,7 +11,7 @@ authors:
   import StopShareVsPopChart from "$lib/components/analysis/StopShareVsPopChart.svelte";
   import DisparityIndexChart from "$lib/components/analysis/DisparityIndexChart.svelte";
   import SearchVolumeAreaChart from "$lib/components/analysis/SearchVolumeAreaChart.svelte";
-  import ContrabandScatterChart from "$lib/components/analysis/ContrabandScatterChart.svelte";
+  import OutcomeTestTable from "$lib/components/analysis/OutcomeTestTable.svelte";
   import AgenciesReportingChart from "$lib/components/analysis/AgenciesReportingChart.svelte";
   import { getLocale } from "$lib/paraglide/runtime";
   import {
@@ -146,9 +146,9 @@ Looking at the disparity indexes of the searches, arrests, and share of stops sh
   <DisparityIndexChart byMetric={a.disparity.byMetric} years={a.disparity.years} />
 </Figure>
 
-## Search intensity is down over the decade
+## Search rates rebounded slightly in recent years, but remain lower than pre-pandemic
 
-Searches dropped from 6.7 per 100 stops in 2019 to 4.7 in 2025. Two forces drove it: a steady decline in discretionary consent searches, and a near-total collapse in searches based on the smell of drugs or alcohol starting in 2023; Missouri legalized recreational cannabis in December, 2022.
+Searches dropped from 6.7 per 100 stops in 2019 to 4.7 in 2025. Two forces drove it: a steady decline in discretionary consent searches, and a near-total collapse in searches based on the smell of drugs or alcohol starting in 2023; Missouri legalized recreational cannabis in December, 2022. However, search rates did increase somewhat in 2025 compared to the prior two years.
 
 <Figure
   title="Searches by reason, statewide"
@@ -165,12 +165,11 @@ Searches during stops of Black drivers and Hispanic drivers were more frequent t
 
 <Figure
   title="The outcome test"
-  caption="Each group placed by how often its drivers are searched (left to right) against how often those searches find contraband (bottom to top). Toggle between 2023 and 2025 — contraband-found counts are only apples-to-apples from 2023 on (a 2023 reporting change), so we compare across that window."
+  caption="For each driver race: the total number of searches, the search rate (searches per 100 stops), and the share of those searches that turned up contraband. Reading down each table, as the search rate rises across groups, the share finding contraband falls. Shown for 2025 and 2023 — the two years with comparable contraband-found data, which isn't reported statewide before 2020 and shifts sharply at 2023."
   flush
   source={sourceBundle}
-  summary="Scatter plot of search rate against contraband hit rate by race, with a toggle between 2023 and 2025; in both years White drivers are searched least but found with contraband most often, while Hispanic drivers are searched most yet found with contraband least often.">
-  <ContrabandScatterChart
-    races={a.raceSummary.races}
+  summary="Two tables, for 2023 and 2025, of search rate (searches per 100 stops) and contraband hit rate by driver race. In both years White drivers are searched least but found with contraband most often, while Hispanic drivers are searched most yet found with contraband least often.">
+  <OutcomeTestTable
     byYear={a.outcomeByYear?.byYear ?? null}
     years={a.outcomeByYear?.years ?? null} />
 </Figure>

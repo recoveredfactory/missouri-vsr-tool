@@ -24,6 +24,12 @@
   // Wider-than-tall panels, taller than before for more vertical room. The
   // right margin carries the end labels — wide enough for the Black label,
   // which spells out "× share of population" on a second line.
+  //
+  // NOTE on font sizes: this panel's viewBox is narrower than the stop-share
+  // chart above it (W 280 vs 326), but both render at the same on-screen width,
+  // so an identical font-size number renders ~16% larger here. The text sizes
+  // below are therefore scaled by 280/326 (~0.86) so the two small-multiple
+  // blocks read at the same type size. Keep them in step if either W changes.
   const W = 280;
   const H = 230;
   const pad = { top: 18, right: 108, bottom: 30, left: 34 };
@@ -139,9 +145,9 @@
         <line x1={pad.left} y1={baseY} x2={pad.left + plotW} y2={baseY} stroke="#94a3b8" stroke-width="1" />
         {#each yTicks as t}
           <line x1={pad.left - 3} y1={yOf(t)} x2={pad.left} y2={yOf(t)} stroke="#94a3b8" stroke-width="1" />
-          <text x={pad.left - 6} y={yOf(t) + 3.5} text-anchor="end" font-size="9.5" fill="#64748b">{t}×</text>
+          <text x={pad.left - 6} y={yOf(t) + 3.5} text-anchor="end" font-size="8" fill="#64748b">{t}×</text>
           {#if t === 1}
-            <text x={pad.left - 6} y={yOf(t) + 13} text-anchor="end" font-size="9" fill="#94a3b8" font-style="italic">{parityLabel}</text>
+            <text x={pad.left - 6} y={yOf(t) + 13} text-anchor="end" font-size="7.5" fill="#94a3b8" font-style="italic">{parityLabel}</text>
           {/if}
         {/each}
 
@@ -151,7 +157,7 @@
         <!-- year ticks: first, last, and a few in between -->
         {#each yrs as yr, i}
           {#if yearTick(yr, i)}
-            <text x={x(i)} y={baseY + 16} text-anchor={i === 0 ? "start" : i === n - 1 ? "end" : "middle"} font-size="11" fill="#64748b">{yr}</text>
+            <text x={x(i)} y={baseY + 16} text-anchor={i === 0 ? "start" : i === n - 1 ? "end" : "middle"} font-size="9.5" fill="#64748b">{yr}</text>
           {/if}
         {/each}
 
@@ -169,14 +175,14 @@
 
         <!-- start-of-line value labels (first dots), natural order -->
         {#each startLabels(mtr.key) as lab}
-          <text x={x(0) + 5} y={lab.y} font-size="10.5" font-weight="600" fill={lab.c}>{lab.v.toFixed(1)}×</text>
+          <text x={x(0) + 5} y={lab.y} font-size="9" font-weight="600" fill={lab.c}>{lab.v.toFixed(1)}×</text>
         {/each}
 
         <!-- end-of-line labels: fixed order; Black spells out the unit -->
         {#each endLabels(mtr.key) as lab}
-          <text x={x(n - 1) + 6} y={lab.y} font-size="11.5" font-weight="700" fill={lab.c}>{lab.race} {lab.v.toFixed(1)}×</text>
+          <text x={x(n - 1) + 6} y={lab.y} font-size="10" font-weight="700" fill={lab.c}>{lab.race} {lab.v.toFixed(1)}×</text>
           {#if lab.two}
-            <text x={x(n - 1) + 6} y={lab.y + 11} font-size="9" fill="#94a3b8">share of population</text>
+            <text x={x(n - 1) + 6} y={lab.y + 11} font-size="8" fill="#94a3b8">share of population</text>
           {/if}
         {/each}
 

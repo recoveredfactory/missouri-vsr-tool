@@ -2,10 +2,11 @@
   import ChartTooltip from "./ChartTooltip.svelte";
 
   // Agencies filing a report each year. Just the absolute count per year — the
-  // story is the 2024 dip and the 2025 rebound. Every bar is the site's dark
-  // brand green; the anomalous 2024 year (and that year alone) is a brighter
-  // amber so the dip pops. A light y-axis (a few gridlines) gives the bars a
-  // scale to read against; the 2024/2025 bars carry their counts.
+  // story is the 2024 dip and the 2025 rebound. Kept deliberately neutral: every
+  // bar is a calm slate grey, and the anomalous 2024 year (and that year alone)
+  // is picked out in a darker slate, so the dip reads as "the odd one out" by
+  // depth rather than a loud accent hue. A light y-axis (a few gridlines) gives
+  // the bars a scale to read against; the 2024/2025 bars carry their counts.
   //
   // Mobile-first: a compact viewBox keeps the type legible when the SVG scales
   // down on a phone.
@@ -15,9 +16,9 @@
   export let desktopCountYears = [2023]; // count label shown only on wider screens
   export let note = "About 110 agencies dropped out in 2024 — and nearly all came back in 2025";
 
-  const DARK = "#25784c"; // chart brand green (matches the app's chart palette) — baseline bars
-  const DIP = "#fbbf24"; // warm amber — the 2024 reporting artifact (caution; amber is the app's note/caution hue)
-  const DIP_STROKE = "#f59e0b";
+  const BAR = "#94a3b8"; // slate-400 — calm neutral baseline bars
+  const DIP = "#334155"; // slate-700 — the 2024 reporting artifact, picked out by depth, not hue
+  const INK = "#334155"; // slate-700 — note text, connector, count labels
 
   const W = 400;
   const H = 300;
@@ -75,10 +76,10 @@
   {#if noteLines.length && dipIdx >= 0}
     {@const dipTop = baseY - barH(total(data[dipIdx]))}
     {#each noteLines as line, li}
-      <text x={W - pad.right} y={14 + li * 15} text-anchor="end" font-size="11" font-weight="700" fill={DARK}>{line}</text>
+      <text x={W - pad.right} y={14 + li * 15} text-anchor="end" font-size="11" font-weight="700" fill={INK}>{line}</text>
     {/each}
     <line x1={xCenter(dipIdx)} y1={14 + noteLines.length * 15 - 4} x2={xCenter(dipIdx)} y2={dipTop - 20}
-          stroke={DARK} stroke-width="1" stroke-dasharray="3 2" />
+          stroke={INK} stroke-width="1" stroke-dasharray="3 2" />
   {/if}
 
   {#each data as d, i}
@@ -86,15 +87,15 @@
     {@const h = barH(total(d))}
     {@const y = baseY - h}
     <rect x={xCenter(i) - barW / 2} y={y} width={barW} height={h} rx="1.5"
-          fill={dip ? DIP : DARK} stroke={dip ? DIP_STROKE : "none"} stroke-width="1"
-          on:pointermove={(e) => showTip(e, { title: d.year, rows: [{ label: "Agencies reported", value: total(d), color: dip ? DIP : DARK }] })}
+          fill={dip ? DIP : BAR} stroke="none"
+          on:pointermove={(e) => showTip(e, { title: d.year, rows: [{ label: "Agencies reported", value: total(d), color: dip ? DIP : BAR }] })}
           on:pointerleave={hideTip} />
     <!-- wider invisible hit area so the thin/short bars are easy to hover -->
     <rect x={xCenter(i) - bandW / 2} y={pad.top} width={bandW} height={plotH} fill="transparent"
-          on:pointermove={(e) => showTip(e, { title: d.year, rows: [{ label: "Agencies reported", value: total(d), color: dip ? DIP : DARK }] })}
+          on:pointermove={(e) => showTip(e, { title: d.year, rows: [{ label: "Agencies reported", value: total(d), color: dip ? DIP : BAR }] })}
           on:pointerleave={hideTip} />
     {#if hasCount(d.year) || hasDesktopCount(d.year)}
-      <text x={xCenter(i)} y={y - 6} text-anchor="middle" font-size="13" font-weight="700" fill={DARK}
+      <text x={xCenter(i)} y={y - 6} text-anchor="middle" font-size="13" font-weight="700" fill={INK}
             class={hasDesktopCount(d.year) ? "sm-up" : ""}>{total(d)}</text>
     {/if}
     <text x={xCenter(i)} y={baseY + 16} text-anchor="middle" font-size="11" fill="#64748b">{d.year}</text>
