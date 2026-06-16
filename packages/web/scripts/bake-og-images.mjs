@@ -2,9 +2,10 @@
 // Bake per-page Open Graph images.
 //
 // Usage:
-//   pnpm bake:og                 # all agencies + 287g + home
+//   pnpm bake:og                 # all agencies + 287g + home + analysis
 //   pnpm bake:og --only 287g     # just that template
 //   pnpm bake:og --only home
+//   pnpm bake:og --only analysis
 //   pnpm bake:og --only agencies
 //   pnpm bake:og --slug missouri-state-highway-patrol
 //   pnpm bake:og --limit 100     # for benchmarking — bake only the first N
@@ -33,7 +34,7 @@ const OUT_DIR = path.join(STATIC_DIR, "og");
 const WORKER_PATH = path.join(__dirname, "bake-og-worker.mjs");
 
 const CDN_BASE = process.env.PUBLIC_DATA_BASE_URL ?? "https://data.vsr.recoveredfactory.net";
-const RELEASE_PATH = process.env.PUBLIC_DATA_RELEASE_PATH ?? "/releases/v2.1";
+const RELEASE_PATH = process.env.PUBLIC_DATA_RELEASE_PATH ?? "/releases/v2.2";
 const SIZE = { width: 1200, height: 630 };
 
 // ---------- args ----------
@@ -221,20 +222,41 @@ const { renderMapPng, renderToPng, card, writePng } = mainBuilder;
 // ---------- per-page builders (main thread) ----------
 
 const buildHome = async () => {
-  // Use the real agency count for the stat — the map only shows agencies
-  // with geocoded centroids (state-wide agencies have none), but the
-  // dataset as a whole covers more.
+  // Headline stat = agencies that actually reported in the newest year in the
+  // data — NOT every agency that has ever appeared. The cumulative count (all
+  // ~769 agencies across 2001–latest) overstates how many are active today;
+  // "agencies reporting in {latestYear}" is the honest "as of now" number.
+  // The map dots are the subset of those agencies that have a geocoded
+  // centroid (state-wide agencies have none).
   let totalAgencies = centroidByslug.size;
+  let latestYear = null;
+  let activeSlugs = null;
   try {
     const res = await fetch(`${CDN_BASE}${RELEASE_PATH}/dist/agency_index.json`);
     if (res.ok) {
       const agencies = await res.json();
-      totalAgencies = agencies.length;
+      const years = agencies
+        .map((a) => Number(a.latest_year_with_data))
+        .filter(Number.isFinite);
+      latestYear = years.length ? Math.max(...years) : null;
+      if (latestYear != null) {
+        const active = agencies.filter(
+          (a) =>
+            Array.isArray(a.years_with_data) &&
+            a.years_with_data.map(Number).includes(latestYear),
+        );
+        totalAgencies = active.length;
+        activeSlugs = new Set(active.map((a) => a.agency_slug));
+      } else {
+        totalAgencies = agencies.length;
+      }
     }
   } catch {
     // best effort
   }
-  const allCentroids = [...centroidByslug.values()];
+  const allCentroids = [...centroidByslug.entries()]
+    .filter(([slug]) => !activeSlugs || activeSlugs.has(slug))
+    .map(([, c]) => c);
   const homeMapDataUrl = await renderMapPng({ mode: "dots", dots: allCentroids }, 300);
 
   const png = await renderToPng(
@@ -243,12 +265,36 @@ const buildHome = async () => {
       title: "Who gets stopped. Why. What happens next.",
       subtitle: "Traffic-stop data for every Missouri police agency.",
       stat: String(totalAgencies),
-      statLabel: "agencies tracked",
+      statLabel: latestYear ? `agencies reporting in ${latestYear}` : "agencies tracked",
       mapDataUrl: homeMapDataUrl,
     }),
   );
   await writePng("home.png", png);
-  console.log(`✓ home.png (${totalAgencies} agencies, ${centroidByslug.size} on map)`);
+  console.log(
+    `✓ home.png (${totalAgencies} agencies reporting in ${latestYear ?? "?"}, ${allCentroids.length} on map)`,
+  );
+};
+
+const buildAnalysis = async () => {
+  // OG card for the analysis articles. One per piece today; namespaced under
+  // og/analysis/ so more articles can be added without collision. Strings are
+  // hardcoded here (English) to match the other cards, which don't read from
+  // Paraglide either. The map is decorative MO coverage, like the home card.
+  const allCentroids = [...centroidByslug.values()];
+  const mapDataUrl = await renderMapPng({ mode: "dots", dots: allCentroids }, 300);
+
+  const png = await renderToPng(
+    card({
+      eyebrow: "Analysis",
+      title: "First impressions of the 2025 Vehicle Stops Report",
+      subtitle: "What the new Missouri data shows",
+      stat: null,
+      statLabel: null,
+      mapDataUrl,
+    }),
+  );
+  await writePng("analysis/first-impressions-2025.png", png);
+  console.log("✓ analysis/first-impressions-2025.png");
 };
 
 const build287g = async () => {
@@ -392,6 +438,9 @@ if (only === "home" || !only) {
 }
 if (only === "287g" || !only) {
   await build287g();
+}
+if (only === "analysis" || !only) {
+  await buildAnalysis();
 }
 if (only === "agencies" || !only) {
   await buildAllAgencies();

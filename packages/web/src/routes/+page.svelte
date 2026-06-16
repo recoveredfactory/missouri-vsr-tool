@@ -1,6 +1,11 @@
 <script>
   import StickyHeader from "$lib/components/StickyHeader.svelte";
   import HomeAgencyMetricTable from "$lib/components/HomeAgencyMetricTable.svelte";
+  import { latestArticle } from "$lib/analysis/articles";
+  import {
+    analysis_card_kicker,
+    analysis_card_cta,
+  } from "$lib/paraglide/messages";
   import {
     home_highlights_heading,
     home_toc_download,
@@ -56,8 +61,9 @@
     home_about_link,
     home_287g_link,
     home_mcp_banner_tag,
-    home_mcp_banner_text,
-    home_mcp_banner_cta,
+    home_analysis_banner_tag,
+    home_analysis_banner_text,
+    home_analysis_banner_cta,
     home_mcp_heading,
     home_mcp_intro,
     home_mcp_limits_heading,
@@ -204,6 +210,11 @@
     localeBase = `/${locale}`;
   }
   $: canonicalUrl = `${siteUrl}${localeBase}`;
+  // Recompute when locale changes so the localized title/dek refresh.
+  $: latestAnalysis = (() => {
+    locale;
+    return latestArticle();
+  })();
   $: homeHrefEn = `${siteUrl}/en`;
   $: homeHrefEs = `${siteUrl}/es`;
   $: webSiteSchema = {
@@ -225,9 +236,9 @@
     "https://mcp-staging.vsr.recoveredfactory.net/";
   const mcpRepoUrl =
     "https://github.com/recoveredfactory/missouri-vsr-tool/tree/main/packages/mcp";
-  // Auto-hide the "New" launch banner after mid-June 2026. Section anchor
-  // and content stay; only the hero-top banner disappears.
-  const showMcpBanner = Date.now() < Date.UTC(2026, 5, 16);
+  // Auto-hide the "New" launch banner after mid-July 2026. The #mcp section and
+  // the "Latest analysis" card stay; only the hero-top banner disappears.
+  const showAnalysisBanner = Date.now() < Date.UTC(2026, 6, 16);
   // Client picker — drives both the snippet body and the path hints below
   // it. Claude Desktop + most stdio-only clients (Cline, Zed) share the
   // mcp-remote bridge config; Cursor speaks HTTP MCP natively; "other"
@@ -459,20 +470,20 @@
 <StickyHeader agencies={data.agencies} />
 
 <main id="main-content" class="min-h-screen bg-white overflow-x-hidden">
-  <!-- MCP launch banner — points to #mcp section below. Auto-hides after
-       2026-06-16 (see showMcpBanner above). -->
-  {#if showMcpBanner}
+  <!-- Analysis launch banner — points to the first-impressions article.
+       Auto-hides after 2026-07-16 (see showAnalysisBanner above). -->
+  {#if showAnalysisBanner}
   <a
-    href="#mcp"
-    on:click={() => trackEvent("mcp_banner_click", { target: "section" })}
+    href="/analysis/first-impressions-2025"
+    on:click={() => trackEvent("analysis_banner_click", { target: "article" })}
     class="block bg-[#1b613c] text-white no-underline transition-colors hover:bg-[#105430] focus:outline-none focus:ring-2 focus:ring-[#1b613c] focus:ring-offset-2"
   >
     <div class="mx-auto max-w-5xl px-4 py-2 text-center text-sm leading-snug sm:px-6 sm:py-2.5">
       <span class="mr-1.5 inline-flex items-center rounded-full bg-white/15 px-2 py-0.5 align-[2px] text-[10px] font-bold uppercase tracking-wider">
-        {home_mcp_banner_tag()}
-      </span><span class="font-medium">{home_mcp_banner_text()}</span>
+        {home_analysis_banner_tag()}
+      </span><span class="font-medium">{home_analysis_banner_text()}</span>
       <span class="ml-1.5 inline font-semibold underline decoration-white/40 underline-offset-4 hover:decoration-white">
-        {home_mcp_banner_cta()} <span aria-hidden="true">→</span>
+        {home_analysis_banner_cta()} <span aria-hidden="true">→</span>
       </span>
     </div>
   </a>
@@ -908,6 +919,32 @@
   <div class="mx-auto mt-2 max-w-5xl px-4 pb-8 text-sm text-slate-600 sm:px-6">
     <a class="underline" href={`/${locale}/287g`}>{home_287g_link()}</a>
   </div>
+
+  <!-- Latest analysis — featured card. Reads the article registry, so it
+       becomes a list automatically as more analysis posts are published. -->
+  {#if latestAnalysis}
+    <section id="analysis" class="border-t border-slate-200 bg-slate-50 py-12">
+      <div class="mx-auto max-w-5xl px-4 sm:px-6">
+        <a
+          href={`/${locale}/analysis/${latestAnalysis.slug}`}
+          class="group block rounded-xl border border-slate-200 bg-white p-6 no-underline transition hover:border-[#1b613c] hover:shadow-md sm:p-8"
+        >
+          <div class="text-xs font-semibold uppercase tracking-[0.18em] text-[#1b613c]">
+            {analysis_card_kicker()}
+          </div>
+          <h2 class="mt-2 text-2xl font-bold text-slate-900 sm:text-3xl">
+            {latestAnalysis.title}
+          </h2>
+          <p class="mt-3 max-w-2xl text-base leading-relaxed text-slate-600">
+            {latestAnalysis.dek}
+          </p>
+          <span class="mt-4 inline-block font-semibold text-[#1b613c] group-hover:underline">
+            {analysis_card_cta()}
+          </span>
+        </a>
+      </div>
+    </section>
+  {/if}
 
   <!-- Download Section -->
   <section id="download" class="border-t border-slate-200 bg-white py-12">
