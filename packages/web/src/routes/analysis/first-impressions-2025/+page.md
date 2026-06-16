@@ -188,7 +188,7 @@ Consistently across 2023 and 2025 data, we see the same pattern of non-White dri
 
 <Figure
   title="The outcome test"
-  caption="For each driver race: the total number of searches, the search rate (searches per 100 stops), and the share of those searches that turned up contraband. Reading down each table, as the search rate rises across groups, the share finding contraband falls. Shown for 2025 and 2023 — the two years with the most comparable contraband-found data, which shifts sharply in 2023 coincident with the legalization of recreational marijuana. 2024 is omitted because of the data quality questions at the beginning of this post."
+  caption="For each driver race: the total number of searches, the search rate (searches per 100 stops), and the share of those searches that turned up contraband. Reading down each table, as the search rate rises across groups, the share finding contraband falls. Shown for 2025 and 2023 — the two years with the most comparable contraband-found data, which shifts sharply in 2023 coincident with the legalization of recreational marijuana. 2024 is omitted because of the data quality questions mentioned at the beginning of this post."
   flush
   source={sourceBundle}
   summary="Two tables, for 2023 and 2025, of search rate (searches per 100 stops) and contraband hit rate by driver race. In both years White drivers are searched least but found with contraband most often, while Hispanic drivers are searched most yet found with contraband least often.">
