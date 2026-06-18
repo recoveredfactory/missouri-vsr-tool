@@ -1,5 +1,6 @@
 <script lang="ts">
   import Spark287gTotal from "$lib/components/Spark287gTotal.svelte";
+  import { raceColors } from "$lib/colors.js";
   import {
     program_287g_chart_stops_share_by_race_label,
     program_287g_race_full_white,
@@ -20,10 +21,10 @@
   export let referenceComp: RaceQuadSeries | null = null;
 
   const RACE_COLORS: Record<Race, string> = {
-    White: "#25784c",
-    Black: "#792a3b",
-    Hispanic: "#1c4f74",
-    Other: "#94a3b8",
+    White: raceColors.White,
+    Black: raceColors.Black,
+    Hispanic: raceColors.Hispanic,
+    Other: raceColors.Other,
   };
 
   $: raceFullLabels = {

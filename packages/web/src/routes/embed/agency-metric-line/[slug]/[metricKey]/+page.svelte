@@ -80,7 +80,7 @@
     return numberFormatter.format(value);
   };
 
-  const raceColor = (race) => raceColors[race] || "#25784c";
+  const raceColor = (race) => raceColors[race] || "#17643b";
 
   const raceLabel = (key) => {
     switch (key) {

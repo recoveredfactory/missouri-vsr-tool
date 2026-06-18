@@ -547,7 +547,7 @@
               {@const width = 260}
               {@const height = 180}
               {@const stopsMax = Math.ceil(Math.max(...stops) / 200000) * 200000}
-              {@const stopsColor = "#25784c"}
+              {@const stopsColor = "#17643b"}
 
               <div class="sr-only">
                 Data summary: From {years[0]} to {years[years.length - 1]}, total stops ranged from {formatStops(Math.min(...stops))} to {formatStops(Math.max(...stops))}.
@@ -619,7 +619,7 @@
               {@const width = 260}
               {@const height = 180}
               {@const consentMax = Math.ceil(Math.max(...consent) / 10000) * 10000}
-              {@const consentColor = "#792a3b"}
+              {@const consentColor = "#2748a5"}
 
               <div class="sr-only">
                 Data summary: Consent searches dropped from {formatStops(consent[0])} in {years[0]} to {formatStops(consent[consent.length - 1])} in {years[years.length - 1]}, a {Math.round((1 - consent[consent.length - 1] / consent[0]) * 100)}% decline.
@@ -702,8 +702,8 @@
           }}
           {@const raceOrder = ["White", "Black", "Hispanic", "Other"]}
           {@const maxVal = Math.max(...raceOrder.map(r => Math.max(population[r], stopsData2[r])))}
-          {@const popColor = "#25784c"}
-          {@const stopsColor2 = "#1c4f74"}
+          {@const popColor = "#17643b"}
+          {@const stopsColor2 = "#5a7bd8"}
           {@const padding2 = { top: 12, right: 12, bottom: 40, left: 35 }}
           {@const width2 = 300}
           {@const height2 = 180}

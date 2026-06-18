@@ -18,7 +18,7 @@
     --color-surface-300: #e2e8f0; /* slate-200 */
     --color-primary: #1b613c; /* brand green */
     --color-secondary: #64748b; /* slate-500 */
-    --color-success: #3e9e6c; /* light brand green */
+    --color-success: #2ab76b; /* light brand green */
     --color-warning: #f59e0b; /* amber-500 */
     --color-danger: #ef4444; /* red-500 */
     --color-info: #3b82f6; /* blue-500 */
@@ -53,7 +53,7 @@
   }
 
   a:focus-visible {
-    @apply outline-none ring-2 ring-[#3e9e6c] ring-offset-2 ring-offset-slate-50;
+    @apply outline-none ring-2 ring-[#2ab76b] ring-offset-2 ring-offset-slate-50;
   }
 }
 
