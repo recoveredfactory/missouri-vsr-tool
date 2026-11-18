@@ -419,7 +419,15 @@ const init = async (): Promise<DuckDBConnection> => {
 };
 
 export const getDb = (): Promise<DuckDBConnection> => {
-  if (!connPromise) connPromise = init();
+  if (!connPromise) {
+    // Forget a failed load so the next call retries. Without this, one
+    // transient CDN error would poison the container for its whole life, and
+    // the prod warmer (see index.ts) keeps containers alive indefinitely.
+    connPromise = init().catch((err) => {
+      connPromise = null;
+      throw err;
+    });
+  }
   return connPromise;
 };
 

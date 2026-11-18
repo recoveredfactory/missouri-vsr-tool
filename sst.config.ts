@@ -138,17 +138,20 @@ export default $config({
       memory: "1024 MB",
       timeout: "30 seconds",
       // Cold start is ~8–15s (76MB Parquet + JSON + SVG fetch from
-      // CloudFront, DuckDB table builds, metric coverage scan). Keep one
-      // container warm in prod so the first user of each session doesn't
-      // eat that latency. Same pattern as the SvelteKit Web app above.
-      warm: isProdStage ? 1 : 0,
+      // CloudFront, DuckDB table builds, metric coverage scan). sst.aws.Function
+      // has no `warm` option (only SvelteKit does), so prod keeps a container
+      // warm with the McpWarmer cron below instead.
+      //
       // Hard cost ceiling — this, not the WAF rule, is the real backstop
       // against a runaway bill. A distributed flood sails under any per-IP
-      // WAF limit, so total parallelism is what bounds spend. At 2 concurrent
-      // × 1024MB × 30s, worst-case fully-saturated 24/7 is ~$85/mo; realistic
-      // abuse is far less and budget alerts fire long before. Raise if real
-      // load needs it (each +1 adds ~$43/mo to the worst case).
-      concurrency: { reserved: 2 },
+      // WAF limit, so total parallelism is what bounds spend. Each concurrent
+      // slot at 1024MB fully saturated 24/7 is ~$43/mo, so prod's 5 caps the
+      // worst case at ~$215/mo and staging's 2 at ~$85/mo. Real load is a
+      // tiny fraction of that (well inside the Lambda free tier as of 2026-11).
+      // Prod went 2 → 5 in 2026-11: at 2 it was throttling ~70–90 requests a
+      // day (cold starts hold a slot for 8–15s). Staging stays at 2 because
+      // it has no WAF (see McpWaf below).
+      concurrency: { reserved: isProdStage ? 5 : 2 },
       url: {
         cors: {
           allowMethods: ["GET", "POST"],
@@ -173,19 +176,42 @@ export default $config({
       },
     });
 
+    // Prod-only warmer. Every 5 minutes EventBridge invokes the Mcp function
+    // directly with { warmer: "true" }. The handler (packages/mcp/src/index.ts)
+    // short-circuits that event: it loads the dataset if this container hasn't
+    // yet (a no-op on a warm one) and returns without touching dispatch or
+    // analytics. Cost is negligible: ~8.6k tiny invocations a month.
+    if (isProdStage) {
+      new sst.aws.Cron("McpWarmer", {
+        schedule: "rate(5 minutes)",
+        function: mcp.arn,
+        event: { warmer: "true" },
+      });
+    }
+
     // WAF can't attach to Lambda Function URLs directly — it needs a
     // CloudFront / API Gateway / ALB in front. We put CloudFront in front
     // of the Lambda URL with a single rate-based rule, ~600 req per 5 min
     // per IP (≈2/s sustained — generous for any real MCP client, throttles a
     // single abuser fast). The Lambda URL stays public for emergency bypass,
     // but the documented endpoint is the CloudFront one.
+    //
+    // Prod only since 2026-11: a web ACL is ~$6/mo ($5 + $1 per rule) and the
+    // staging one blocked nothing in its last 30 days. Staging relies on its
+    // reserved concurrency of 2 as the cost ceiling.
+    //
+    // The provider is still created on every stage: the MCP ACM cert below
+    // uses it too (CloudFront certs must live in us-east-1).
     const cloudfrontProvider = new aws.Provider("McpWafProvider", {
       region: "us-east-1",
     });
 
-    const mcpWaf = new aws.wafv2.WebAcl(
+    const mcpWaf = isProdStage ? new aws.wafv2.WebAcl(
       "McpWaf",
       {
+        // This explicit provider doesn't get SST's default sst:app/sst:stage
+        // tags, so set them here. The VSR budgets filter on sst:app.
+        tags: { "sst:app": $app.name, "sst:stage": $app.stage },
         scope: "CLOUDFRONT",
         defaultAction: { allow: {} },
         rules: [
@@ -213,7 +239,7 @@ export default $config({
         },
       },
       { provider: cloudfrontProvider },
-    );
+    ) : undefined;
 
     const mcpOriginHost = mcp.url.apply((u) => new URL(u).hostname);
 
@@ -273,7 +299,7 @@ export default $config({
       isIpv6Enabled: true,
       httpVersion: "http2",
       priceClass: "PriceClass_100",
-      webAclId: mcpWaf.arn,
+      webAclId: mcpWaf?.arn,
       aliases: mcpAliases,
       origins: [
         {
@@ -343,17 +369,23 @@ export default $config({
       });
     }
 
-    // Cost guardrail — monthly AWS-account budget with email alerts. Fires
-    // on actual (not forecast) spend at 50/80/100% so I get a warning shot
-    // before any real bill. One budget per stage; both cover the full
-    // account, so deploying both means redundant alerts (annoying, not
-    // broken). Skipped when the alert email isn't set so dev stages don't
-    // create stray budgets in the account.
+    // Cost guardrail — monthly budget with email alerts. Fires on actual (not
+    // forecast) spend at 50/80/100% so I get a warning shot before any real
+    // bill. Skipped when the alert email isn't set so dev stages don't create
+    // stray budgets in the account.
+    //
+    // Scoped to this app via the sst:app cost-allocation tag (activated
+    // 2026-11). Until then both budgets watched the whole AWS account, so
+    // other apps' spend (Bedrock, RDS, other sites' WAFs) set off alerts named
+    // after the VSR stages. The legacy costFilters this provider version
+    // supports can't AND sst:app with sst:stage, so BOTH budgets measure the
+    // whole VSR app (prod + staging): staging's lower limit works as an early
+    // warning and prod's as the ceiling. Untagged spend (e.g. tax) is outside
+    // these budgets.
     const budgetEmail = env.AWS_BUDGET_ALERT_EMAIL;
     if (budgetEmail && (isProdStage || isStagingStage)) {
-      // Defaults sized to actual May 2026 run rate (~$1.70/day across the
-      // account = ~$52/mo), with headroom for WAF + one-off domain renewals.
-      // Override per-stage in .env if cost picture changes.
+      // Override per-stage in .env if cost picture changes. As of 2026-11 the
+      // whole VSR app runs ~$10/mo (prod WAF + data bucket storage).
       const budgetLimitUsd = isProdStage
         ? env.AWS_BUDGET_LIMIT_PROD_USD ?? "75"
         : env.AWS_BUDGET_LIMIT_STAGING_USD ?? "30";
@@ -363,6 +395,9 @@ export default $config({
         limitAmount: budgetLimitUsd,
         limitUnit: "USD",
         timeUnit: "MONTHLY",
+        costFilters: [
+          { name: "TagKeyValue", values: [`user:sst:app$${$app.name}`] },
+        ],
         notifications: [50, 80, 100].map((threshold) => ({
           notificationType: "ACTUAL",
           comparisonOperator: "GREATER_THAN",

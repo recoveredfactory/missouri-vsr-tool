@@ -1,5 +1,6 @@
 import type { APIGatewayProxyEventV2, APIGatewayProxyResultV2 } from "aws-lambda";
 
+import { getDb } from "./db.js";
 import { dispatch } from "./dispatch.js";
 import { SERVER_NAME, SERVER_VERSION } from "./server-info.js";
 
@@ -8,9 +9,30 @@ const JSON_HEADERS = {
   "access-control-allow-origin": "*",
 };
 
+// The prod McpWarmer cron (sst.config.ts) invokes the function directly with
+// { warmer: "true" }. It isn't an HTTP request, and a Function URL request
+// can't produce this shape (the body never lands at the top level of the
+// event).
+const isWarmerPing = (event: unknown): boolean =>
+  typeof event === "object" &&
+  event !== null &&
+  (event as { warmer?: unknown }).warmer === "true";
+
 export const handler = async (
   event: APIGatewayProxyEventV2,
 ): Promise<APIGatewayProxyResultV2> => {
+  if (isWarmerPing(event)) {
+    // Load the dataset if this container hasn't yet, so the next real tool
+    // call skips the 8–15s cold load. getDb() is memoized, so on a container
+    // that's already warm this resolves immediately.
+    try {
+      await getDb();
+    } catch (err) {
+      console.error("warmer: dataset load failed", err);
+    }
+    return { statusCode: 200, body: "warm" };
+  }
+
   const method = event.requestContext.http.method;
 
   if (method === "OPTIONS") {
